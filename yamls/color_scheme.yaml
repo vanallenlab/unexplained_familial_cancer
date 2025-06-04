@@ -1,0 +1,29 @@
+Control: "#A9A9A9"       # gray
+Pancancer: "#000000"     # black
+Breast: "#FFC0CB"        # pink
+Prostate: "#ADD8E6"      # baby blue
+Lung: "#66C2A5"
+GI: "#FC8D62"
+CNS: "#666699"
+Pancreas: "#9933ff"
+Colorectal: "#000099"
+Ovarian: "#008080"
+Basal Cell Carcinoma: "#ffa500"
+Squamous Cell Carcinoma: "##ff0066"
+Central Nervous System: "#808080"
+Bladder: "#ffff00"
+Kidney: "#66ff66" # light green
+Sarcoma: "#ffff99" # light yellow
+Testicular Germ Cell Tumor: "#da70d6"
+Uterus: "#ffc299" # peach
+Blood: "#ff4d4d" # red
+Melanoma: "#808080" # dark gray
+mesa: "#cc0000"
+ufc: "#99ccff"
+ceph: "#ffbf80"
+aou: "#0000b3"
+AFR: ""
+AMR: ""
+EAS: ""
+EUR: ""
+SAS: ""
