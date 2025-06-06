@@ -503,7 +503,7 @@ cancer_ontology:
         - primary_malignant_neuroendocrine_neoplasm_of_duodenum
         - primary_malignant_neuroendocrine_neoplasm_of_ileum
         - primary_malignant_neuroendocrine_neoplasm_of_small_intestine
-    - name: Respiratory System (General)
+    - name: Respiratory System
       sub_systems:
         - name: Lung System
           types:

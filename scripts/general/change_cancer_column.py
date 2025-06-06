@@ -3,18 +3,18 @@ import pandas as pd
 
 # --- Load YAML file ---
 with open('cancer_ontology.yaml', 'r') as f:
-    systems = yaml.safe_load(f)
+    ontology = yaml.safe_load(f)
 
 # --- Build a flat mapping from diagnosis to system labels ---
 dx_to_systems = {}
 
+systems = ontology['cancer_ontology']['systems']
 for system in systems:
     sys_name = system['name'].replace(' ', '_')
 
     # Top-level types
     for dx in system.get('types', []):
         dx_to_systems[dx] = [sys_name]
-
     # Sub-systems
     for sub in system.get('sub_systems', []):
         sub_name = sub['name'].replace(' ', '_')
@@ -41,7 +41,7 @@ def group_dxs(row):
             systems_found.add(';'.join(dx_to_systems[dx]))
 
     if systems_found:
-        return '|'.join(sorted(systems_found))
+        return ';'.join(sorted(systems_found))
     else:
         return 'NA'
 
@@ -49,4 +49,4 @@ def group_dxs(row):
 df['original_dx_grouped'] = df.apply(group_dxs, axis=1)
 
 # --- Save result ---
-df.to_csv('dfci-ufc.aou.phenos.adjusted.tsv', sep='\t', index=False)
+df.to_csv('dfci-ufc.aou.phenos.v2.tsv', sep='\t', index=False)

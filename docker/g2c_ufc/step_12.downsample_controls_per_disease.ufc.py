@@ -271,8 +271,11 @@ def main():
 
     # Load sample metadata
     meta = pd.read_csv(args.metadata, sep='\t',index_col=False)
+    meta['original_id'] = meta['original_id'].astype(str)
     phenotype_data = pd.read_csv(args.phenotype_data,sep='\t',index_col=False)
+    phenotype_data['Sample'] = phenotype_data['Sample'].astype(str)
     pca = pd.read_csv(args.pca,sep='\t',index_col=False)
+    pca['#IID'] = pca['#IID'].astype(str)
     
     # Load list of samples to keep
     with open(args.sample_list) as f2:
