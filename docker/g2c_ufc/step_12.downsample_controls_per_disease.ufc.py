@@ -276,7 +276,10 @@ def main():
     phenotype_data['Sample'] = phenotype_data['Sample'].astype(str)
     pca = pd.read_csv(args.pca,sep='\t',index_col=False)
     pca['#IID'] = pca['#IID'].astype(str)
-    
+ 
+    with open(args.log_file, "a") as f:
+        f.write(f"Size of initial data: {len(meta)}\n")
+
     # Load list of samples to keep
     with open(args.sample_list) as f2:
         samples = set(patient.strip() for patient in f2)
@@ -285,10 +288,13 @@ def main():
     if args.exclude_samples:
         with open(args.exclude_samples) as f3:
             exclude_samples = set(patient.strip() for patient in f3)
-        samples = samples - exclude_samples
+        samples = samples #- exclude_samples
 
     # Filter to just cases in our study as well as cases in the specific subtype
     meta = meta[meta['original_id'].astype(str).str.strip().isin(samples)]
+
+    with open(args.log_file, "a") as f:
+        f.write(f"Size of data filtered to ufc: {len(meta)}\n")
 
     # Merge the metadata with phenotype data
     phenotype_data = phenotype_data.drop(columns=['cancer','age'], errors='ignore')
