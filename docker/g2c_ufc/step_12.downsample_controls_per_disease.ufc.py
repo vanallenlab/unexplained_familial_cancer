@@ -265,9 +265,6 @@ def main():
     if not args.log_file:
         args.log_file = f"{args.cancer_subtype}.cohort.log"
 
-    with open(args.log_file, "a") as f:
-        f.write(f"Size of initial data: {len(meta)}\n")
-
     with open(args.log_file, "w") as f:
         f.write("Size\tNum_Filtered\tPercent_Filtered\tExclusion_Criteria\n")
         
