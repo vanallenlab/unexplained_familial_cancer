@@ -32,7 +32,7 @@ workflow SAIGE_GENE {
       unsorted_vcf_list = gather_vcfs.vcf_list
   }
 
-  Int negative_shards = 2900
+  Int negative_shards = 0
   
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     # Filter VCF to Low Frequency Variants, variants found w/in cohort, and removed INFO
@@ -85,14 +85,28 @@ workflow SAIGE_GENE {
 
   call make_group_file_part2 as make_group_file_part2_001 {
     input:
-      split_vep_output = concatenateFiles_001.out
+      split_vep_output = concatenateFiles_001.out,
+      cancer_type = cancer_type,
+      freq = "001"
   }
  
   call make_group_file_part2 as make_group_file_part2_0001 {
     input:
-      split_vep_output = concatenateFiles_0001.out
+      split_vep_output = concatenateFiles_0001.out,
+      cancer_type = cancer_type,
+      freq = "0001"
   }
- 
+
+  call Tasks.copy_file_to_storage as copy0{
+    input:
+      text_file = make_group_file_part2_001.group_file,
+      output_dir = analysis_3_saige_dir
+  }
+  call Tasks.copy_file_to_storage as copy1{
+    input:
+      text_file = make_group_file_part2_0001.group_file,
+      output_dir = analysis_3_saige_dir
+  } 
   call get_covariates {
     input:
       sample_data = sample_data,
@@ -200,7 +214,7 @@ workflow SAIGE_GENE {
       output_name = cancer_type
   }
 
-  call Tasks.copy_file_to_storage{
+  call Tasks.copy_file_to_storage as copy3{
     input:
       text_file = sortSAIGE_Output.out1,
       output_dir = analysis_3_saige_dir
@@ -363,20 +377,79 @@ task process_vcf_part1 {
 
     if ! grep -q '^##INFO=<ID=gnomAD_AF_non_cancer_afr' <(bcftools view -h ~{vcf}); then
         echo "Error: gnomAD annotations not found in VCF header." >&2
-        bcftools view -h ~{vcf} -O z -o output.001.vcf.gz
-        bcftools view -h ~{vcf} -O z -o output.0001.vcf.gz
+
+        # Add missing FILTER header
+        echo '##FILTER=<ID=ExcessHet,Description="Excess heterozygosity filter">' > extra_header.txt
+        bcftools annotate -h extra_header.txt -O z -o tmp1.vcf.gz ~{vcf}
+        rm ~{vcf}
+
+        bcftools view -S ~{subjects_list} -O z -o tmp2.vcf.gz tmp1.vcf.gz
+
+        bcftools view -h tmp2.vcf.gz -O z -o output.001.vcf.gz
+        bcftools view -h tmp2.vcf.gz -O z -o output.0001.vcf.gz
         exit 0
     fi
 
+    # Step 1: Extract relevant fields using bcftools +split-vep
+    # Format: Variant ID + gnomAD subpopulation AFs + Cohort AF + Impact
+    bcftools +split-vep ~{vcf} \
+      -f '%ID\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_oth\t%AF\t%IMPACT\n' \
+      -d | uniq > extracted_variants.txt
+
+    # Sort and deduplicate
+    sort -u extracted_variants.txt > sorted_variants.txt
+
+    # Step 2a: Filter variants with:
+    # - AF < 1% in major populations (AFR, EAS, AMR, FIN, NFE, SAS)
+    # - AF < 10% in minor populations (MID, AMI, ASJ, OTH)
+    # - AF < 1% in cohort
+    awk -F'\t' '
+    BEGIN { OFS="\t" }
+    {
+      # Replace missing AFs with 0
+      for (i = 2; i <= 12; i++) {
+        $i = ($i == "." ? 0 : $i) + 0
+      }
+
+      if (
+        $2  < 0.01 && $3  < 0.01 && $4  < 0.01 && $5  < 0.01 &&
+        $6  < 0.01 && $7  < 0.01 && $8  < 0.10 && $9  < 0.10 &&
+        $10 < 0.10 && $11 < 0.10 && $12 < 0.01
+      ) print $1
+    }
+    ' sorted_variants.txt > variant_ids_AF001.txt
+
+    # Step 2b: Stricter filter:
+    # - AF < 0.1% in major populations
+    # - AF < 1% in minor populations
+    # - AF < 0.1% in cohort
+    awk -F'\t' '
+    BEGIN { OFS="\t" }
+    {
+      for (i = 2; i <= 12; i++) {
+        $i = ($i == "." ? 0 : $i) + 0
+      }
+
+      if (
+        $2  < 0.001 && $3  < 0.001 && $4  < 0.001 && $5  < 0.001 &&
+        $6  < 0.001 && $7  < 0.001 && $8  < 0.01 && $9  < 0.01 &&
+        $10 < 0.01 && $11 < 0.01 && $12 < 0.001
+      ) print $1
+    }
+    ' sorted_variants.txt > variant_ids_AF0001.txt
+
+    # Cleanup intermediate files
+    rm extracted_variants.txt sorted_variants.txt
+
     # Make a list of variant IDs to keep
-    bcftools +split-vep ~{vcf} -f '%ID\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_oth\t%AF\t%IMPACT\n' -d | uniq > tmp1.txt
-    sort -u tmp1.txt > tmp2.txt
+    #bcftools +split-vep ~{vcf} -f '%ID\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_oth\t%AF\t%IMPACT\n' -d | uniq > tmp1.txt
+    #sort -u tmp1.txt > tmp2.txt
 
     # Filter to Variants w/ <1% in major gnomAD pops, < 10% in minor gnomAD pops, and < 1% in cohort
-    awk 'BEGIN{OFS="\t"} {$2=($2=="."?0:$2); $3=($3=="."?0:$3); $4=($4=="."?0:$4); $5=($5=="."?0:$5);$6=($6=="."?0:$6); $7=($7=="."?0:$7); $8=($8=="."?0:$8); $9=($9=="."?0:$9); $10=($10=="."?0:$10); $11=($11=="."?0:$11); if($2+0<0.01 && $3+0<0.01 && $4+0<0.01 && $5+0<0.01 && $6+0<0.01 && $7+0<0.01 && $8+0<0.1 && $9+0<0.1 && $10+0<0.1 && $11+0<0.1 && $12+0<0.01) print}' tmp2.txt | cut -f1 > variant_ids.001.txt
+    #awk 'BEGIN{OFS="\t"} {$2=($2=="."?0:$2); $3=($3=="."?0:$3); $4=($4=="."?0:$4); $5=($5=="."?0:$5);$6=($6=="."?0:$6); $7=($7=="."?0:$7); $8=($8=="."?0:$8); $9=($9=="."?0:$9); $10=($10=="."?0:$10); $11=($11=="."?0:$11); if($2+0<0.01 && $3+0<0.01 && $4+0<0.01 && $5+0<0.01 && $6+0<0.01 && $7+0<0.01 && $8+0<0.1 && $9+0<0.1 && $10+0<0.1 && $11+0<0.1 && $12+0<0.01) print}' tmp2.txt | cut -f1 > variant_ids.001.txt
     # Filter to Variants w/ <0.1% in major gnomAD pops, < 1% in minor gnomAD pops, and < 0.1% in cohort
-    awk 'BEGIN{OFS="\t"} {$2=($2=="."?0:$2); $3=($3=="."?0:$3); $4=($4=="."?0:$4); $5=($5=="."?0:$5);$6=($6=="."?0:$6); $7=($7=="."?0:$7); $8=($8=="."?0:$8); $9=($9=="."?0:$9); $10=($10=="."?0:$10); $11=($11=="."?0:$11); if($2+0<0.001 && $3+0<0.001 && $4+0<0.001 && $5+0<0.001 && $6+0<0.001 && $7+0<0.001 && $8+0<0.01 && $9+0<0.01 && $10+0<0.01 && $11+0<0.01 && $12+0<0.001) print}' tmp2.txt | cut -f1 > variant_ids.0001.txt
-    rm tmp1.txt tmp2.txt
+    #awk 'BEGIN{OFS="\t"} {$2=($2=="."?0:$2); $3=($3=="."?0:$3); $4=($4=="."?0:$4); $5=($5=="."?0:$5);$6=($6=="."?0:$6); $7=($7=="."?0:$7); $8=($8=="."?0:$8); $9=($9=="."?0:$9); $10=($10=="."?0:$10); $11=($11=="."?0:$11); if($2+0<0.001 && $3+0<0.001 && $4+0<0.001 && $5+0<0.001 && $6+0<0.001 && $7+0<0.001 && $8+0<0.01 && $9+0<0.01 && $10+0<0.01 && $11+0<0.01 && $12+0<0.001) print}' tmp2.txt | cut -f1 > variant_ids.0001.txt
+    #rm tmp1.txt tmp2.txt
 
     bcftools view --include ID==@variant_ids.001.txt ~{vcf} -O z -o tmp1.001.vcf.gz
     bcftools view --include ID==@variant_ids.0001.txt ~{vcf} -O z -o tmp1.0001.vcf.gz
@@ -415,8 +488,6 @@ task process_vcf_part2 {
   command <<<
     set -euxo pipefail
     bcftools annotate -x INFO -O z -o tmp1.vcf.gz ~{vcf}
-    #bcftools annotate --header-lines <(echo '##FILTER=<ID=ExcessHet,Description="Filter for excessive heterozygosity">') -O z -o tmp1.vcf.gz ~{vcf}
-    echo "Check 1"
     
     if [ $(wc -l < ~{important_variants}) -eq 0 ]; then
       bcftools view -h tmp1.vcf.gz -O z -o  output.vcf.gz
@@ -427,7 +498,6 @@ task process_vcf_part2 {
     bcftools view --include ID==@~{important_variants} tmp1.vcf.gz -O z -o output.vcf.gz
 
     bcftools index --csi output.vcf.gz
-    echo "Check 3"
   >>>
   output {
     File output_vcf = "output.vcf.gz"
@@ -526,6 +596,8 @@ task make_group_file_part1 {
 task make_group_file_part2 {
   input {
     File split_vep_output
+    String cancer_type
+    String freq
   }
   command <<<
   set -eu -o pipefail
@@ -537,6 +609,7 @@ task make_group_file_part2 {
   df = pd.read_csv(vep_file, sep="\t", names=['Gene', 'Variant', 'Consequence'], header=None)
   df = df[df['Gene'] != '.']
   df = df[~df['Consequence'].str.contains('&',na=False)]
+  df = df.loc[~df['Consequence'].str.contains('nmd_transcript_variant', na=False)]
   df.loc[df['Consequence'].str.contains('synonymous_variant', na=False), 'Consequence'] = 'synonymous_variant'
  
   df = df[~df['Gene'].str.contains('-', na=False)]
@@ -547,23 +620,6 @@ task make_group_file_part2 {
   # Print the number of unique values in 'Gene' and 'Variant'
   print(f"Unique values in 'Gene': {df['Gene'].nunique()}")
   print(f"Unique values in 'Variant': {df['Variant'].nunique()}")
-
-  # Define the groups to check
-  #pathogenic_terms = {"Pathogenic", "Likely_pathogenic", "PLP"}
-  #valid_consequences = {"LOW", "MODERATE", "HIGH","synonymous_variant"}
-
-  # Identify rows with pathogenic consequences
-  #is_pathogenic = df["Consequence"].isin(pathogenic_terms)
-
-  # Identify rows with valid consequences
-  #is_valid_consequence = df["Consequence"].isin(valid_consequences)
-
-  # Create a set of (Gene, Variant) pairs with valid consequences
-  #valid_pairs = set(df.loc[is_valid_consequence, ["Gene", "Variant"]].itertuples(index=False, name=None))
-
-  # Filter the DataFrame
-  #filtered_df = df[~is_pathogenic | df[["Gene", "Variant"]].apply(tuple, axis=1).isin(valid_pairs)]
-  #df = df[df[["Gene", "Variant"]].apply(tuple, axis=1).isin(valid_pairs)]
 
   # Define the hierarchy for 'Consequence'
   consequence_hierarchy = {
@@ -587,23 +643,13 @@ task make_group_file_part2 {
   # Drop duplicates, keeping the first (highest-ranked Consequence)
   df_filtered = df_sorted.drop_duplicates(subset=['Gene', 'Variant'], keep='first')
 
-  # Find the variants that appear more than once
-  duplicate_variants = df_filtered[df_filtered['Variant'].duplicated(keep=False)]
-
-  # Save the duplicate rows to a new TSV file
-  duplicate_variants.to_csv('duplicate_variants.tsv', sep='\t', index=False)
-
   # Drop the rank column (optional)
   df_filtered = df_filtered.drop(columns=['Consequence_Rank'])
   df = df_filtered
 
-  print("Checkpoint 1")
-  print(df.head())
-
   # Extract and format data
   grouped = df.groupby('Gene')
 
-  print("Checkpoint 2")
   # Prepare the output
   output = []
   for gene, group in grouped:
@@ -612,17 +658,14 @@ task make_group_file_part2 {
       output.append(f"{gene} var {variants}")
       output.append(f"{gene} anno {annotations}")
 
-  print("Checkpoint 3")
   # Write to the group file
-  with open("groupfile.txt", "w") as f:
+  with open("~{cancer_type}.~{freq}.groupfile", "w") as f:
       f.write("\n".join(output) + "\n")
 
-  print("Checkpoint 4")
   CODE
   >>>
   output {
-    File group_file = "groupfile.txt"
-    File repeat_vars = 'duplicate_variants.tsv'
+    File group_file = "~{cancer_type}.~{freq}.groupfile"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"
