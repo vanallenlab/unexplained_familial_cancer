@@ -198,7 +198,7 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_the_peritoneum
     - name: Genitourinary System
       sub_systems:
-        - name: Kidney/Renal
+        - name: Kidney
           types:
             - clear_cell_carcinoma_of_kidney
             - malignant_tumor_of_kidney
@@ -206,7 +206,7 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_kidney
             - primary_malignant_neoplasm_of_renal_pelvis
             - renal_cell_carcinoma
-        - name: Bladder and Ureter
+        - name: Bladder
           types:
             - carcinoma_of_bladder
             - malignant_neoplasm_of_anterior_wall_of_urinary_bladder
@@ -223,7 +223,6 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_trigone_of_urinary_bladder
             - primary_malignant_neoplasm_of_ureter
             - primary_malignant_neoplasm_of_ureteric_orifice_of_urinary_bladder
-            - primary_malignant_neoplasm_of_urethra
             - primary_malignant_neoplasm_of_urinary_bladder_neck
         - name: Prostate
           types:
@@ -233,14 +232,17 @@ cancer_ontology:
             - prostatic_intraepithelial_neoplasia
             - primary_malignant_neoplasm_of_prostate
             - recurrent_malignant_neoplasm_of_prostate
+        - name: Testis
+          types:
+            - primary_malignant_neoplasm_of_testis
       types:
         - carcinoma_of_penis
         - neoplasm_of_urinary_system
-        - primary_malignant_neoplasm_of_testis
         - primary_malignant_neoplasm_of_urinary_system
+        - primary_malignant_neoplasm_of_urethra
     - name: Gynecologic System
       sub_systems:
-        - name: Ovary and Fallopian
+        - name: Ovary
           types:
             - clear_cell_adenocarcinoma_of_ovary
             - malignant_immature_teratoma_of_ovary
@@ -275,7 +277,7 @@ cancer_ontology:
             - malignant_neoplasm_of_endometrium_of_corpus_uteri
             - neoplasm_of_endometrium
             - primary_malignant_neoplasm_of_endometrium
-        - name: Vaginal, Vulva and Labia
+        - name: Vaginal
           types:
             - malignant_neoplasm_of_labia_majora
             - malignant_neoplasm_of_labia_minora
@@ -468,32 +470,6 @@ cancer_ontology:
       types: # General hematologic types that don't fit specific sub-categories
         - neoplasm_affecting_hematopoietic_structure
         - malignant_tumor_of_lymphoid_hemopoietic_and_related_tissue
-    - name: Melanoma System
-      types:
-        - malignant_melanoma
-        - malignant_melanoma_of_back
-        - malignant_melanoma_of_ear_and/or_external_auditory_canal
-        - malignant_melanoma_of_head_and_neck
-        - malignant_melanoma_of_hip
-        - malignant_melanoma_of_lip
-        - malignant_melanoma_of_lower_limb
-        - malignant_melanoma_of_right_choroid
-        - malignant_melanoma_of_scalp_and/or_neck
-        - malignant_melanoma_of_skin
-        - malignant_melanoma_of_skin_of_breast
-        - malignant_melanoma_of_skin_of_eyelid
-        - malignant_melanoma_of_skin_of_face
-        - malignant_melanoma_of_skin_of_lip
-        - malignant_melanoma_of_skin_of_lower_limb
-        - malignant_melanoma_of_skin_of_nose
-        - malignant_melanoma_of_skin_of_shoulder
-        - malignant_melanoma_of_skin_of_trunk
-        - malignant_melanoma_of_skin_of_upper_limb
-        - malignant_melanoma_of_thigh
-        - malignant_melanoma_of_trunk
-        - malignant_melanoma_of_upper_limb
-        - malignant_melanoma_of_vulva
-        - overlapping_malignant_melanoma_of_skin
     - name: Nervous System
       types:
         - malignant_neoplasm_of_cerebrum_excluding_lobes_and_ventricles
