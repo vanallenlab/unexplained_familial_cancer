@@ -33,7 +33,7 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_trunk
             - primary_malignant_neoplasm_of_upper_limb
       types: [] # General bone and soft tissue types, if any, that don't fit specific sub-categories
-    - name: Breast System
+    - name: Breast
       types:
         - carcinoma_of_breast
         - carcinoma_of_breast__upper,_outer_quadrant
@@ -78,7 +78,7 @@ cancer_ontology:
         - estrogen_receptor_positive_tumor
     - name: Endocrine System
       sub_systems:
-        - name: Thyroid System
+        - name: Thyroid
           types:
             - follicular_thyroid_carcinoma
             - medullary_thyroid_carcinoma
@@ -172,6 +172,7 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_liver
         - name: Pancreas
           types:
+            - primary_malignant_neoplasm_of_islets_of_langerhans
             - malignant_tumor_of_body_of_pancreas
             - malignant_tumor_of_pancreas
             - malignant_tumor_of_pancreatic_duct
@@ -298,7 +299,7 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_parametrium
     - name: Head and Neck System
       sub_systems:
-        - name: Oral and Pharyngeal System
+        - name: Oropharyngeal
           types:
             - carcinomainsitu_of_oral_mucosa
             - carcinoma_of_base_of_tongue
@@ -338,6 +339,7 @@ cancer_ontology:
             - squamous_cell_carcinoma_of_skin_of_lower_lip
             - squamous_cell_carcinoma_of_skin_of_upper_lip
             - squamous_cell_carcinoma_of_tongue
+            - tumor_of_salivary_gland
       types:
         - carcinoma_of_skin_of_head/neck
         - malignant_neoplasm_of_nasal_cavities,_middle_ear_and_accessory_sinuses
@@ -374,8 +376,7 @@ cancer_ontology:
         - squamous_cell_carcinoma_of_scalp
         - squamous_cell_carcinoma_of_skin_of_ear
         - squamous_cell_carcinoma_of_skin_of_neck
-        - tumor_of_salivary_gland
-    - name: Hematologic and Lymphoid System
+    - name: Hematolymphoid System
       sub_systems:
         - name: Leukemia
           types:
@@ -455,7 +456,7 @@ cancer_ontology:
             - primary_cutaneous_cd30+_large_tcell_lymphoma
             - primary_cutaneous_tcell_lymphoma
             - primary_mediastinal_thymic_large_bcell_lymphoma
-        - name: Myeloma and Mast Cell Neoplasms
+        - name: Myelomastocytic
           types:
             - iga_myeloma
             - igg_myeloma
@@ -497,7 +498,7 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_retina_primary
         - primary_malignant_neoplasm_of_spinal_meninges
         - primary_malignant_neoplasm_of_temporal_lobe
-    - name: Neuroendocrine and Carcinoid Tumors
+    - name: Neuroendocrine Tumors
       types:
         - carcinoid_tumor
         - carcinoid_tumor_of_appendix
@@ -528,7 +529,7 @@ cancer_ontology:
         - primary_malignant_neuroendocrine_neoplasm_of_small_intestine
     - name: Respiratory System
       sub_systems:
-        - name: Lung System
+        - name: Lung
           types:
             - adenocarcinoma_of_right_lung
             - carcinoid_tumor_of_lung
