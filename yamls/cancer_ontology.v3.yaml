@@ -601,7 +601,10 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_skin_of_lower_limb
         - primary_malignant_neoplasm_of_skin_of_trunk
         - primary_malignant_neoplasm_of_skin_of_upper_limb
-    - name: Unspecified or Systemic
+    - name: Testis
+      types:
+        - primary_malignant_neoplasm_of_testis
+    - name: Other
       types:
         - disseminated_malignancy_of_unknown_primary
         - malignant_adenomatous_neoplasm
