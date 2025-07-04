@@ -326,7 +326,7 @@ cancer_ontology:
         - squamous_cell_carcinoma_of_scalp
         - squamous_cell_carcinoma_of_skin_of_ear
         - squamous_cell_carcinoma_of_skin_of_neck
-    - name: Hematolymphoid System
+    - name: Hematologic System
       sub_systems:
         - name: Leukemia
           types:
