@@ -356,56 +356,6 @@ cancer_ontology:
             - myeloid_leukemia
             - myeloid_leukemia_in_remission
             - plasma_cell_leukemia
-        - name: Lymphoma
-          types:
-            - bcell_lymphoma_clinical
-            - blastic_plasmacytoid_dendritic_cell_neoplasm
-            - burkitts_lymphoma_clinical
-            - classical_hodgkin_lymphoma
-            - cutaneous/peripheral_tcell_lymphoma
-            - diffuse_follicle_center_lymphoma
-            - diffuse_large_bcell_lymphoma_nodal/systemic_with_skin_involvement
-            - diffuse_nonhodgkins_lymphoma,_small_cell_clinical
-            - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
-            - follicular_low_grade_bcell_lymphoma
-            - follicular_nonhodgkins_lymphoma
-            - follicular_nonhodgkins_lymphoma_diffuse_follicle_center_subtype_grade_1
-            - follicular_nonhodgkins_lymphoma,_large_cell_clinical
-            - follicular_nonhodgkins_lymphoma,_mixed_small_cleaved_cell_and_large_cell_clinical
-            - follicular_nonhodgkins_lymphoma,_small_cleaved_cell_clinical
-            - hodgkin_lymphoma,_nodular_lymphocyte_predominance_clinical
-            - large_cell_anaplastic_lymphoma
-            - lymphocyterich_classical_hodgkin_lymphoma
-            - malignant_immunoproliferative_disease_clinical
-            - malignant_lymphoma
-            - malignant_lymphoma_of_extranodal_and/or_solid_organ_site
-            - malignant_lymphoma_of_intraabdominal_lymph_nodes
-            - malignant_lymphoma_of_intrathoracic_lymph_nodes
-            - malignant_lymphoma_of_lymph_nodes_of_axilla_and/or_upper_limb
-            - malignant_lymphoma_of_lymph_nodes_of_head,_face_and/or_neck
-            - malignant_lymphoma_of_lymph_nodes_of_inguinal_region_and/or_lower_limb
-            - malignant_lymphoma_of_lymph_nodes_of_multiple_sites
-            - malignant_lymphoma_of_spleen
-            - mantle_cell_lymphoma
-            - marginal_zone_lymphoma
-            - neoplasm_of_intraabdominal_lymph_nodes
-            - neoplasm_of_intrapelvic_lymph_node
-            - neoplasm_of_intrathoracic_lymph_nodes
-            - neoplasm_of_lymph_node
-            - neoplasm_of_lymph_node_of_lower_limb
-            - neoplasm_of_lymph_nodes_of_upper_limb
-            - nodular_lymphoma
-            - nodular_lymphoma_of_extranodal_and/or_solid_organ_site
-            - nodular_lymphoma_of_intraabdominal_lymph_nodes
-            - nodular_lymphoma_of_intrapelvic_lymph_nodes
-            - nodular_lymphoma_of_lymph_nodes_of_head,_face_and_neck
-            - nodular_lymphoma_of_lymph_nodes_of_multiple_sites
-            - nonhodgkins_lymphoma_clinical
-            - nonhodgkins_lymphoma_of_extranodal_site
-            - primary_central_nervous_system_lymphoma
-            - primary_cutaneous_cd30+_large_tcell_lymphoma
-            - primary_cutaneous_tcell_lymphoma
-            - primary_mediastinal_thymic_large_bcell_lymphoma
         - name: Myelomastocytic
           types:
             - iga_myeloma
@@ -421,6 +371,57 @@ cancer_ontology:
       types: # General hematologic types that don't fit specific sub-categories
         - neoplasm_affecting_hematopoietic_structure
         - malignant_tumor_of_lymphoid_hemopoietic_and_related_tissue
+    - name: Lymphoma
+      types:
+        - bcell_lymphoma_clinical
+        - blastic_plasmacytoid_dendritic_cell_neoplasm
+        - burkitts_lymphoma_clinical
+        - classical_hodgkin_lymphoma
+        - cutaneous/peripheral_tcell_lymphoma
+        - diffuse_follicle_center_lymphoma
+        - diffuse_large_bcell_lymphoma_nodal/systemic_with_skin_involvement
+        - diffuse_nonhodgkins_lymphoma,_small_cell_clinical
+        - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
+        - follicular_low_grade_bcell_lymphoma
+        - follicular_nonhodgkins_lymphoma
+        - follicular_nonhodgkins_lymphoma_diffuse_follicle_center_subtype_grade_1
+        - follicular_nonhodgkins_lymphoma,_large_cell_clinical
+        - follicular_nonhodgkins_lymphoma,_mixed_small_cleaved_cell_and_large_cell_clinical
+        - follicular_nonhodgkins_lymphoma,_small_cleaved_cell_clinical
+        - hodgkin_lymphoma,_nodular_lymphocyte_predominance_clinical
+        - large_cell_anaplastic_lymphoma
+        - lymphocyterich_classical_hodgkin_lymphoma
+        - malignant_immunoproliferative_disease_clinical
+        - malignant_lymphoma
+        - malignant_lymphoma_of_extranodal_and/or_solid_organ_site
+        - malignant_lymphoma_of_intraabdominal_lymph_nodes
+        - malignant_lymphoma_of_intrathoracic_lymph_nodes
+        - malignant_lymphoma_of_lymph_nodes_of_axilla_and/or_upper_limb
+        - malignant_lymphoma_of_lymph_nodes_of_head,_face_and/or_neck
+        - malignant_lymphoma_of_lymph_nodes_of_inguinal_region_and/or_lower_limb
+        - malignant_lymphoma_of_lymph_nodes_of_multiple_sites
+        - malignant_lymphoma_of_spleen
+        - malignant_tumor_of_lymphoid_hemopoietic_and_related_tissue
+        - mantle_cell_lymphoma
+        - marginal_zone_lymphoma
+        - neoplasm_of_intraabdominal_lymph_nodes
+        - neoplasm_of_intrapelvic_lymph_node
+        - neoplasm_of_intrathoracic_lymph_nodes
+        - neoplasm_of_lymph_node
+        - neoplasm_of_lymph_node_of_lower_limb
+        - neoplasm_of_lymph_nodes_of_upper_limb
+        - nodular_lymphoma
+        - nodular_lymphoma_of_extranodal_and/or_solid_organ_site
+        - nodular_lymphoma_of_intraabdominal_lymph_nodes
+        - nodular_lymphoma_of_intrapelvic_lymph_nodes
+        - nodular_lymphoma_of_lymph_nodes_of_head,_face_and_neck
+        - nodular_lymphoma_of_lymph_nodes_of_multiple_sites
+        - nonhodgkins_lymphoma_clinical
+        - nonhodgkins_lymphoma_of_extranodal_site
+        - primary_central_nervous_system_lymphoma
+        - primary_cutaneous_cd30+_large_tcell_lymphoma
+        - primary_cutaneous_tcell_lymphoma
+        - primary_mediastinal_thymic_large_bcell_lymphoma
     - name: Nervous System
       types:
         - malignant_neoplasm_of_cerebrum_excluding_lobes_and_ventricles
