@@ -38,7 +38,8 @@ def group_dxs(row):
     for dx in original_dx.split(';'):
         dx = dx.strip()
         if dx in dx_to_systems:
-            systems_found.add(';'.join(dx_to_systems[dx]))
+            systems_found.update(dx_to_systems[dx])
+            #systems_found.add(';'.join(dx_to_systems[dx]))
 
     if systems_found:
         return ';'.join(sorted(systems_found))
