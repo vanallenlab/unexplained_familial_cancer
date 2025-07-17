@@ -42,12 +42,11 @@ workflow ANALYSIS_5_GSEA {
   }
 }
 
-Task T1_get_rows {
+task T1_get_rows {
   input {
     File variant_tsv
     Array[String] genes_of_interest
     Array[String] allowed_consequences
-    
   }
   command <<<
   python3 <<CODE
