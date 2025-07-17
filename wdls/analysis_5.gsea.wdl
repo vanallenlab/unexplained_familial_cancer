@@ -16,7 +16,7 @@ workflow ANALYSIS_5_GSEA {
     Array[String] allowed_consequences = ["frameshift_variant","stop_gained"]
   }
   File sample_data = "gs://~{workspace_bucket}/UFC_REFERENCE_FILES/analysis/~{cancer_type}/~{cancer_type}.metadata"
-  Array[String] genes_of_interest = "gs://~{workspace_bucket}/UFC_REFERENCE_FILES/gene_lists/" + biological_pathway + ".list"
+  Array[String] genes_of_interest = read_lines("gs://~{workspace_bucket}/UFC_REFERENCE_FILES/gene_lists/" + biological_pathway + ".list")
   Int negative_shards = 21
 
   # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
