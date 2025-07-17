@@ -27,7 +27,7 @@ workflow ANALYSIS_5_GSEA {
   }
 
   scatter (i in range(length(list_files_from_directory.out1) - negative_shards)){
-    call task_1_get_rows {
+    call T1_get_rows {
       input:
         genes_of_interest = genes_of_interest,
         allowed_consequences = allowed_consequences,
@@ -42,7 +42,7 @@ workflow ANALYSIS_5_GSEA {
   }
 }
 
-task_1_get_rows {
+Task T1_get_rows {
   input {
     File variant_tsv
     Array[String] genes_of_interest
@@ -77,7 +77,7 @@ task_1_get_rows {
   }
 }
 
-task task_1_gsea {
+task T2_gsea {
   input {
     File variant_counts
     Array[String] gene_list
