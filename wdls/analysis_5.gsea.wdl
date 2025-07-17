@@ -22,7 +22,7 @@ workflow ANALYSIS_5_GSEA {
   # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
   call Tasks.list_files_from_directory {
     input:
-      dir = analysis_10_output_dir,
+      dir = step_10_output_dir,
       suffix = ".tsv.gz" 
   }
 
@@ -37,7 +37,7 @@ workflow ANALYSIS_5_GSEA {
   }
   call Tasks.concatenateFiles {
     input:
-      files = task_1_get_rows.out1,
+      files = T1_get_rows.out1,
       output_name = biological_pathway
   }
 }
