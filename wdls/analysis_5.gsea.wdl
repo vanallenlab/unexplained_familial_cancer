@@ -53,8 +53,8 @@ task T1_get_rows {
   import pandas as pd
 
   df = pd.read_csv("~{variant_tsv}",sep='\t',index_col=False)
-  genes = "~{sep=' ', genes_of_interest}".split()
-  consequences = "~{sep=' ', allowed_consequences}".split()
+  genes = "~{sep=' ' genes_of_interest}".split()
+  consequences = "~{sep=' ' allowed_consequences}".split()
 
   # Split 'gene_consequence' into gene and consequence
   df[['gene', 'consequence']] = df['gene_consequence'].str.split('_', n=1, expand=True)
