@@ -35,9 +35,10 @@ workflow ANALYSIS_5_GSEA {
 
     }
   }
-  call Tasks.concatenatefiles {
+  call Tasks.concatenateFiles {
     input:
-      files = task_1_get_rows.out1
+      files = task_1_get_rows.out1,
+      output_name = biological_pathway
   }
 }
 
@@ -49,6 +50,7 @@ task_1_get_rows {
     
   }
   command <<<
+  python3 <<CODE
   import pandas as pd
 
   df = pd.read_csv("~{variant_tsv}",sep='\t',index_col=False)
@@ -61,8 +63,9 @@ task_1_get_rows {
   # Filter rows where both gene and consequence match
   df = df[df['gene'].isin(genes) & df['consequence'].isin(consequences)]
   df.to_csv("out.tsv",sep='\t',index=False)
-  >>>
+  CODE
   gzip out.tsv
+  >>>
   output{
     File out1 = "out.tsv.gz"
   }
@@ -82,40 +85,40 @@ task task_1_gsea {
   }
 
   command <<<
-    set -euo pipefail
+  set -euo pipefail
 
-    # Save gene list to file
-    printf "%s\n" ~{sep='\n' gene_list} > genes.txt
+  # Save gene list to file
+  printf "%s\n" ~{sep='\n' gene_list} > genes.txt
 
-    # Filter variant count matrix to just rows with matching genes
-    gunzip -c ~{variant_counts} > all_variants.tsv
-    grep -Ff genes.txt all_variants.tsv > filtered.tsv || true
+  # Filter variant count matrix to just rows with matching genes
+  gunzip -c ~{variant_counts} > all_variants.tsv
+  grep -Ff genes.txt all_variants.tsv > filtered.tsv || true
 
-    # Prepend header line (first line of original file)
-    head -n 1 all_variants.tsv > filtered_with_header.tsv
-    cat filtered.tsv >> filtered_with_header.tsv
+  # Prepend header line (first line of original file)
+  head -n 1 all_variants.tsv > filtered_with_header.tsv
+  cat filtered.tsv >> filtered_with_header.tsv
 
-    # Now parse using Python
-    python3 <<CODE
-    import pandas as pd
+  # Now parse using Python
+  python3 <<CODE
+  import pandas as pd
 
-    # Load the filtered data
-    df = pd.read_csv("filtered_with_header.tsv", sep="\t")
+  # Load the filtered data
+  df = pd.read_csv("filtered_with_header.tsv", sep="\t")
 
-    # Damage-related consequences
-    damaging = set(~{sep=', ' damaging_terms})
+  # Damage-related consequences
+  damaging = set(~{sep=', ' damaging_terms})
 
-    # Extract gene and consequence from the first column
-    df[['gene', 'consequence']] = df.iloc[:, 0].str.split('_', n=1, expand=True)
+  # Extract gene and consequence from the first column
+  df[['gene', 'consequence']] = df.iloc[:, 0].str.split('_', n=1, expand=True)
 
-    # Keep only rows with damaging consequences
-    df = df[df['consequence'].isin(damaging)]
+  # Keep only rows with damaging consequences
+  df = df[df['consequence'].isin(damaging)]
 
-    # Drop metadata columns, sum across rows for each patient
-    patient_counts = (df.iloc[:, 1:-2] > 0).astype(int).sum()
+  # Drop metadata columns, sum across rows for each patient
+  patient_counts = (df.iloc[:, 1:-2] > 0).astype(int).sum()
 
-    # Output to file
-    patient_counts.reset_index().to_csv("damaging_counts.tsv", sep="\t", header=False, index=False)
+  # Output to file
+  patient_counts.reset_index().to_csv("damaging_counts.tsv", sep="\t", header=False, index=False)
   CODE
   >>>
 
