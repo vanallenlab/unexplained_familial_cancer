@@ -8,15 +8,15 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_5_GSEA {
   input {
-    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_8_VISUALIZE_VEP/sharded_vcfs"
-    String cancer_type
+    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP"
+    String cancer_type = "colorectal"
     String analysis_5_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5_GSEA/"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
-    String biological_pathway = "Mismatch_Repair"
+    String biological_pathway = "Mismatch_repair"
     Array[String] allowed_consequences = ["frameshift_variant","stop_gained"]
   }
   File sample_data = "gs://~{workspace_bucket}/UFC_REFERENCE_FILES/analysis/~{cancer_type}/~{cancer_type}.metadata"
-  Array[String] genes_of_interest = read_lines("gs://~{workspace_bucket}/UFC_REFERENCE_FILES/gene_lists/" + biological_pathway + ".list")
+  Array[String] genes_of_interest = read_lines("gs://~{workspace_bucket}/UFC_REFERENCE_FILES/gene_list/" + biological_pathway + ".gene_list")
   Int negative_shards = 21
 
   # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
