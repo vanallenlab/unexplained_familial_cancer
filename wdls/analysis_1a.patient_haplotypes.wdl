@@ -75,7 +75,7 @@ task T2_data_process{
   roh_df = pd.read_csv("~{roh_file}", delim_whitespace=True, comment="#", header=None,
                      names=["Type", "Sample", "Chr", "Start", "End", "Length", "Markers", "Quality"])
   roh_df = roh_df[roh_df["Type"] == "RG"]
-
+  roh_df = roh_df[roh_df["Length"] > 100_000]
 
   # Get unique samples
   samples = sorted(roh_df["Sample"].unique())
