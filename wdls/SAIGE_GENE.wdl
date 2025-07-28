@@ -404,18 +404,20 @@ task process_vcf_part1 {
     # - AF < 10% in minor populations (MID, AMI, ASJ, OTH)
     # - AF < 1% in cohort
     awk -F'\t' '
-    BEGIN { OFS="\t" }
+    BEGIN { OFS = "\t" }
     {
-      # Replace missing AFs with 0
+      # Replace missing AFs (".") with 0 and convert to numeric
       for (i = 2; i <= 12; i++) {
-        $i = ($i == "." ? 0 : $i) + 0
+        if ($i == ".") $i = 0
+        $i += 0
       }
 
       if (
         $2  < 0.01 && $3  < 0.01 && $4  < 0.01 && $5  < 0.01 &&
         $6  < 0.01 && $7  < 0.01 && $8  < 0.10 && $9  < 0.10 &&
         $10 < 0.10 && $11 < 0.10 && $12 < 0.01
-      ) print $1
+      )
+        print $1
     }
     ' sorted_variants.txt > variant_ids_AF001.txt
 
