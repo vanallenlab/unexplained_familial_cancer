@@ -5,11 +5,11 @@
 
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
-workflow ANALYSIS_1A_CREATE_HAPLOTYPES {
+workflow ANALYSIS_1A_PATIENT_HAPLOTYPES {
   input {
 
     File genetic_map = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/filtered_genetic_map_hg38_withX.txt.gz"
-    String analysis_1a_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/HAPLOTYPE_DATA/"
+    String analysis_1a_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/PATIENT_HAPLOTYPES/"
     Array[String] chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"]
   }
   
