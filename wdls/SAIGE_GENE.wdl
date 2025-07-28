@@ -42,7 +42,7 @@ workflow SAIGE_GENE {
     }
 
     # Get the important variants to keep around 
-    call make_group_file_part1/ as make_group_file_part1_001 {
+    call make_group_file_part1 as make_group_file_part1_001 {
       input:
         vcf = process_vcf_part1.out1,
         autosomal_gene_file = autosomal_gene_file
