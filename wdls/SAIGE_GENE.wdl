@@ -16,7 +16,6 @@ workflow SAIGE_GENE {
     File sample_data
     File aou_phenotypes = "gs://fc-secure-d21aa6b0-1d19-42dc-93e3-42de3578da45/dfci-g2c-inputs/phenotypes/dfci-g2c.aou.phenos.tsv.gz"
     File non_aou_phenotypes = "gs://dfci-g2c-inputs/phenotypes/dfci-g2c.non_aou.phenos.tsv.gz"
-    File genes_of_interest = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/riaz_genes.list"
     String analysis_3_saige_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/"
     String single_sex_analysis
   }

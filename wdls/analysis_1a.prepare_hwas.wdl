@@ -5,40 +5,41 @@
 
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
-workflow ANALYSIS_1A_HWAS {
+workflow ANALYSIS_1A_CREATE_HAPLOTYPES {
   input {
 
-    String analysis_1_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/"
-    File genetic_map = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/genetic_map_hg38_withX.txt.gz"
-    String analysis_1a_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/HWAS/"
-    File chr_roh_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/roh.aou.chr22.txt"
-    String chr = "22"
+    File genetic_map = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/filtered_genetic_map_hg38_withX.txt.gz"
+    String analysis_1a_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/HAPLOTYPE_DATA/"
+    Array[String] chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"]
   }
-  String output_name = "chr" + chr + ".hwas"
-  call T1_split_genetic_map {
-    input:
-      genetic_map = genetic_map,
-      chr = chr 
-  }
-  scatter(i in range(length(T1_split_genetic_map.out1)-19)) {
-    call T2_data_process {
+  
+  scatter(chr in chromosomes) {
+    File chr_roh_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/roh.aou.chr" + chr + ".txt"
+    String output_name = "aou.chr" + chr + ".haplotypes"
+    call T1_split_genetic_map {
       input:
-        genetic_map = T1_split_genetic_map.out1[i],
-        roh_file = chr_roh_file, 
-        chr = chr
+        genetic_map = genetic_map,
+        chr = chr 
     }
+    scatter(i in range(length(T1_split_genetic_map.out1)-0)) {
+      call T2_data_process {
+        input:
+          genetic_map = T1_split_genetic_map.out1[i],
+          roh_file = chr_roh_file, 
+          chr = chr
+      }
+    }
+    call Tasks.concatenateFiles_noheader {
+      input:
+        files = T2_data_process.out1,
+        callset_name = output_name
+    }
+    call Tasks.copy_file_to_storage {
+      input:
+      text_file = concatenateFiles_noheader.out1,
+      output_dir = analysis_1a_output_dir    
+    } 
   }
-  call Tasks.concatenateFiles_noheader {
-    input:
-      files = T2_data_process.out1,
-      callset_name = output_name
-  }
-  #call Tasks.copy_file_to_storage {
-  #  input:
-  #   text_file = T4_runs_of_homozygosity.out1,
-  #   output_dir = analysis_1_output_dir
-  #    
-  #} 
 }
 
 task T2_data_process{
@@ -68,16 +69,13 @@ task T2_data_process{
           "haplotype": hap_id
       })
 
-  print(haplotypes[0:20])
   hap_df = pd.DataFrame(haplotypes)
-  print(hap_df.head())
 
   # Load ROH
   roh_df = pd.read_csv("~{roh_file}", delim_whitespace=True, comment="#", header=None,
                      names=["Type", "Sample", "Chr", "Start", "End", "Length", "Markers", "Quality"])
   roh_df = roh_df[roh_df["Type"] == "RG"]
 
-  print(roh_df.head())
 
   # Get unique samples
   samples = sorted(roh_df["Sample"].unique())
@@ -107,7 +105,6 @@ task T2_data_process{
                   (sample_roh["End"] > hap_start) &
                   (sample_roh["Start"] < hap_end)
               ]
-              print(f"Length of overlapping:{len(overlapping)}")
               # Merge overlapping intervals
               intervals = []
               for _, roh in overlapping.iterrows():
