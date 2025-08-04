@@ -393,7 +393,7 @@ task process_vcf_part1 {
     # Format: Variant ID + gnomAD subpopulation AFs + Cohort AF + Impact
     bcftools +split-vep ~{vcf} \
       -f '%ID\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_oth\t%AF\t%IMPACT\n' \
-      -d | uniq > extracted_variants.txt
+      -d 2>/dev/null | uniq > extracted_variants.txt
 
     # Sort and deduplicate
     sort -u extracted_variants.txt > sorted_variants.txt
@@ -402,8 +402,7 @@ task process_vcf_part1 {
     # - AF < 1% in major populations (AFR, EAS, AMR, FIN, NFE, SAS)
     # - AF < 10% in minor populations (MID, AMI, ASJ, OTH)
     # - AF < 1% in cohort
-    awk -F'\t' '
-    BEGIN { OFS = "\t" }
+    awk -F'\t' 'BEGIN { OFS = "\t" }
     {
       # Replace missing AFs (".") with 0 and convert to numeric
       for (i = 2; i <= 12; i++) {
@@ -411,34 +410,31 @@ task process_vcf_part1 {
         $i += 0
       }
 
-      if (
-        ($2  < 0.01) && ($3  < 0.01) && ($4  < 0.01) && ($5  < 0.01) &&
+      if (($2  < 0.01) && ($3  < 0.01) && ($4  < 0.01) && ($5  < 0.01) &&
         ($6  < 0.01) && ($7  < 0.01) && ($8  < 0.10) && ($9  < 0.10) &&
-        ($10 < 0.10) && ($11 < 0.10) && ($12 < 0.01)
-      ) {
+        ($10 < 0.10) && ($11 < 0.10) && ($12 < 0.01)) {
         print $1
       }
     }
-    ' sorted_variants.txt > variant_ids_AF001.txt
+    ' sorted_variants.txt > variant_ids.001.txt
 
     # Step 2b: Stricter filter:
     # - AF < 0.1% in major populations
     # - AF < 1% in minor populations
     # - AF < 0.1% in cohort
-    awk -F'\t' '
-    BEGIN { OFS="\t" }
+    awk -F'\t' 'BEGIN { OFS="\t" }
     {
       for (i = 2; i <= 12; i++) {
         $i = ($i == "." ? 0 : $i) + 0
       }
 
-      if (
-        $2  < 0.001 && $3  < 0.001 && $4  < 0.001 && $5  < 0.001 &&
-        $6  < 0.001 && $7  < 0.001 && $8  < 0.01 && $9  < 0.01 &&
-        $10 < 0.01 && $11 < 0.01 && $12 < 0.001
-      ) print $1
+      if (($2  < 0.001) && ($3  < 0.001) && ($4  < 0.001) && ($5  < 0.001) &&
+        ($6  < 0.001) && ($7  < 0.001) && ($8  < 0.01) && ($9  < 0.01) &&
+        ($10 < 0.01) && ($11 < 0.01) && ($12 < 0.001)) {
+        print $1
+      }
     }
-    ' sorted_variants.txt > variant_ids_AF0001.txt
+    ' sorted_variants.txt > variant_ids.0001.txt
 
     # Cleanup intermediate files
     rm extracted_variants.txt sorted_variants.txt

@@ -5,15 +5,15 @@
 
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
-workflow ANALYSIS_1B_PERFORM_HWAS {
+workflow ANALYSIS_1C_LOGISTIC_REGRESSION {
   input {
-    File step_12_data = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/genitourinary_system/genitourinary_system.metadata"
-    String cancer_type = "genitourinary_system"
+    String cancer_type = ""
  
-    String analysis_1a_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1A_HWAS/"
-    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1B_HWAS/" 
+    String analysis_1a_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1A_GENES/"
+    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1C_RESULTS/" 
   }
 
+  File step_12_data = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
   Int negative_shards = 0
 
   call Tasks.list_files_from_directory {
@@ -144,7 +144,7 @@ task T2_RunLogisticRegression {
 
   # Iterate over haplotypes
   for _, row in haplotype_df.iterrows():
-      hap_id = row['Haplotype']
+      hap_id = row['Genomic_Region']
       values = row[sample_list].astype(float).values
 
       # Skip invariant haplotypes
@@ -152,7 +152,8 @@ task T2_RunLogisticRegression {
           continue
 
       # Z-score normalize ROH values
-      hap_values = (values - values.mean()) / values.std()
+      #hap_values = (values - values.mean()) / values.std()
+      hap_values = ((values - values.mean()) / values.std()).round().astype(int)
 
       # Design matrix
       X = df[covariates].copy()

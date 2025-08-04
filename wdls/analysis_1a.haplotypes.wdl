@@ -8,8 +8,8 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 workflow ANALYSIS_1A_PATIENT_HAPLOTYPES {
   input {
 
-    File genetic_map = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/filtered_genetic_map_hg38_withX.txt.gz"
-    String analysis_1a_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/PATIENT_HAPLOTYPES/"
+    File processed_genetic_map = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/filtered_genetic_map_hg38_withX.txt.gz"
+    String analysis_1a_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1A_HAPLOTYPES/"
     Array[String] chromosomes = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"]
   }
   
@@ -18,7 +18,7 @@ workflow ANALYSIS_1A_PATIENT_HAPLOTYPES {
     String output_name = "aou.chr" + chr + ".haplotypes"
     call T1_split_genetic_map {
       input:
-        genetic_map = genetic_map,
+        genetic_map = processed_genetic_map,
         chr = chr 
     }
     scatter(i in range(length(T1_split_genetic_map.out1)-0)) {
@@ -83,7 +83,7 @@ task T2_data_process{
   # Prepare output file
   with open("aou.haplotyping_homozygosity_matrix.~{chr}.tsv", "w") as f:
       # Write header
-      f.write("Haplotype\t" + "\t".join(map(str, samples)) + "\n")
+      f.write("Genomic_Region\t" + "\t".join(map(str, samples)) + "\n")
 
 
       for _, hap in hap_df.iterrows():
@@ -122,7 +122,7 @@ task T2_data_process{
                       merged[-1][1] = max(merged[-1][1], interval[1])
 
               overlap_bp = sum(end - start for start, end in merged)
-              percent_homo = round((overlap_bp / hap_length) * 100, 2) if hap_length > 0 else 0.0
+              percent_homo = round((overlap_bp / hap_length), 2) if hap_length > 0 else 0.0
               row_vals.append(f"{percent_homo:.2f}")
 
           # Write this haplotype's row

@@ -81,7 +81,7 @@ task T1_Convert_To_TSV {
   grep -E 'HIGH|Pathogenic|Likely_pathogenic' tmp.txt > tmp2.txt || touch tmp2.txt
   rm tmp.txt
 
-  # Filter the File to only include CPGS
+  # Filter the File to only include Autosomal Dominant CPGS
   awk 'NR==FNR {cpg[$1]; next} $7 in cpg' <(grep AD ~{cpg_list} | grep -v RAD | cut -f1 ) tmp2.txt > tmp3.txt
 
   rm tmp2.txt
