@@ -1,6 +1,10 @@
-version 1.0
+# Unexplained Familial Cancer (UFC)
+# Copyright (c) 2023-Present, Noah Fields and the Dana-Farber Cancer Institute
+# Contact: Noah Fields <Noah_Fields@dfci.harvard.edu>
+# Distributed under the terms of the GNU GPL v2.0g
 
-workflow identify_pgs_thresholds {
+version 1.0
+workflow ANALYSIS_4D_COMPUTE_THRESHOLDS {
   input {
     String PGS_ID = ""
     String google_bucket = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
@@ -15,12 +19,6 @@ workflow identify_pgs_thresholds {
       phenos_file = phenos_file
   }
 
-  output {
-    File or2_thresholds = compute_thresholds.or2_thresholds
-    File or5_thresholds = compute_thresholds.or5_thresholds
-    File or2_samples = compute_thresholds.or2_samples
-    File or5_samples = compute_thresholds.or5_samples
-  }
 }
 
 task T1_compute_thresholds {
@@ -32,7 +30,7 @@ task T1_compute_thresholds {
     command <<<
     set -euo pipefail
 
-    python3 <<EOF
+    python3 <<CODE
     import pandas as pd
     import numpy as np
     from scipy.stats import fisher_exact
@@ -109,19 +107,18 @@ task T1_compute_thresholds {
         for score, ids in samples_or5.items():
             for i in ids:
                 f.write(f"{score}\t{i}\n")
-  EOF
-  >>>
+    CODE
+    >>>
 
-  output {
-    File or2_thresholds = "thresholds_or2.tsv"
-    File or5_thresholds = "thresholds_or5.tsv"
-    File or2_samples = "samples_or2.tsv"
-    File or5_samples = "samples_or5.tsv"
-  }
+    output {
+      File or2_thresholds = "thresholds_or2.tsv"
+      File or5_thresholds = "thresholds_or5.tsv"
+      File or2_samples = "samples_or2.tsv"
+      File or5_samples = "samples_or5.tsv"
+    }
 
-  runtime {
-    docker: "vanallenlab/pydata_stack"
-    memory: "4G"
-    cpu: 1
-  }
+    runtime {
+      docker: "vanallenlab/pydata_stack"
+      memory: "4G"
+    }
 }
