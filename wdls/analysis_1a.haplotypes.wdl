@@ -5,7 +5,7 @@
 
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
-workflow ANALYSIS_1A_PATIENT_HAPLOTYPES {
+workflow ANALYSIS_1A_HAPLOTYPES {
   input {
 
     File processed_genetic_map = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/filtered_genetic_map_hg38_withX.txt.gz"

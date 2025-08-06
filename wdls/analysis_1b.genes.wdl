@@ -5,18 +5,18 @@
 
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
-workflow ANALYSIS_1A_HWAS {
+workflow ANALYSIS_1B_GENES {
   input {
 
     String analysis_1_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/"
     String analysis_1b_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1B_GENES/"
     Array[String] chroms = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"]
-    File gene_regions_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/genes.coordinates.bed"
+    File gene_regions_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis_1b.bed.gz"
   }
 
   scatter(chr in chroms){
    File chr_roh_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/roh.aou.chr" + chr + ".txt"
-    String output_name = "aou.chr" + chr + ".exome.v4.hwas.tsv"
+    String output_name = "aou.chr" + chr + ".genes.tsv"
     call T2_data_process {
       input:
         roh_file = chr_roh_file,
@@ -28,7 +28,7 @@ workflow ANALYSIS_1A_HWAS {
     call Tasks.copy_file_to_storage {
       input:
         text_file = T2_data_process.out1,
-        output_dir = analysis_1a_output_dir
+        output_dir = analysis_1b_output_dir
     }
   }
 }
@@ -61,7 +61,7 @@ task T2_data_process{
   # The 'haplotype' ID can be a combination of chr_start_end or gene name
   haplotypes = []
   for index, row in gene_df.iterrows():
-      hap_id = f"{row['Chr']}_{row['Start']}_{row['End']}_{row['GeneName']}"
+      hap_id = f"{row['Chr']}_{int(row['Start'])}_{int(row['End'])}_{row['GeneName']}"
       haplotypes.append({
           "chr": row["Chr"],
           "start": row["Start"],

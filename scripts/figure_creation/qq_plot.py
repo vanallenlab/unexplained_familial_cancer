@@ -26,7 +26,8 @@ def main():
 	df = pd.read_csv(args.data, sep='\t', index_col=False)
 
     # Get dimensions for our analysis
-	max_mafs = sorted(list(set(df['max_MAF'])))
+	#max_mafs = sorted(list(set(df['max_MAF'])))
+	max_mafs = [0.01,0.001]
 	nrows = len(max_mafs)
 
 	groups = sorted(list(set(df['Group'])))
