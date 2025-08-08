@@ -11,7 +11,7 @@ workflow STEP_10_VISUALIZE_VEP {
     File aou_subjects
     File gene_list
     String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/"
-    String chr = "1" 
+    String chr = "22" 
   }
 
   call Tasks.gather_a_chromosome_level_vcfs {
@@ -25,7 +25,7 @@ workflow STEP_10_VISUALIZE_VEP {
       unsorted_vcf_list = gather_a_chromosome_level_vcfs.out1[0]
   }
 
-  Int negative_shards = 0
+  Int negative_shards = 35
 
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     call Convert_To_TSV {
@@ -314,7 +314,9 @@ task Convert_To_TSV {
       tmp.txt || touch tmp.txt
 
     # Sort and Filter to High and Moderate Impact Variants
-    grep -E 'HIGH|MODERATE' tmp.txt | sort -u >> ~{output_file}
+    if grep -q -E 'HIGH|MODERATE' tmp.txt; then
+        grep -E 'HIGH|MODERATE' tmp.txt | sort -u > ~{output_file}
+    fi
     gzip ~{output_file}
   >>>
   output {
