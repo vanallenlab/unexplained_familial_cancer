@@ -314,8 +314,7 @@ task Convert_To_TSV {
       tmp.txt || touch tmp.txt
 
     # Sort and Filter to High and Moderate Impact Variants
-    sort -u < tmp.txt | grep -E 'HIGH|MODERATE' >> ~{output_file}
-     
+    grep -E 'HIGH|MODERATE' tmp.txt | sort -u >> ~{output_file}
     gzip ~{output_file}
   >>>
   output {
