@@ -1066,7 +1066,7 @@ task sortSAIGE_Output {
     tail -n +2 ~{saige_output_001} | grep -v Cauchy > tmp_001.tsv
     tail -n +2 ~{saige_output_beta_001} | grep -v Cauchy > tmp.beta_001.tsv
     
-    paste <(cut -f1-5 tmp_001.tsv) <(cut -f6,7 tmp.beta_001.tsv) <(cut -f8- tmp_001.tsv) > tmp.updated_001.tsv
+    paste <(cut -f1-5 tmp_001.tsv) <(cut -f7,8 tmp.beta_001.tsv) <(cut -f8- tmp_001.tsv) > tmp.updated_001.tsv
     awk 'BEGIN{OFS="\t"} NR==1 {print; next} { $3 = 0.01; print }' tmp.updated_001.tsv > tmp.updated_again_001.tsv
     sort -k4,4g tmp.updated_again_001.tsv > tmp.final_001.tsv
 
@@ -1074,7 +1074,7 @@ task sortSAIGE_Output {
     tail -n +2 ~{saige_output_0001} | grep -v Cauchy > tmp_0001.tsv
     tail -n +2 ~{saige_output_beta_0001} | grep -v Cauchy > tmp.beta_0001.tsv
 
-    paste <(cut -f1-5 tmp_0001.tsv) <(cut -f6,7 tmp.beta_0001.tsv) <(cut -f8- tmp_0001.tsv) > tmp.updated_0001.tsv
+    paste <(cut -f1-5 tmp_0001.tsv) <(cut -f7,8 tmp.beta_0001.tsv) <(cut -f8- tmp_0001.tsv) > tmp.updated_0001.tsv
     awk 'BEGIN{OFS="\t"} NR==1 {print; next} { $3 = 0.001; print }' tmp.updated_0001.tsv > tmp.updated_again_0001.tsv
     sort -k4,4g tmp.updated_again_0001.tsv > tmp.final_0001.tsv
 

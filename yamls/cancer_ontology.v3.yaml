@@ -225,9 +225,6 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_ureter
             - primary_malignant_neoplasm_of_ureteric_orifice_of_urinary_bladder
             - primary_malignant_neoplasm_of_urinary_bladder_neck
-        - name: Testis
-          types:
-            - primary_malignant_neoplasm_of_testis
       types:
         - carcinoma_of_penis
         - neoplasm_of_urinary_system
