@@ -1078,8 +1078,9 @@ task sortSAIGE_Output {
     awk 'BEGIN{OFS="\t"} NR==1 {print; next} { $3 = 0.001; print }' tmp.updated_0001.tsv > tmp.updated_again_0001.tsv
     sort -k4,4g tmp.updated_again_0001.tsv > tmp.final_0001.tsv
 
+    cat tmp.final_001.tsv tmp.final_0001.tsv | sort -k4,4g > tmp.final_all.tsv
     # Put it all together
-    cat header.txt tmp.final_001.tsv tmp.final_0001.tsv > ~{out_filename}
+    cat header.txt tmp.final_all.tsv > ~{out_filename}
   >>>
   runtime{
     docker:"ubuntu:latest"
