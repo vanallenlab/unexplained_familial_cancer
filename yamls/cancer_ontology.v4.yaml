@@ -83,7 +83,6 @@ cancer_ontology:
         - malignant_neoplasm_of_rectum,_rectosigmoid_junction_and_anus
         - malignant_neoplasm,_overlapping_lesion_of_rectum,_anus_and_anal_canal
         - malignant_tumor_of_anal_canal
-        - malignant_tumor_of_anus
         - malignant_tumor_of_ascending_colon
         - malignant_tumor_of_cecum
         - malignant_tumor_of_colon
@@ -190,6 +189,7 @@ cancer_ontology:
       types:
         - gastrointestinal_stromal_tumor
         - malignant_neoplasm_of_gastrointestinal_tract
+        - malignant_tumor_of_anus
         - mucinous_adenocarcinoma_of_gastrointestinal_tract
         - neoplasm_of_digestive_system
         - neoplasm_of_digestive_tract
@@ -578,6 +578,9 @@ cancer_ontology:
             - squamous_cell_carcinoma_of_skin_of_face
             - squamous_cell_carcinoma_of_skin_of_lower_extremity
             - squamous_cell_carcinoma_of_upper_extremity
+            - squamous_cell_carcinoma_of_skin_of_lower_lip
+            - squamous_cell_carcinoma_of_skin_of_upper_lip
+            - squamous_cell_carcinoma_of_tongue
       types: # General skin types that don't fit specific sub-categories
         - malignant_neoplasm_of_canthus
         - malignant_neoplasm_of_lower_eyelid
