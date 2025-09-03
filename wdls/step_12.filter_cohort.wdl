@@ -13,7 +13,6 @@ workflow STEP_12_FILTER_COHORT {
     Int max_age = 200
     Int min_age = 0
     String cohorts = "aou"
-    String sex = "XX,XY"
     File explained_samples = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/samples_with_pvs.list"
     File pca = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_11_GENETIC_RELATEDNESS/ufc.eigenvec"
     File kinship = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_11_GENETIC_RELATEDNESS/ufc.kin0"

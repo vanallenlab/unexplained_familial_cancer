@@ -8,9 +8,9 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_4B_PRS {
   input {
-    File raw_prs_basename = "breast_system.PGS000015.raw.pgs" 
-    String PGS_ID = "PGS000015"
-    Array[String] cancer_types = ["basal_cell","breast","bone_and_soft_tissue","colorectal","gastrointestinal","thyroid","urinary","gynecologic","head_and_neck","hematologic","lymphoma","melanoma","prostate","squamous_cell","oropharyngeal","respiratory","nervous","testis"]
+    File raw_prs_basename = "PGS004691.raw.pgs" 
+    String PGS_ID = "PGS004691"
+    Array[String] cancer_types = ["kidney","bladder","respiratory"]
     String analysis_4_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
   }
@@ -39,14 +39,15 @@ workflow ANALYSIS_4B_PRS {
 
   call Tasks.concatenateFiles {
     input:
-      files = T5_get_summary_statistics.out1
+      files = T5_get_summary_statistics.out1,
+      output_name = PGS_ID
   }
 
-  #call Tasks.copy_file_to_storage {
-  #  input:
-  #    text_file = concatenateFiles.out1,
-  #    output_dir = analysis_4_output_dir
-  #}
+  call Tasks.copy_file_to_storage {
+    input:
+      text_file = concatenateFiles.out1,
+      output_dir = analysis_4_output_dir + "ALL_BY_ALL/"
+  }
 
 }
 
@@ -193,7 +194,7 @@ task T5_get_summary_statistics {
   controls = merged_df[merged_df['cancer'] == 'control']['pgs_score']
   t_stat, p_val = ttest_ind(cases, controls, equal_var=False)
 
-  f.write("\n\n~{cancer_type}\n\n".capitalize())
+  f.write("\n\n####~{cancer_type}####\n\n".capitalize())
   f.write(f"T-test p-value (case vs control): {p_val:.4e}\n")
 
   # 2. Mean and std of the two distributions
@@ -209,9 +210,14 @@ task T5_get_summary_statistics {
   # 4. Logistic regression of cancer status on PGS with covariates
   # Prepare design matrix
   merged_df['sex_binary'] = merged_df['inferred_sex'].map({'male': 1, 'm': 1, 'female': 0, 'f': 0})
+  merged_df['smoking_history'] = (
+      merged_df['smoking_history']
+      .replace("NA", 0)        # turn 'NA' into 0
+      .astype(float)           # force numeric dtype
+  )
 
   # Base covariates
-  covariates = ['pgs_score', 'PC1', 'PC2', 'PC3', 'PC4', 'age']
+  covariates = ['pgs_score', 'PC1', 'PC2', 'PC3', 'PC4', 'age', 'smoking_history']
 
   # Add 'sex_binary' if it varies
   if merged_df['sex_binary'].nunique() > 1:
@@ -220,8 +226,21 @@ task T5_get_summary_statistics {
   Xy = merged_df[covariates + ['cancer']].dropna()
 
   # Now safely split cancer out to y
-  X = Xy[covariates]
   y = Xy['cancer'].apply(lambda x: 0 if x == 'control' else 1)
+
+  # Check smoking history distribution by group
+  if 'smoking_history' in covariates:
+      tab = pd.crosstab(y, Xy['smoking_history'], dropna=False)
+
+      # Case group (y=1) and control group (y=0)
+      cases = Xy.loc[y == 1, 'smoking_history']
+      controls = Xy.loc[y == 0, 'smoking_history']
+
+      # Drop if all cases or all controls are the same (0 or 1 only)
+      if cases.nunique(dropna=True) <= 1 or controls.nunique(dropna=True) <= 1:
+          covariates.remove('smoking_history')
+
+  X = Xy[covariates]
 
   # Add constant for intercept
   X = sm.add_constant(X)
