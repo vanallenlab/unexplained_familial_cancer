@@ -159,6 +159,24 @@ cancer_ontology:
 
     - name: Urinary_System
       sub_systems:
+        - name: Bladder
+          types:
+            - carcinoma_of_bladder
+            - malignant_neoplasm_of_anterior_wall_of_urinary_bladder
+            - malignant_neoplasm_of_lateral_wall_of_urinary_bladder
+            - malignant_neoplasm,_overlapping_lesion_of_bladder
+            - malignant_tumor_of_trigone_of_urinary_bladder
+            - malignant_tumor_of_urinary_bladder
+            - malignant_tumor_of_vault_of_bladder
+            - neoplasm_of_bladder
+            - primary_malignant_neoplasm_of_bladder
+            - primary_malignant_neoplasm_of_dome_of_urinary_bladder
+            - primary_malignant_neoplasm_of_lateral_wall_of_urinary_bladder
+            - primary_malignant_neoplasm_of_posterior_wall_of_urinary_bladder
+            - primary_malignant_neoplasm_of_trigone_of_urinary_bladder
+            - primary_malignant_neoplasm_of_ureter
+            - primary_malignant_neoplasm_of_ureteric_orifice_of_urinary_bladder
+            - primary_malignant_neoplasm_of_urinary_bladder_neck
         - name: Kidney
           types:
             - clear_cell_carcinoma_of_kidney
@@ -477,7 +495,6 @@ cancer_ontology:
         - malignant_neuroendocrine_tumor_of_ileum
         - malignant_neuroendocrine_tumor_of_small_intestine
         - malignant_poorly_differentiated_neuroendocrine_carcinoma
-        - malignant_tumor_of_parotid_gland
         - medullary_thyroid_carcinoma
         - primary_malignant_neoplasm_of_adrenal_medulla
         - primary_malignant_neoplasm_of_islets_of_langerhans
@@ -499,6 +516,56 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_adrenal_gland
         - primary_malignant_neoplasm_of_endocrine_gland
         - primary_malignant_neoplasm_of_parathyroid_gland
+
+    - name: ENT
+      types:
+        - squamous_cell_carcinoma_of_tongue
+        - carcinoma_of_base_of_tongue
+        - malignant_tumor_of_base_of_tongue
+        - malignant_tumor_of_oropharynx
+        - malignant_tumor_of_tonsil
+        - overlapping_malignant_neoplasm_of_tongue
+        - primary_malignant_neoplasm_of_base_of_tongue
+        - primary_malignant_neoplasm_of_lateral_wall_of_oropharynx
+        - primary_malignant_neoplasm_of_oropharynx
+        - primary_malignant_neoplasm_of_tonsil
+        - primary_malignant_neoplasm_of_tonsillar_fossa
+        - primary_malignant_neoplasm_of_tonsillar_pillar
+        - primary_squamous_cell_carcinoma_of_palatine_tonsil
+        - malignant_tumor_of_nasopharynx
+        - primary_malignant_neoplasm_of_nasopharynx
+        - carcinomainsitu_of_oral_mucosa
+        - malignant_neoplasm,_overlapping_lesion_of_tongue
+        - malignant_tumor_of_aryepiglottic_fold__laryngeal_aspect
+        - malignant_tumor_of_supraglottis
+        - malignant_tumor_of_tongue
+        - primary_malignant_neoplasm_of_border_of_tongue
+        - primary_malignant_neoplasm_of_buccal_mucosa
+        - primary_malignant_neoplasm_of_floor_of_mouth
+        - primary_malignant_neoplasm_of_hard_palate
+        - primary_malignant_neoplasm_of_hypopharyngeal_aspect_of_aryepiglottic_fold
+        - primary_malignant_neoplasm_of_larynx
+        - primary_malignant_neoplasm_of_lower_gum
+        - primary_malignant_neoplasm_of_oral_cavity
+        - primary_malignant_neoplasm_of_palate
+        - primary_malignant_neoplasm_of_pharynx
+        - primary_malignant_neoplasm_of_subglottis
+        - primary_malignant_neoplasm_of_supraglottis
+        - primary_malignant_neoplasm_of_tongue
+        - squamous_cell_carcinoma_of_tongue
+        - malignant_tumor_of_pharynx
+        - primary_malignant_neoplasm_of_nasal_cavity
+        - malignant_tumor_of_nasal_cavity
+        - malignant_tumor_of_maxillary_sinus
+        - tumor_of_salivary_gland
+        - malignant_neoplasm_of_nasal_cavities,_middle_ear_and_accessory_sinuses
+        - malignant_tumor_of_ear,_nose_and_throat
+        - neoplasm_of_accessory_sinus
+        - primary_malignant_neoplasm_of_ethmoidal_sinus
+        - primary_malignant_neoplasm_of_maxillary_sinus
+        - primary_malignant_neoplasm_of_parotid_gland
+        - malignant_tumor_of_parotid_gland
+        - malignant_neoplasm_of_thorax
 
     - name: Environmental Virus
       sub_systems:
@@ -538,108 +605,40 @@ cancer_ontology:
             - vaginal_intraepithelial_neoplasia_grade_1
             - vulval_intraepithelial_neoplasia_grade_1
             - vulval_intraepithelial_neoplasia_grade_2
-
-        - name: Oropharynx
-          types: 
-            - squamous_cell_carcinoma_of_tongue
-            - carcinoma_of_base_of_tongue
-            - malignant_tumor_of_base_of_tongue
-            - malignant_tumor_of_oropharynx
-            - malignant_tumor_of_tonsil
-            - overlapping_malignant_neoplasm_of_tongue
-            - primary_malignant_neoplasm_of_base_of_tongue
-            - primary_malignant_neoplasm_of_lateral_wall_of_oropharynx
-            - primary_malignant_neoplasm_of_oropharynx
-            - primary_malignant_neoplasm_of_tonsil
-            - primary_malignant_neoplasm_of_tonsillar_fossa
-            - primary_malignant_neoplasm_of_tonsillar_pillar
-            - primary_squamous_cell_carcinoma_of_palatine_tonsil
         - name: EBV
           types:
-            - malignant_tumor_of_nasopharynx
-            - primary_malignant_neoplasm_of_nasopharynx
             - burkitts_lymphoma_clinical
       types:
         - primary_malignant_neoplasm_of_urethra
         - carcinoma_of_penis
-    - name: Environmental Smoking Alcohol
-      sub_systems:
-        - name: Bladder
-          types:
-            - carcinoma_of_bladder
-            - malignant_neoplasm_of_anterior_wall_of_urinary_bladder
-            - malignant_neoplasm_of_lateral_wall_of_urinary_bladder
-            - malignant_neoplasm,_overlapping_lesion_of_bladder
-            - malignant_tumor_of_trigone_of_urinary_bladder
-            - malignant_tumor_of_urinary_bladder
-            - malignant_tumor_of_vault_of_bladder
-            - neoplasm_of_bladder
-            - primary_malignant_neoplasm_of_bladder
-            - primary_malignant_neoplasm_of_dome_of_urinary_bladder
-            - primary_malignant_neoplasm_of_lateral_wall_of_urinary_bladder
-            - primary_malignant_neoplasm_of_posterior_wall_of_urinary_bladder
-            - primary_malignant_neoplasm_of_trigone_of_urinary_bladder
-            - primary_malignant_neoplasm_of_ureter
-            - primary_malignant_neoplasm_of_ureteric_orifice_of_urinary_bladder
-            - primary_malignant_neoplasm_of_urinary_bladder_neck
-        - name: Lung
-          types:
-            - adenocarcinoma_of_right_lung
-            - malignant_neoplasm_of_lower_lobe_of_lung
-            - malignant_neoplasm_of_middle_lobe,_bronchus_or_lung
-            - malignant_neoplasm_of_middle_lobe_of_lung
-            - malignant_neoplasm_of_right_upper_lobe_of_lung
-            - malignant_neoplasm_of_upper_lobe,_bronchus_or_lung
-            - malignant_neoplasm,_overlapping_lesion_of_bronchus_and_lung
-            - malignant_tumor_of_lung
-            - overlapping_malignant_neoplasm_of_bronchus_and_lung
-            - primary_adenocarcinoma_of_lung
-            - primary_malignant_neoplasm_of_bronchus_of_left_upper_lobe
-            - primary_malignant_neoplasm_of_left_upper_lobe_of_lung
-            - primary_malignant_neoplasm_of_lower_lobe,_bronchus_or_lung
-            - primary_malignant_neoplasm_of_middle_lobe,_bronchus_or_lung
-            - primary_malignant_neoplasm_of_upper_lobe,_bronchus_or_lung
-            - neoplasm_of_respiratory_tract
-            - primary_malignant_neoplasm_of_bronchus
-            - primary_malignant_neoplasm_of_respiratory_tract
-            - primary_malignant_neoplasm_of_main_bronchus
-            - tumor_of_respiratory_system
-            - malignant_neoplasm_of_lower_respiratory_tract
 
+    - name: Lung
       types:
-        - carcinomainsitu_of_oral_mucosa
-        - malignant_neoplasm,_overlapping_lesion_of_tongue
-        - malignant_tumor_of_aryepiglottic_fold__laryngeal_aspect
-        - malignant_tumor_of_supraglottis
-        - malignant_tumor_of_tongue
-        - primary_malignant_neoplasm_of_border_of_tongue
-        - primary_malignant_neoplasm_of_buccal_mucosa
-        - primary_malignant_neoplasm_of_floor_of_mouth
-        - primary_malignant_neoplasm_of_hard_palate
-        - primary_malignant_neoplasm_of_hypopharyngeal_aspect_of_aryepiglottic_fold
-        - primary_malignant_neoplasm_of_larynx
-        - primary_malignant_neoplasm_of_lower_gum
-        - primary_malignant_neoplasm_of_oral_cavity
-        - primary_malignant_neoplasm_of_palate
-        - primary_malignant_neoplasm_of_pharynx
-        - primary_malignant_neoplasm_of_subglottis
-        - primary_malignant_neoplasm_of_supraglottis
-        - primary_malignant_neoplasm_of_tongue
-        - squamous_cell_carcinoma_of_tongue
+        - adenocarcinoma_of_right_lung
+        - malignant_neoplasm_of_lower_lobe_of_lung
+        - malignant_neoplasm_of_middle_lobe,_bronchus_or_lung
+        - malignant_neoplasm_of_middle_lobe_of_lung
+        - malignant_neoplasm_of_right_upper_lobe_of_lung
+        - malignant_neoplasm_of_upper_lobe,_bronchus_or_lung
+        - malignant_neoplasm,_overlapping_lesion_of_bronchus_and_lung
+        - malignant_tumor_of_lung
+        - overlapping_malignant_neoplasm_of_bronchus_and_lung
+        - primary_adenocarcinoma_of_lung
+        - primary_malignant_neoplasm_of_bronchus_of_left_upper_lobe
+        - primary_malignant_neoplasm_of_left_upper_lobe_of_lung
+        - primary_malignant_neoplasm_of_lower_lobe,_bronchus_or_lung
+        - primary_malignant_neoplasm_of_middle_lobe,_bronchus_or_lung
+        - primary_malignant_neoplasm_of_upper_lobe,_bronchus_or_lung
+        - neoplasm_of_respiratory_tract
+        - primary_malignant_neoplasm_of_bronchus
+        - primary_malignant_neoplasm_of_respiratory_tract
+        - primary_malignant_neoplasm_of_main_bronchus
+        - tumor_of_respiratory_system
+        - malignant_neoplasm_of_lower_respiratory_tract
 
     - name: Environmental Miscellaneous
       types:
         - mesothelioma_malignant,_clinical_disorder
-        - malignant_tumor_of_pharynx
-        - primary_malignant_neoplasm_of_nasal_cavity
-        - malignant_tumor_of_nasal_cavity
-        - malignant_tumor_of_maxillary_sinus
-        - tumor_of_salivary_gland
-        - malignant_neoplasm_of_nasal_cavities,_middle_ear_and_accessory_sinuses
-        - malignant_tumor_of_ear,_nose_and_throat
-        - neoplasm_of_accessory_sinus
-        - primary_malignant_neoplasm_of_ethmoidal_sinus
-        - primary_malignant_neoplasm_of_maxillary_sinus
         - malignant_mesothelioma_of_pleura
         - primary_malignant_neoplasm_of_pleura
         - large_cell_anaplastic_lymphoma
@@ -657,7 +656,6 @@ cancer_ontology:
         - malignant_tumor_of_pelvis
         - primary_malignant_neoplasm_of_the_peritoneum
         - primary_malignant_neoplasm_of_intraabdominal_organs
-        - malignant_neoplasm_of_thorax
         - malignant_neoplasm_of_upper_limb
         - malignant_tumor_of_unknown_origin
         - multiple_endocrine_neoplasia,_type_1
@@ -680,6 +678,5 @@ cancer_ontology:
         - malignant_tumor_of_face
         - malignant_tumor_of_head_and_neck
         - malignant_tumor_of_neck
-        - primary_malignant_neoplasm_of_parotid_gland
         - primary_malignant_neoplasm_of_head
         - malignant_tumor_of_lip

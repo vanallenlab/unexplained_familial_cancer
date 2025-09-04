@@ -106,7 +106,7 @@ task T1_get_rows {
   df_075 = df[df['gene_impact'].isin(
       [f"{g}_{suffix}" for g in genes for suffix in ["REVEL075"]]
   )]
-  df_050.to_csv("revel075.tsv",sep='\t',index=False) 
+  df_075.to_csv("revel075.tsv",sep='\t',index=False) 
   CODE
   >>>
   output{
@@ -169,25 +169,31 @@ task T2_gsea {
 
   # Create binary 'sex_binary': 0 = female, 1 = male (or anything else)
   merged['sex_binary'] = merged['inferred_sex'].apply(lambda x: 0 if x == 'female' else 1)
-  merged_df['smoking_history'] = (
-      merged_df['smoking_history']
-      .replace("NA", 0)        # turn 'NA' into 0
-      .astype(float)           # force numeric dtype
+  # Convert smoking_history to numeric (force errors to NaN, then fill with 0)
+  merged['smoking_history'] = (
+      pd.to_numeric(merged['smoking_history'], errors='coerce')
+      .fillna(0)     # or could use .fillna(merged['smoking_history'].mean())
   )
 
   # Define covariates to zscore
-  covariates = [f"PC{i}" for i in range(1, 5)] + ['age',"num_pathogenic_variants"]
+  covariates = [f"PC{i}" for i in range(1, 5)] + ['age']
   merged[covariates] = merged[covariates].apply(zscore)
-
-  # Z-score these covariates (handle missing data safely)
-  merged[covariates] = merged[covariates].apply(lambda col: zscore(col.fillna(col.mean())))
+  merged['num_pathogenic_variants_bin'] = (merged['num_pathogenic_variants'] >= 1).astype(int)
+  covariates.append('num_pathogenic_variants_bin')
 
   # Add 'sex_binary' to covariates only if it varies
   if merged['sex_binary'].nunique() > 1:
       covariates.append('sex_binary')
-  # Add 'sex_binary' to covariates only if it varies
+
+  # Add 'smoking_history' to covariates only if it varies
   if merged['smoking_history'].nunique() > 1:
-      covariates.append('smoking_history')
+      # Check for perfect separation
+      cases = merged.loc[merged['is_case'] == 1, 'smoking_history']
+      controls = merged.loc[merged['is_case'] == 0, 'smoking_history']
+    
+      # Drop if all cases or all controls are the same (0 or 1 only)
+      if cases.nunique(dropna=True) > 1 and controls.nunique(dropna=True) > 1:
+          covariates.append('smoking_history')
 
   # Covariates
   X = merged[covariates]
@@ -200,16 +206,26 @@ task T2_gsea {
   model = sm.Logit(y, X)
   result = model.fit()
 
-  # Extract stats
-  coef = result.params[1]              # beta for predictor (assuming 1 predictor after intercept)
-  se = result.bse[1]                   # standard error
-  ci_low, ci_high = result.conf_int().iloc[1]  # 95% CI
-  pval = result.pvalues[1]             # p-value
+  try:
+      # Fit logistic regression
+      model = sm.Logit(y, X)
+      result = model.fit(disp=False)
 
-  # Write one-line output
+      coef = result.params[1]              # beta
+      se = result.bse[1]                   # standard error
+      ci_low, ci_high = result.conf_int().iloc[1]  # 95% CI
+      pval = result.pvalues[1]             # p-value
+
+      row = f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\t{pval:.3e}\t{coef:.4f}\t{ci_low:.4f}\t{ci_high:.4f}\n"
+
+  except Exception:
+      # If it fails, return NA line
+      row = f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\tNA\tNA\tNA\tNA\n"
+
+  # Write header + result
   with open("logistic_regression_summary.txt", "w") as f:
-      f.write("cancer\tPathogenic Threshold\tAF\tp_value\tbeta\t95%_CI_lower\t95%_CI_upper\n")
-      f.write(f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\t{pval:.3e}\t{coef:.4f}\t{ci_low:.4f}\t{ci_high:.4f}\n")
+      f.write("cancer\tPathogenic_Threshold\tAF\tp_value\tbeta\t95%_CI_lower\t95%_CI_upper\n")
+      f.write(row)
 
   CODE
   >>>
