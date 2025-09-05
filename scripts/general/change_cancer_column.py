@@ -63,67 +63,14 @@ def count_pgc(row):
     if not original_dx or original_dx == 'nan':
         return 0
 
-    ehr_primary_indicators = [
-        'primary_malignant_neoplasm_of',
-        'primary_malignant_neuroendocrine_neoplasm_of',
-        'primary_basal_cell_carcinoma_of',
-        'primary_low_grade_serous_adenocarcinoma_of',
-        'primary_adenocarcinoma_of',
-        'primary_squamous_cell_carcinoma_of',
-        'primary_central_nervous_system',
-        'primary_cutaneous',
-        'primary_mediastinal_thymic_large_bcell_lymphoma',
-        'fibrohistiocytic_tumor',
-        'gastrointestinal_stromal_tumor',
-        'infiltrating_ductal_carcinoma_of',
-        'infiltrating_duct_carcinoma_of',
-        'inflammatory_carcinoma_of',
-        'cholangiocarcinoma_of_biliary_tract',
-        'intrahepatic_bile_duct_carcinoma',
-        'clear_cell_carcinoma_of_kidney',
-        'renal_cell_carcinoma',
-        'clear_cell_adenocarcinoma_of_ovary',
-        'serous_cystadenoma_borderline_malignancy_of_ovary',
-        'endometrial_intraepithelial_neoplasia',
-        'acute_leukemia',
-        'acute_lymphoid_leukemia',
-        'acute_myeloid_leukemia',
-        'acute_promyelocytic_leukemia',
-        'chronic_leukemia',
-        'chronic_lymphoid_leukemia',
-        'chronic_myeloid_leukemia',
-        'chronic_myelomonocytic_leukemia',
-        'multiple_myeloma',
-        'hodgkin_lymphoma',
-        'follicular_low_grade_bcell_lymphoma',
-        'mantle_cell_lymphoma',
-        'marginal_zone_lymphoma',
-        'malignant_melanoma_of',
-        'microcystic_adnexal_carcinoma',
-        'sebaceous_adenocarcinoma_of',
-        'carcinoid_tumor_of',
-        'medullary_thyroid_carcinoma',
-        'follicular_thyroid_carcinoma',
-        'papillary_thyroid_carcinoma',
-        'squamous_cell_carcinoma_of',
-        'carcinomainsitu_of',
-        'cervical_intraepithelial_neoplasia',
-        'liver_cell_carcinoma',
-        'vaginal_intraepithelial_neoplasia',
-        'vulval_intraepithelial_neoplasia',
-        'burkitts_lymphoma',
-        'adenocarcinoma_of_',
-        'mesothelioma_malignant',
-        'malignant_mesothelioma_of'
-    ]
-    
-    # Split by semicolon and keep only terms containing "primary"
+    ehr_primary_indicators = ['primary']
+
+    # Split by semicolon and keep only terms containing an indicator
     diagnoses = [
         dx.strip() 
         for dx in original_dx.split(';') 
         if any(ind in dx.lower() for ind in ehr_primary_indicators)
     ]
-
 
     # Map each dx to YAML system(s), then flatten
     mapped_systems = []
@@ -131,8 +78,10 @@ def count_pgc(row):
         if dx in dx_to_systems:
             mapped_systems.extend(dx_to_systems[dx])
 
-    # Count how many are in the PGC list
-    return sum(sys.lower() in [c.lower() for c in pgc_cancers] for sys in mapped_systems)
+    # Use a set to avoid double-counting the same PGC category
+    unique_systems = set(sys.lower() for sys in mapped_systems)
+    return sum(sys in [c.lower() for c in pgc_cancers] for sys in unique_systems)
+
 
 
 # Apply to dataframe
