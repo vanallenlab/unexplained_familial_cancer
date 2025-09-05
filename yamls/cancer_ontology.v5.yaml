@@ -102,7 +102,7 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_sigmoid_colon
         - primary_malignant_neoplasm_of_transverse_colon
 
-    - name: Gastrointestinal System
+    - name: Gastrointestinal
       sub_systems:
         - name: Stomach
           types:
@@ -128,7 +128,7 @@ cancer_ontology:
             - malignant_tumor_of_lower_third_of_esophagus
             - primary_malignant_neoplasm_of_esophagus
             - primary_malignant_neoplasm_of_lower_third_of_esophagus
-        - name: Bile Duct
+        - name: Biliary
           types:
             - cholangiocarcinoma_of_biliary_tract
             - intrahepatic_bile_duct_carcinoma
@@ -211,8 +211,6 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_body_of_uterus
             - primary_malignant_neoplasm_of_isthmus_of_uterus
             - primary_malignant_neoplasm_of_uterus
-        - name: Endometrial
-          types:
             - endometrial_intraepithelial_neoplasia
             - malignant_neoplasm_of_endometrium_of_corpus_uteri
             - neoplasm_of_endometrium
@@ -276,7 +274,6 @@ cancer_ontology:
             - bcell_lymphoma_clinical
             - diffuse_follicle_center_lymphoma
             - diffuse_large_bcell_lymphoma_nodal/systemic_with_skin_involvement
-            - diffuse_nonhodgkins_lymphoma,_small_cell_clinical
             - follicular_low_grade_bcell_lymphoma
             - follicular_nonhodgkins_lymphoma
             - follicular_nonhodgkins_lymphoma_diffuse_follicle_center_subtype_grade_1
@@ -315,7 +312,7 @@ cancer_ontology:
         - nodular_lymphoma_of_lymph_nodes_of_head,_face_and_neck
         - nodular_lymphoma_of_lymph_nodes_of_multiple_sites
 
-    - name: Nervous System
+    - name: Nervous
       sub_systems:
         - name: Eye
           types:
@@ -360,7 +357,7 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_prostate
         - recurrent_malignant_neoplasm_of_prostate
 
-    - name: Skin System
+    - name: Skin
       sub_systems:
         - name: Basal Cell Carcinoma
           types:
@@ -495,7 +492,8 @@ cancer_ontology:
         - malignant_neuroendocrine_tumor_of_ileum
         - malignant_neuroendocrine_tumor_of_small_intestine
         - malignant_poorly_differentiated_neuroendocrine_carcinoma
-        - medullary_thyroid_carcinoma
+        - medullary_thyroid_carcinoma # medullary thyroid is a neuroendocrine tumor
+        - primary_malignant_neoplasm_of_adrenal_gland # adrenal is neuroendocrine or endocrine depending on if its in medulla or cortex: patient has neuroendocrine tumor
         - primary_malignant_neoplasm_of_adrenal_medulla
         - primary_malignant_neoplasm_of_islets_of_langerhans
         - primary_malignant_neoplasm_of_pituitary_gland
@@ -512,10 +510,11 @@ cancer_ontology:
               - malignant_tumor_of_thyroid_gland
               - papillary_thyroid_carcinoma
               - primary_malignant_neoplasm_of_thyroid_gland
+        - name: Parathyroid
+            types:
+              - primary_malignant_neoplasm_of_parathyroid_gland
       types:
-        - primary_malignant_neoplasm_of_adrenal_gland
         - primary_malignant_neoplasm_of_endocrine_gland
-        - primary_malignant_neoplasm_of_parathyroid_gland
 
     - name: ENT
       types:
@@ -552,7 +551,6 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_subglottis
         - primary_malignant_neoplasm_of_supraglottis
         - primary_malignant_neoplasm_of_tongue
-        - squamous_cell_carcinoma_of_tongue
         - malignant_tumor_of_pharynx
         - primary_malignant_neoplasm_of_nasal_cavity
         - malignant_tumor_of_nasal_cavity
