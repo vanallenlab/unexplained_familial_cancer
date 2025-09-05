@@ -252,6 +252,7 @@ def main():
                         'ancestry matching [default: keep all samples]')
     parser.add_argument('--min-age',required = False, help='minimum age for the study')
     parser.add_argument('--max-age',required = False, help='maximum age for the study')
+    parser.add_argument('--min-cancers', type=int, required = False, default = 1, help='minimum amount of cancers a case must have')
     parser.add_argument('--apparent_aneuploidies',required = False, help='allowed ploidies')
     parser.add_argument('--sex-karyotypes',required = False, help='allowed sex ploidies')
     parser.add_argument('--outfile', required=True, help='output.tsv')
@@ -319,6 +320,12 @@ def main():
             meta =meta[meta['cancer'].str.contains(f"control|{args.cancer_subtype}")]
         else:
             meta =meta[(meta['cancer'] == "control") | (meta['original_dx'].str.contains(args.cancer_subtype))]
+
+    # Filter to 0 cancers (controls) or more than X cancers if specified
+    if args.min_cancers > 1:
+        # Keep controls (0 cancers) OR cases with >= min_cancers
+        df = df[(df['Possibly_Genetic_Cancers'] == 0) | 
+                (df['Possibly_Genetic_Cancers'] >= args.min_cancers)]
 
     # Remove samples with irrelevant cancer diagnosis for this study
     sample_size3 = len(meta)

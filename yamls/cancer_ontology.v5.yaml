@@ -1,7 +1,7 @@
 cancer_ontology:
   description: An ontology of cancer types categorized by organ systems.
   systems:
-    - name: Bone and Soft Tissue
+    - name: Sarcoma
       sub_systems:
         - name: Bone
           types:
@@ -325,24 +325,24 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_eye
             - primary_malignant_neoplasm_of_orbit
             - primary_malignant_neoplasm_of_retina_primary
-      `  - name: Meninges
+        - name: Meninges
           types:
             - neoplasm_of_meninges
             - primary_malignant_neoplasm_of_cerebral_meninges
             - primary_malignant_neoplasm_of_meninges
             - primary_malignant_neoplasm_of_spinal_meninges
-         - name: Brain
-           types:
-             - malignant_neoplasm_of_cerebrum_excluding_lobes_and_ventricles
-             - malignant_neoplasm,_overlapping_lesion_of_brain
-             - neoplasm_of_brain
-             - primary_malignant_neoplasm_of_brain
-             - primary_malignant_neoplasm_of_cerebellum
-             - primary_malignant_neoplasm_of_frontal_lobe
-             - primary_malignant_neoplasm_of_parietal_lobe
-             - primary_malignant_neoplasm_of_temporal_lobe
-             - primary_malignant_neoplasm_of_cerebral_ventricle
-             - primary_malignant_neoplasm_of_cerebrum
+        - name: Brain
+          types:
+            - malignant_neoplasm_of_cerebrum_excluding_lobes_and_ventricles
+            - malignant_neoplasm,_overlapping_lesion_of_brain
+            - neoplasm_of_brain
+            - primary_malignant_neoplasm_of_brain
+            - primary_malignant_neoplasm_of_cerebellum
+            - primary_malignant_neoplasm_of_frontal_lobe
+            - primary_malignant_neoplasm_of_parietal_lobe
+            - primary_malignant_neoplasm_of_temporal_lobe
+            - primary_malignant_neoplasm_of_cerebral_ventricle
+            - primary_malignant_neoplasm_of_cerebrum
       types:      
         - malignant_neoplasm_of_peripheral_nerves_of_head,_face_and_neck
         - primary_malignant_neoplasm_of_central_nervous_system
@@ -505,53 +505,43 @@ cancer_ontology:
     - name: Endocrine
       sub_systems:
         - name: Thyroid
-            types:
-              - follicular_thyroid_carcinoma
-              - malignant_tumor_of_thyroid_gland
-              - papillary_thyroid_carcinoma
-              - primary_malignant_neoplasm_of_thyroid_gland
+          types:
+            - follicular_thyroid_carcinoma
+            - malignant_tumor_of_thyroid_gland
+            - papillary_thyroid_carcinoma
+            - primary_malignant_neoplasm_of_thyroid_gland
         - name: Parathyroid
-            types:
-              - primary_malignant_neoplasm_of_parathyroid_gland
+          types:
+            - primary_malignant_neoplasm_of_parathyroid_gland
       types:
         - primary_malignant_neoplasm_of_endocrine_gland
 
-    - name: ENT
+
+    - name: ENT # Non Viral
+      sub_systems:
+        - name: Oral Cavity
+          types:
+            - squamous_cell_carcinoma_of_tongue
+            - overlapping_malignant_neoplasm_of_tongue
+            - carcinomainsitu_of_oral_mucosa
+            - malignant_neoplasm,_overlapping_lesion_of_tongue
+            - malignant_tumor_of_tongue
+            - primary_malignant_neoplasm_of_border_of_tongue
+            - primary_malignant_neoplasm_of_buccal_mucosa
+            - primary_malignant_neoplasm_of_floor_of_mouth
+            - primary_malignant_neoplasm_of_hard_palate
+            - primary_malignant_neoplasm_of_lower_gum
+            - primary_malignant_neoplasm_of_oral_cavity
+            - primary_malignant_neoplasm_of_tongue
+        - name: Hypopharyngeal Laryngeal
+          types:
+            - malignant_tumor_of_aryepiglottic_fold__laryngeal_aspect
+            - malignant_tumor_of_supraglottis
+            - primary_malignant_neoplasm_of_hypopharyngeal_aspect_of_aryepiglottic_fold
+            - primary_malignant_neoplasm_of_larynx
+            - primary_malignant_neoplasm_of_subglottis
+            - primary_malignant_neoplasm_of_supraglottis
       types:
-        - squamous_cell_carcinoma_of_tongue
-        - carcinoma_of_base_of_tongue
-        - malignant_tumor_of_base_of_tongue
-        - malignant_tumor_of_oropharynx
-        - malignant_tumor_of_tonsil
-        - overlapping_malignant_neoplasm_of_tongue
-        - primary_malignant_neoplasm_of_base_of_tongue
-        - primary_malignant_neoplasm_of_lateral_wall_of_oropharynx
-        - primary_malignant_neoplasm_of_oropharynx
-        - primary_malignant_neoplasm_of_tonsil
-        - primary_malignant_neoplasm_of_tonsillar_fossa
-        - primary_malignant_neoplasm_of_tonsillar_pillar
-        - primary_squamous_cell_carcinoma_of_palatine_tonsil
-        - malignant_tumor_of_nasopharynx
-        - primary_malignant_neoplasm_of_nasopharynx
-        - carcinomainsitu_of_oral_mucosa
-        - malignant_neoplasm,_overlapping_lesion_of_tongue
-        - malignant_tumor_of_aryepiglottic_fold__laryngeal_aspect
-        - malignant_tumor_of_supraglottis
-        - malignant_tumor_of_tongue
-        - primary_malignant_neoplasm_of_border_of_tongue
-        - primary_malignant_neoplasm_of_buccal_mucosa
-        - primary_malignant_neoplasm_of_floor_of_mouth
-        - primary_malignant_neoplasm_of_hard_palate
-        - primary_malignant_neoplasm_of_hypopharyngeal_aspect_of_aryepiglottic_fold
-        - primary_malignant_neoplasm_of_larynx
-        - primary_malignant_neoplasm_of_lower_gum
-        - primary_malignant_neoplasm_of_oral_cavity
-        - primary_malignant_neoplasm_of_palate
-        - primary_malignant_neoplasm_of_pharynx
-        - primary_malignant_neoplasm_of_subglottis
-        - primary_malignant_neoplasm_of_supraglottis
-        - primary_malignant_neoplasm_of_tongue
-        - malignant_tumor_of_pharynx
         - primary_malignant_neoplasm_of_nasal_cavity
         - malignant_tumor_of_nasal_cavity
         - malignant_tumor_of_maxillary_sinus
@@ -563,18 +553,17 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_maxillary_sinus
         - primary_malignant_neoplasm_of_parotid_gland
         - malignant_tumor_of_parotid_gland
-        - malignant_neoplasm_of_thorax
 
     - name: Environmental Virus
       sub_systems:
-        - name: Anus
+        - name: Anus #HPV
           types:
             - malignant_tumor_of_anus
             - malignant_tumor_of_anal_canal
             - primary_malignant_neoplasm_of_anal_canal
             - primary_malignant_neoplasm_of_anus
             - squamous_cell_carcinoma_of_anal_margin
-        - name: Cervix
+        - name: Cervix #HPV
           types:
             - cervical_intraepithelial_neoplasia_grade_1
             - cervical_intraepithelial_neoplasia_grade_2
@@ -582,13 +571,28 @@ cancer_ontology:
             - malignant_tumor_of_cervix
             - primary_malignant_neoplasm_of_endocervix
             - primary_malignant_neoplasm_of_uterine_cervix
-        - name: Liver
+        - name: Liver #Hep B/C
           types:
             - liver_cell_carcinoma
             - malignant_neoplasm_of_liver
             - neoplasm_of_liver
             - primary_malignant_neoplasm_of_liver
-        - name: Vaginal
+        - name: Oropharynx #HPV
+          types:
+            - carcinoma_of_base_of_tongue
+            - malignant_tumor_of_base_of_tongue
+            - malignant_tumor_of_oropharynx
+            - malignant_tumor_of_tonsil
+            - primary_malignant_neoplasm_of_base_of_tongue
+            - primary_malignant_neoplasm_of_lateral_wall_of_oropharynx
+            - primary_malignant_neoplasm_of_oropharynx
+            - primary_malignant_neoplasm_of_tonsil
+            - primary_malignant_neoplasm_of_tonsillar_fossa
+            - primary_malignant_neoplasm_of_tonsillar_pillar
+            - primary_squamous_cell_carcinoma_of_palatine_tonsil
+            - primary_malignant_neoplasm_of_pharynx
+            - malignant_tumor_of_pharynx
+        - name: Vaginal #HPV
           types:
             - malignant_neoplasm_of_labia_majora
             - malignant_neoplasm_of_labia_minora
@@ -603,9 +607,11 @@ cancer_ontology:
             - vaginal_intraepithelial_neoplasia_grade_1
             - vulval_intraepithelial_neoplasia_grade_1
             - vulval_intraepithelial_neoplasia_grade_2
-        - name: EBV
+        - name: EBV #Burkitts Lymphoma and Nasopharynx
           types:
             - burkitts_lymphoma_clinical
+            - malignant_tumor_of_nasopharynx
+            - primary_malignant_neoplasm_of_nasopharynx
       types:
         - primary_malignant_neoplasm_of_urethra
         - carcinoma_of_penis
@@ -678,3 +684,4 @@ cancer_ontology:
         - malignant_tumor_of_neck
         - primary_malignant_neoplasm_of_head
         - malignant_tumor_of_lip
+        - malignant_neoplasm_of_thorax

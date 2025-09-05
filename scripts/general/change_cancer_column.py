@@ -6,9 +6,9 @@ with open('cancer_ontology.yaml', 'r') as f:
     ontology = yaml.safe_load(f)
 
 # Non-Viral Associated Cancers
-nva_cancers = ["appendix","biliary","bladder","bone","brain","breast","colorectal","esophagus","eye","kidney",
+pgc_cancers = ["appendix","biliary","bladder","bone","brain","breast","colorectal","esophagus","eye","kidney",
 "leukemia","lung","lymphoma","melanoma","meninges","myelomastocytic","nervous","neuroendocrine","ovary","pancreas","parathyroid",
-"prostate","stomach","small intestines","testis","thyoid","uterus"]
+"prostate","stomach","small intestines","testis","thyroid","uterus"]
 
 # --- Build a flat mapping from diagnosis to system labels ---
 dx_to_systems = {}
@@ -54,21 +54,46 @@ def group_dxs(row):
 # --- Apply function to create new column ---
 df['original_dx_grouped'] = df.apply(group_dxs, axis=1)
 
-# --- Function to count PGC cancers per patient ---
+# --- Function to count PGC cancers per patient (based on 'primary' diagnoses in original_dx) ---
 def count_pgc(row):
     if row.get('cancer', '').strip().lower() == 'control':
         return 0
 
-    grouped = str(row.get('original_dx_grouped', '')).strip().lower()
-    if not grouped or grouped == 'nan':
+    original_dx = str(row.get('original_dx', '')).strip().lower()
+    if not original_dx or original_dx == 'nan':
         return 0
 
-    # Split by semicolon and count overlaps (case-insensitive)
-    diagnoses = [dx.strip().lower() for dx in grouped.split(';')]
-    return sum(dx in [c.lower() for c in pgc_cancers] for dx in diagnoses)
+    # Split by semicolon and keep only terms containing "primary"
+    diagnoses = [dx.strip() for dx in original_dx.split(';') if "primary" in dx.lower()]
 
-# --- Apply function ---
+    # Map each dx to YAML system(s), then flatten
+    mapped_systems = []
+    for dx in diagnoses:
+        if dx in dx_to_systems:
+            mapped_systems.extend(dx_to_systems[dx])
+
+    # Count how many are in the PGC list
+    return sum(sys.lower() in [c.lower() for c in pgc_cancers] for sys in mapped_systems)
+
+
+# Apply to dataframe
 df['Possibly_Genetic_Cancers'] = df.apply(count_pgc, axis=1)
+
+# # --- Function to count PGC cancers per patient ---
+# def count_pgc(row):
+#     if row.get('cancer', '').strip().lower() == 'control':
+#         return 0
+
+#     grouped = str(row.get('original_dx_grouped', '')).strip().lower()
+#     if not grouped or grouped == 'nan':
+#         return 0
+
+#     # Split by semicolon and count overlaps (case-insensitive)
+#     diagnoses = [dx.strip().lower() for dx in grouped.split(';')]
+#     return sum(dx in [c.lower() for c in pgc_cancers] for dx in diagnoses)
+
+# # --- Apply function ---
+# df['Possibly_Genetic_Cancers'] = df.apply(count_pgc, axis=1)
 
 # --- Save result ---
 df.to_csv('dfci-ufc.aou.phenos.v2.tsv', sep='\t', index=False)
