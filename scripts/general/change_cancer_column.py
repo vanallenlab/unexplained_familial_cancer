@@ -54,7 +54,7 @@ def group_dxs(row):
 # --- Apply function to create new column ---
 df['original_dx_grouped'] = df.apply(group_dxs, axis=1)
 
-# --- Function to count PGC cancers per patient (based on 'primary' diagnoses in original_dx) ---
+# --- Function to count PGC cancers per patient (assume primary unless ambiguous system) ---
 def count_pgc(row):
     if row.get('cancer', '').strip().lower() == 'control':
         return 0
@@ -63,26 +63,26 @@ def count_pgc(row):
     if not original_dx or original_dx == 'nan':
         return 0
 
-    ehr_primary_indicators = ['primary']
+    ambiguous_systems = {"lung", "bone", "brain", "liver"}
 
-    # Split by semicolon and keep only terms containing an indicator
-    diagnoses = [
-        dx.strip() 
-        for dx in original_dx.split(';') 
-        if any(ind in dx.lower() for ind in ehr_primary_indicators)
-    ]
+    # Split diagnoses by semicolon
+    diagnoses = [dx.strip() for dx in original_dx.split(';')]
 
-    # Map each dx to YAML system(s), then flatten
     mapped_systems = []
     for dx in diagnoses:
         if dx in dx_to_systems:
-            mapped_systems.extend(dx_to_systems[dx])
+            systems = dx_to_systems[dx]
+            for sys in systems:
+                sys_lower = sys.lower()
+                # Keep if non-ambiguous OR explicitly marked as "primary"
+                if sys_lower not in ambiguous_systems or "primary" in dx:
+                    mapped_systems.append(sys)
 
-    # Use a set to avoid double-counting the same PGC category
+    # Deduplicate to avoid double counting
     unique_systems = set(sys.lower() for sys in mapped_systems)
+
+    # Count overlap with PGC cancers
     return sum(sys in [c.lower() for c in pgc_cancers] for sys in unique_systems)
-
-
 
 # Apply to dataframe
 df['Possibly_Genetic_Cancers'] = df.apply(count_pgc, axis=1)
