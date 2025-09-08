@@ -10,6 +10,19 @@ pgc_cancers = ["appendix","biliary","bladder","bone","brain","breast","colorecta
 "leukemia","lung","lymphoma","melanoma","meninges","myelomastocytic","nervous","neuroendocrine","ovary","pancreas","parathyroid",
 "prostate","stomach","small intestines","testis","thyroid","uterus"]
 
+cancel_out = {"intrahepatic_bile_duct_carcinoma":"Liver","primary_malignant_neoplasm_of_renal_pelvis":"Kidney",
+"neuroendocrine_carcinoma_of_appendix":"Appendix","malignant_neuroendocrine_tumor_of_duodenum":"Small_Intestines",
+"malignant_neuroendocrine_tumor_of_ileum":"Small_Intestines", "malignant_neuroendocrine_tumor_of_small_intestine":"Small_Intestines",
+"primary_malignant_neuroendocrine_neoplasm_of_duodenum":"Small_Intestines","primary_malignant_neuroendocrine_neoplasm_of_ileum":"Small_Intestines",
+"primary_malignant_neuroendocrine_neoplasm_of_small_intestine":"Small_Intestines","primary_malignant_neoplasm_of_islets_of_langerhans":"Pancreas",
+"malignant_carcinoid_tumor_of_lung":"Lung","malignant_carcinoid_tumor_of_bronchus":"Lung","malignant_carcinoid_tumor_of_small_intestine":"Small_Intestines",
+"malignant_carcinoid_tumor_of_ileum":"Small_Intestines","malignant_carcinoid_tumor_of_ileum":"Small_Intestines","malignant_carcinoid_tumor_of_colon":"Colorectal",
+"carcinoid_tumor_of_small_intestine":"Small_Intestines","carcinoid_tumor_of_large_intestine":"Colorectal","carcinoid_tumor_of_intestine":"Small_Intestines",
+"carcinoid_tumor_of_ileum":"Small_Intestines","carcinoid_tumor_of_stomach":"Stomach","carcinoid_tumor_of_lung":"Lung","burkitts_lymphoma_clinical":"Lymphoma",
+"primary_malignant_neoplasm_of_urethra":"Prostate","mesothelioma_malignant,_clinical_disorder":"Lung","malignant_mesothelioma_of_pleura":"Lung",
+"primary_malignant_neoplasm_of_pleura":"Lung","primary_malignant_neoplasm_of_pleura":"Lung","large_cell_anaplastic_lymphoma":"Lymphoma",
+"extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma":"Lymphoma"}
+
 # --- Build a flat mapping from diagnosis to system labels ---
 dx_to_systems = {}
 
@@ -54,6 +67,48 @@ def group_dxs(row):
 # --- Apply function to create new column ---
 df['original_dx_grouped'] = df.apply(group_dxs, axis=1)
 
+def apply_cancel_out(row):
+    original_dx = str(row.get('original_dx', '')).strip()
+    if not original_dx or original_dx.lower() == 'nan':
+        return row['original_dx_grouped']
+
+    diagnoses = [dx.strip() for dx in original_dx.split(';')]
+    kept_labels = set()
+    dx_to_labels = {}
+
+    for dx in diagnoses:
+        if dx in dx_to_systems:
+            labels = dx_to_systems[dx]
+            dx_to_labels[dx] = labels
+            kept_labels.update(labels)
+
+    # Apply cancel_out: remove labels if only supported by canceled dx
+    for dx, target in cancel_out.items():
+        if dx in dx_to_labels:
+            # Remove all labels contributed by this dx
+            for lbl in dx_to_labels[dx]:
+                # Check if this label is supported by any non-canceled dx
+                supported_elsewhere = any(
+                    (lbl in dx_to_labels[d]) and d not in cancel_out
+                    for d in dx_to_labels
+                )
+                if not supported_elsewhere and lbl in kept_labels:
+                    kept_labels.remove(lbl)
+
+            # Also remove the mapped cancel_out target if it’s unsupported
+            if target in kept_labels:
+                supported_elsewhere = any(
+                    (target in dx_to_labels[d]) and d not in cancel_out
+                    for d in dx_to_labels
+                )
+                if not supported_elsewhere:
+                    kept_labels.remove(target)
+
+    return ';'.join(sorted(kept_labels)) if kept_labels else 'NA'
+
+# Apply to dataframe
+df['original_dx_grouped'] = df.apply(apply_cancel_out, axis=1)
+
 # --- Function to count PGC cancers per patient (assume primary unless ambiguous system) ---
 def count_pgc(row):
     if row.get('cancer', '').strip().lower() == 'control':
@@ -86,22 +141,6 @@ def count_pgc(row):
 
 # Apply to dataframe
 df['Possibly_Genetic_Cancers'] = df.apply(count_pgc, axis=1)
-
-# # --- Function to count PGC cancers per patient ---
-# def count_pgc(row):
-#     if row.get('cancer', '').strip().lower() == 'control':
-#         return 0
-
-#     grouped = str(row.get('original_dx_grouped', '')).strip().lower()
-#     if not grouped or grouped == 'nan':
-#         return 0
-
-#     # Split by semicolon and count overlaps (case-insensitive)
-#     diagnoses = [dx.strip().lower() for dx in grouped.split(';')]
-#     return sum(dx in [c.lower() for c in pgc_cancers] for dx in diagnoses)
-
-# # --- Apply function ---
-# df['Possibly_Genetic_Cancers'] = df.apply(count_pgc, axis=1)
 
 # --- Save result ---
 df.to_csv('dfci-ufc.aou.phenos.v2.tsv', sep='\t', index=False)

@@ -151,7 +151,6 @@ cancer_ontology:
             - neoplasm_of_appendix
             - primary_malignant_neoplasm_of_appendix
       types:
-        - malignant_neoplasm_of_gastrointestinal_tract
         - mucinous_adenocarcinoma_of_gastrointestinal_tract
         - neoplasm_of_digestive_system
         - neoplasm_of_digestive_tract
@@ -170,6 +169,7 @@ cancer_ontology:
             - malignant_tumor_of_vault_of_bladder
             - neoplasm_of_bladder
             - primary_malignant_neoplasm_of_bladder
+            - primary_malignant_neoplasm_of_renal_pelvis
             - primary_malignant_neoplasm_of_dome_of_urinary_bladder
             - primary_malignant_neoplasm_of_lateral_wall_of_urinary_bladder
             - primary_malignant_neoplasm_of_posterior_wall_of_urinary_bladder
@@ -177,17 +177,18 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_ureter
             - primary_malignant_neoplasm_of_ureteric_orifice_of_urinary_bladder
             - primary_malignant_neoplasm_of_urinary_bladder_neck
+            - primary_malignant_neoplasm_of_urethra
         - name: Kidney
           types:
             - clear_cell_carcinoma_of_kidney
             - malignant_tumor_of_kidney
             - neoplasm_of_left_kidney
             - primary_malignant_neoplasm_of_kidney
-            - primary_malignant_neoplasm_of_renal_pelvis
             - renal_cell_carcinoma
       types:
         - neoplasm_of_urinary_system
         - primary_malignant_neoplasm_of_urinary_system
+        
     - name: Gynecologic System
       sub_systems:
         - name: Ovary
@@ -216,9 +217,6 @@ cancer_ontology:
             - neoplasm_of_endometrium
             - primary_malignant_neoplasm_of_endometrium
       types:
-        - malignant_neoplasm_of_genital_structure
-        - malignant_tumor_of_female_genital_organ
-        - primary_malignant_neoplasm_of_female_genital_organ
         - primary_malignant_neoplasm_of_parametrium
 
     - name: Hematologic System
@@ -236,16 +234,10 @@ cancer_ontology:
             - acute_promyelocytic_leukemia,_fab_m3
             - acute_promyelocytic_leukemia,_fab_m3,_in_remission
             - atypical_chronic_myeloid_leukemia
-            - bcell_chronic_lymphocytic_leukemia
             - chronic_leukemia
-            - chronic_lymphoid_leukemia,_disease
-            - chronic_lymphoid_leukemia_in_remission
             - chronic_myeloid_leukemia
             - chronic_myeloid_leukemia_in_remission
             - chronic_myelomonocytic_leukemia
-            - leukemia
-            - lymphoid_leukemia
-            - lymphoid_leukemia_in_remission
             - megakaryocytic_leukemia
             - monocytic_leukemia
             - myeloid_leukemia
@@ -263,13 +255,15 @@ cancer_ontology:
             - mast_cell_neoplasm
             - plasma_cell_neoplasm
             - relapse_multiple_myeloma
-      types: # General hematologic types that don't fit specific sub-categories
-        - neoplasm_affecting_hematopoietic_structure
+        
 
     - name: Lymphoma
       sub_systems:
         - name: Non-Hodgkins
           types:
+            - bcell_chronic_lymphocytic_leukemia
+            - chronic_lymphoid_leukemia,_disease
+            - chronic_lymphoid_leukemia_in_remission
             - diffuse_nonhodgkins_lymphoma,_small_cell_clinical
             - bcell_lymphoma_clinical
             - diffuse_follicle_center_lymphoma
@@ -294,7 +288,6 @@ cancer_ontology:
         - cutaneous/peripheral_tcell_lymphoma
         - hodgkin_lymphoma,_nodular_lymphocyte_predominance_clinical
         - lymphocyterich_classical_hodgkin_lymphoma
-        - malignant_immunoproliferative_disease_clinical
         - malignant_lymphoma
         - malignant_lymphoma_of_extranodal_and/or_solid_organ_site
         - malignant_lymphoma_of_intraabdominal_lymph_nodes
@@ -613,7 +606,6 @@ cancer_ontology:
             - malignant_tumor_of_nasopharynx
             - primary_malignant_neoplasm_of_nasopharynx
       types:
-        - primary_malignant_neoplasm_of_urethra
         - carcinoma_of_penis
 
     - name: Lung
@@ -653,6 +645,7 @@ cancer_ontology:
         - malignant_neoplasm_of_canthus
         - malignant_neoplasm_of_lower_eyelid
         - primary_malignant_neoplasm_of_posterior_mediastinum
+        - malignant_neoplasm_of_gastrointestinal_tract
         - disseminated_malignancy_of_unknown_primary
         - malignant_adenomatous_neoplasm
         - malignant_neoplasm_of_abdomen
@@ -671,17 +664,25 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_illdefined_site
         - primary_malignant_neoplasm_of_trunk
         - primary_malignant_neoplasm_of_unspecified_site_clinical
+        - malignant_immunoproliferative_disease_clinical
+        - malignant_neoplasm_of_genital_structure
+        - neoplasm_affecting_hematopoietic_structure
         - primary_malignant_neoplasm_of_upper_limb
         - recurrent_malignant_neoplastic_disease
         - neoplasm_of_intraabdominal_lymph_nodes
         - neoplasm_of_intrapelvic_lymph_node
         - neoplasm_of_intrathoracic_lymph_nodes
         - neoplasm_of_lymph_node
+        - leukemia
         - neoplasm_of_lymph_node_of_lower_limb
         - neoplasm_of_lymph_nodes_of_upper_limb
+        - lymphoid_leukemia
+        - lymphoid_leukemia_in_remission
         - malignant_tumor_of_face
         - malignant_tumor_of_head_and_neck
         - malignant_tumor_of_neck
         - primary_malignant_neoplasm_of_head
         - malignant_tumor_of_lip
         - malignant_neoplasm_of_thorax
+        - malignant_tumor_of_female_genital_organ
+        - primary_malignant_neoplasm_of_female_genital_organ
