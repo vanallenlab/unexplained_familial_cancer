@@ -546,8 +546,13 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_maxillary_sinus
         - primary_malignant_neoplasm_of_parotid_gland
         - malignant_tumor_of_parotid_gland
-
-    - name: Environmental Virus
+    - name: Liver # Most cases coocur w/ Biliary
+      types:
+        - liver_cell_carcinoma
+        - malignant_neoplasm_of_liver
+        - neoplasm_of_liver
+        - primary_malignant_neoplasm_of_liver
+    - name: Viral
       sub_systems:
         - name: Anus #HPV
           types:
@@ -564,12 +569,6 @@ cancer_ontology:
             - malignant_tumor_of_cervix
             - primary_malignant_neoplasm_of_endocervix
             - primary_malignant_neoplasm_of_uterine_cervix
-        - name: Liver #Hep B/C
-          types:
-            - liver_cell_carcinoma
-            - malignant_neoplasm_of_liver
-            - neoplasm_of_liver
-            - primary_malignant_neoplasm_of_liver
         - name: Oropharynx #HPV
           types:
             - carcinoma_of_base_of_tongue

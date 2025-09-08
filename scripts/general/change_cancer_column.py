@@ -95,33 +95,55 @@ def clean_dx_grouped(row):
 df['original_dx_grouped'] = df.apply(clean_dx_grouped, axis=1)
 
 def count_pgc(row):
-    if row.get('cancer', '').strip().lower() == 'control':
+    # Controls never count
+    if str(row.get('cancer', '')).strip().lower() == 'control':
         return 0
 
-    # Use the grouped column as canonical
-    grouped = str(row.get('original_dx_grouped', '')).strip().lower()
-    if not grouped or grouped == 'nan':
+    # Use grouped systems as canonical
+    grouped = str(row.get('original_dx_grouped', '')).strip()
+    if not grouped or grouped.lower() == 'nan':
         return 0
 
-    ambiguous_systems = {"lung", "bone", "brain", "liver"}
-    # Normalize pgc cancers
-    pgc_set = set([c.lower().replace(' ', '_') for c in pgc_cancers])
+    ambiguous_systems = {"lung", "bone", "brain", "liver", "meninges"}
+    pgc_set = set(pgc_cancers)  # exact strings, no normalization
 
-    # Split grouped column into individual systems
-    systems_found = set([s.strip().replace(' ', '_') for s in grouped.split(';')])
+    # Split grouped systems
+    systems_found = {s.strip() for s in grouped.split(';') if s.strip()}
 
-    # Handle ambiguous systems: keep only if original_dx mentions "primary"
+    # Original dx text (for "primary" detection)
     original_dx = str(row.get('original_dx', '')).lower()
-    filtered_systems = set()
-    for sys in systems_found:
-        if sys in ambiguous_systems:
-            if "primary" in original_dx:
-                filtered_systems.add(sys)
-        else:
-            filtered_systems.add(sys)
 
-    # Count how many are in PGC cancers
-    return sum(sys in pgc_set for sys in filtered_systems)
+    # Start with all found systems
+    included_systems = set(systems_found)
+
+    # Apply cancel_out rules first (drop specific systems if key dx is present)
+    for dx in str(row.get('original_dx', '')).split(';'):
+        dx = dx.strip()
+        if dx in cancel_out:
+            for sys_to_remove in cancel_out[dx]:
+                included_systems.discard(sys_to_remove)
+
+    # Handle ambiguous systems
+    final_systems = set()
+    for sys in included_systems:
+        if sys in ambiguous_systems:
+            # keep if explicitly "primary"
+            if "primary" in original_dx:
+                final_systems.add(sys)
+        else:
+            final_systems.add(sys)
+
+    # Count PGC overlap
+    pgc_count = sum(1 for s in final_systems if s in pgc_set)
+
+    # Bump rule: if ambiguous system is the only one left and no PGC counted
+    if pgc_count == 0 and len(included_systems) == 1:
+        only = next(iter(included_systems))
+        if only in ambiguous_systems and only in pgc_set:
+            pgc_count = 1
+
+    return pgc_count
+
 
 
 # # --- Function to count PGC cancers per patient (assume primary unless ambiguous system) ---
