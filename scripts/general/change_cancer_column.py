@@ -99,50 +99,72 @@ def count_pgc(row):
     if str(row.get('cancer', '')).strip().lower() == 'control':
         return 0
 
-    # Use grouped systems as canonical
-    grouped = str(row.get('original_dx_grouped', '')).strip()
-    if not grouped or grouped.lower() == 'nan':
+    original_dx = str(row.get('original_dx', '')).strip()
+    if not original_dx or original_dx.lower() == 'nan':
         return 0
 
+    pgc_set = set(pgc_cancers)
     ambiguous_systems = {"lung", "bone", "brain", "liver", "meninges"}
-    pgc_set = set(pgc_cancers)  # exact strings, no normalization
 
-    # Split grouped systems
-    systems_found = {s.strip() for s in grouped.split(';') if s.strip()}
+    child_systems = set()
+    parent_systems = set()
 
-    # Original dx text (for "primary" detection)
-    original_dx = str(row.get('original_dx', '')).lower()
+    # Step 1: Map each dx → child + parent
+    for dx in original_dx.split(';'):
+        dx = dx.strip()
+        if not dx:
+            continue
 
-    # Start with all found systems
-    included_systems = set(systems_found)
+        if dx in dx_to_systems:
+            systems = dx_to_systems[dx]
+            if len(systems) == 1:
+                child_systems.add(systems[0])
+            elif len(systems) == 2:
+                child, parent = systems
+                child_systems.add(child)
+                parent_systems.add(parent)
 
-    # Apply cancel_out rules first (drop specific systems if key dx is present)
-    for dx in str(row.get('original_dx', '')).split(';'):
+    # Step 2: Apply cancel_out
+    for dx in original_dx.split(';'):
         dx = dx.strip()
         if dx in cancel_out:
-            for sys_to_remove in cancel_out[dx]:
-                included_systems.discard(sys_to_remove)
+            sys_to_remove = cancel_out[dx]
+            if isinstance(sys_to_remove, str):
+                sys_to_remove = [sys_to_remove]
 
-    # Handle ambiguous systems
-    final_systems = set()
-    for sys in included_systems:
-        if sys in ambiguous_systems:
-            # keep if explicitly "primary"
-            if "primary" in original_dx:
-                final_systems.add(sys)
-        else:
-            final_systems.add(sys)
+            for sys in sys_to_remove:
+                # remove from child and parent if present
+                child_systems.discard(sys)
+                parent_systems.discard(sys)
 
-    # Count PGC overlap
-    pgc_count = sum(1 for s in final_systems if s in pgc_set)
+    # Step 3: Handle ambiguous systems
+    filtered_children = set()
+    for dx in original_dx.split(';'):
+        dx = dx.strip().lower()
+        if dx in dx_to_systems:
+            for sys in dx_to_systems[dx]:
+                if sys in ambiguous_systems:
+                    if "primary" in dx:  # keep only if explicitly primary
+                        filtered_children.add(sys)
+                else:
+                    filtered_children.add(sys)
 
-    # Bump rule: if ambiguous system is the only one left and no PGC counted
-    if pgc_count == 0 and len(included_systems) == 1:
-        only = next(iter(included_systems))
+    # Combine children + valid parents
+    all_systems = filtered_children.union(parent_systems)
+
+    # Step 4: Count overlap with PGC cancers
+    pgc_count = sum(1 for s in all_systems if s in pgc_set)
+
+    # Step 5: Bump rule for ambiguous-only cases
+    if pgc_count == 0 and len(all_systems) == 1:
+        only = next(iter(all_systems))
         if only in ambiguous_systems and only in pgc_set:
             pgc_count = 1
 
     return pgc_count
+
+
+
 
 
 
