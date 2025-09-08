@@ -9,7 +9,7 @@ with open('cancer_ontology.yaml', 'r') as f:
 # Non-Viral Associated Cancers
 pgc_cancers = ["appendix","biliary","bladder","bone","brain","breast","colorectal","esophagus","eye","kidney",
 "leukemia","lung","lymphoma","melanoma","meninges","myelomastocytic","nervous","neuroendocrine","ovary","pancreas","parathyroid",
-"prostate","stomach","small intestines","testis","thyroid","uterus"]
+"prostate","stomach","small_intestines","soft_tissue","testis","thyroid","uterus"]
 
 cancel_out = {"intrahepatic_bile_duct_carcinoma":"Liver","primary_malignant_neoplasm_of_renal_pelvis":"Kidney",
 "neuroendocrine_carcinoma_of_appendix":"Appendix","malignant_neuroendocrine_tumor_of_duodenum":"Small_Intestines",
