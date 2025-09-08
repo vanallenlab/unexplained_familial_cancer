@@ -68,43 +68,42 @@ def group_dxs(row):
 df['original_dx_grouped'] = df.apply(group_dxs, axis=1)
 
 def apply_cancel_out(row):
-    original_dx = str(row.get('original_dx', '')).strip()
-    if not original_dx or original_dx.lower() == 'nan':
-        return row['original_dx_grouped']
+    """
+    Remove labels from original_dx_grouped if:
+      - A diagnosis exactly matches a key in cancel_out, AND
+      - That diagnosis contributed the cancel_out value label, AND
+      - No other diagnosis in the row supports that label.
+    """
+    original = str(row.get('original_dx', '') or '').strip()
+    if not original or original.lower() == 'nan':
+        return row.get('original_dx_grouped', 'NA')
 
-    diagnoses = [dx.strip() for dx in original_dx.split(';')]
-    kept_labels = set()
-    dx_to_labels = {}
+    terms = [t.strip() for t in original.split(';') if t.strip()]
 
-    for dx in diagnoses:
-        if dx in dx_to_systems:
-            labels = dx_to_systems[dx]
-            dx_to_labels[dx] = labels
-            kept_labels.update(labels)
+    # Build supports: which diagnoses contribute which labels
+    label_support = defaultdict(set)
+    term_to_labels = {}
+    for t in terms:
+        if t in dx_to_systems:
+            labels = dx_to_systems[t]
+            term_to_labels[t] = labels
+            for lab in labels:
+                label_support[lab].add(t)
+        else:
+            term_to_labels[t] = []
 
-    # Apply cancel_out: remove labels if only supported by canceled dx
-    for dx, target in cancel_out.items():
-        if dx in dx_to_labels:
-            # Remove all labels contributed by this dx
-            for lbl in dx_to_labels[dx]:
-                # Check if this label is supported by any non-canceled dx
-                supported_elsewhere = any(
-                    (lbl in dx_to_labels[d]) and d not in cancel_out
-                    for d in dx_to_labels
-                )
-                if not supported_elsewhere and lbl in kept_labels:
-                    kept_labels.remove(lbl)
+    # Process cancel rules
+    for cancel_key, cancel_label in cancel_out.items():
+        if cancel_key in terms:
+            # Remove support from that diagnosis
+            if cancel_label in label_support:
+                label_support[cancel_label].discard(cancel_key)
 
-            # Also remove the mapped cancel_out target if it’s unsupported
-            if target in kept_labels:
-                supported_elsewhere = any(
-                    (target in dx_to_labels[d]) and d not in cancel_out
-                    for d in dx_to_labels
-                )
-                if not supported_elsewhere:
-                    kept_labels.remove(target)
+    # Keep labels that still have at least one supporting diagnosis
+    final_labels = [lab for lab, supporters in label_support.items() if supporters]
 
-    return ';'.join(sorted(kept_labels)) if kept_labels else 'NA'
+    return ';'.join(sorted(final_labels)) if final_labels else 'NA'
+
 
 # Apply to dataframe
 df['original_dx_grouped'] = df.apply(apply_cancel_out, axis=1)
