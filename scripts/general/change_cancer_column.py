@@ -19,10 +19,10 @@ cancel_out = {"intrahepatic_bile_duct_carcinoma":"Liver","primary_malignant_neop
 "malignant_carcinoid_tumor_of_lung":"Lung","malignant_carcinoid_tumor_of_bronchus":"Lung","malignant_carcinoid_tumor_of_small_intestine":"Small_Intestines",
 "malignant_carcinoid_tumor_of_ileum":"Small_Intestines","malignant_carcinoid_tumor_of_ileum":"Small_Intestines","malignant_carcinoid_tumor_of_colon":"Colorectal",
 "carcinoid_tumor_of_small_intestine":"Small_Intestines","carcinoid_tumor_of_large_intestine":"Colorectal","carcinoid_tumor_of_intestine":"Small_Intestines",
-"carcinoid_tumor_of_ileum":"Small_Intestines","carcinoid_tumor_of_stomach":"Stomach","carcinoid_tumor_of_lung":"Lung","burkitts_lymphoma_clinical":"Lymphoma",
+"carcinoid_tumor_of_ileum":"Small_Intestines","carcinoid_tumor_of_stomach":"Stomach","carcinoid_tumor_of_lung":"Lung","burkitts_lymphoma_clinical":"Non-Hodgkins",
 "primary_malignant_neoplasm_of_urethra":"Prostate","mesothelioma_malignant,_clinical_disorder":"Lung","malignant_mesothelioma_of_pleura":"Lung",
-"primary_malignant_neoplasm_of_pleura":"Lung","primary_malignant_neoplasm_of_pleura":"Lung","large_cell_anaplastic_lymphoma":"Lymphoma",
-"extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma":"Lymphoma"}
+"primary_malignant_neoplasm_of_pleura":"Lung","primary_malignant_neoplasm_of_pleura":"Lung","large_cell_anaplastic_lymphoma":"Non-Hodgkins",
+"extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma":"Non-Hodgkins"}
 
 # --- Build a flat mapping from diagnosis to system labels ---
 dx_to_systems = {}
@@ -68,46 +68,31 @@ def group_dxs(row):
 # --- Apply function to create new column ---
 df['original_dx_grouped'] = df.apply(group_dxs, axis=1)
 
-def apply_cancel_out_recursive(row):
-    """
-    Remove labels based on cancel_out and clean up parent systems if
-    none of their child diagnoses remain.
-    """
-    original = str(row.get('original_dx', '') or '').strip()
-    grouped = str(row.get('original_dx_grouped', '') or '').strip()
-    if not original or original.lower() == 'nan':
-        return grouped
+def clean_dx_grouped(row):
+    labels = set(row['original_dx_grouped'].split(';'))
 
-    # Split and standardize
-    terms = [t.strip() for t in original.split(';') if t.strip()]
-    labels = set([l.strip() for l in grouped.split(';') if l.strip() and l != 'NA'])
+    # Remove any sub-systems based on cancel_out keys
+    for key, value in cancel_out.items():
+        if key in str(row['original_dx']).lower() and value in labels:
+            labels.discard(value)
 
-    # Step 1: Remove labels tied to cancel_out keys
-    for key, label_to_remove in cancel_out.items():
-        if key in terms and label_to_remove in labels:
-            labels.discard(label_to_remove)
+    # Build parent → children mapping from dx_to_systems
+    parent_to_children = {}
+    for systems in dx_to_systems.values():
+        if len(systems) > 1:
+            child, parent = systems[0], systems[1]
+            parent_to_children.setdefault(parent, set()).add(child)
 
-    # Step 2: Remove parent systems if none of their children remain
-    # Build reverse mapping: parent -> set of child dx that maps to it
-    parent_to_children = defaultdict(set)
-    for dx, dx_labels in dx_to_systems.items():
-        for lab in dx_labels:
-            parent_to_children[lab].add(dx)
+    # Remove parent if none of its children remain
+    for parent, children in parent_to_children.items():
+        # intersect with current labels to see if any child exists
+        if parent in labels and len(labels.intersection(children)) == 0:
+            labels.discard(parent)
 
-    # Remove parents that have no remaining child diagnosis
-    cleaned_labels = set()
-    for lab in labels:
-        children = parent_to_children.get(lab, set())
-        # Keep label only if at least one child dx exists in terms and not canceled
-        if any(child in terms and cancel_out.get(child, None) != lab for child in children):
-            cleaned_labels.add(lab)
-
-    return ';'.join(sorted(cleaned_labels)) if cleaned_labels else 'NA'
-
-
+    return ';'.join(sorted(labels))
 
 # Apply to dataframe
-df['original_dx_grouped'] = df.apply(apply_cancel_out, axis=1)
+df['original_dx_grouped'] = df.apply(clean_dx_grouped, axis=1)
 
 # --- Function to count PGC cancers per patient (assume primary unless ambiguous system) ---
 def count_pgc(row):
