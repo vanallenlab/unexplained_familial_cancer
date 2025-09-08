@@ -1,5 +1,6 @@
 import yaml
 import pandas as pd
+from collections import defaultdict
 
 # --- Load YAML file ---
 with open('cancer_ontology.yaml', 'r') as f:
@@ -67,42 +68,42 @@ def group_dxs(row):
 # --- Apply function to create new column ---
 df['original_dx_grouped'] = df.apply(group_dxs, axis=1)
 
-def apply_cancel_out(row):
+def apply_cancel_out_recursive(row):
     """
-    Remove labels from original_dx_grouped if:
-      - A diagnosis exactly matches a key in cancel_out, AND
-      - That diagnosis contributed the cancel_out value label, AND
-      - No other diagnosis in the row supports that label.
+    Remove labels based on cancel_out and clean up parent systems if
+    none of their child diagnoses remain.
     """
     original = str(row.get('original_dx', '') or '').strip()
+    grouped = str(row.get('original_dx_grouped', '') or '').strip()
     if not original or original.lower() == 'nan':
-        return row.get('original_dx_grouped', 'NA')
+        return grouped
 
+    # Split and standardize
     terms = [t.strip() for t in original.split(';') if t.strip()]
+    labels = set([l.strip() for l in grouped.split(';') if l.strip() and l != 'NA'])
 
-    # Build supports: which diagnoses contribute which labels
-    label_support = defaultdict(set)
-    term_to_labels = {}
-    for t in terms:
-        if t in dx_to_systems:
-            labels = dx_to_systems[t]
-            term_to_labels[t] = labels
-            for lab in labels:
-                label_support[lab].add(t)
-        else:
-            term_to_labels[t] = []
+    # Step 1: Remove labels tied to cancel_out keys
+    for key, label_to_remove in cancel_out.items():
+        if key in terms and label_to_remove in labels:
+            labels.discard(label_to_remove)
 
-    # Process cancel rules
-    for cancel_key, cancel_label in cancel_out.items():
-        if cancel_key in terms:
-            # Remove support from that diagnosis
-            if cancel_label in label_support:
-                label_support[cancel_label].discard(cancel_key)
+    # Step 2: Remove parent systems if none of their children remain
+    # Build reverse mapping: parent -> set of child dx that maps to it
+    parent_to_children = defaultdict(set)
+    for dx, dx_labels in dx_to_systems.items():
+        for lab in dx_labels:
+            parent_to_children[lab].add(dx)
 
-    # Keep labels that still have at least one supporting diagnosis
-    final_labels = [lab for lab, supporters in label_support.items() if supporters]
+    # Remove parents that have no remaining child diagnosis
+    cleaned_labels = set()
+    for lab in labels:
+        children = parent_to_children.get(lab, set())
+        # Keep label only if at least one child dx exists in terms and not canceled
+        if any(child in terms and cancel_out.get(child, None) != lab for child in children):
+            cleaned_labels.add(lab)
 
-    return ';'.join(sorted(final_labels)) if final_labels else 'NA'
+    return ';'.join(sorted(cleaned_labels)) if cleaned_labels else 'NA'
+
 
 
 # Apply to dataframe
