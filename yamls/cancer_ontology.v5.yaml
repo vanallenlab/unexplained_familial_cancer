@@ -77,8 +77,6 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_skin_of_breast
         - primary_malignant_neoplasm_of_upper_inner_quadrant_of_female_breast
         - primary_malignant_neoplasm_of_upper_outer_quadrant_of_female_breast
-        - estrogen_receptor_negative_neoplasm
-        - estrogen_receptor_positive_tumor
     - name: Colorectal
       types:
         - malignant_neoplasm_of_colon_and/or_rectum
@@ -685,3 +683,5 @@ cancer_ontology:
         - malignant_neoplasm_of_thorax
         - malignant_tumor_of_female_genital_organ
         - primary_malignant_neoplasm_of_female_genital_organ
+        - estrogen_receptor_negative_neoplasm
+        - estrogen_receptor_positive_tumor

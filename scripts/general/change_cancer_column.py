@@ -106,42 +106,64 @@ pgc_cancers = [
     "testis","thyroid","uterus"
 ]
 
-# --- Count function ---
-def count_pgc(row):
-    if row.get("cancer", "").strip().lower() == "control":
+def count_pgc_direct(row):
+    """
+    Returns the number of Possibly Genetic Cancers (PGC) for a patient.
+    Counts only diagnoses in pgc_cancers.
+    Ambiguous cancers (lung, brain, meninges, bone, liver) are only counted if 'primary' appears in the dx.
+    """
+    if row.get('cancer', '').strip().lower() == 'control':
         return 0
 
-    grouped = str(row.get("original_dx_grouped", "")).strip()
-    if not grouped or grouped.lower() == "nan":
+    original_dx = str(row.get('original_dx', '')).strip()
+    if not original_dx or original_dx.lower() == 'nan':
         return 0
 
-    ambiguous = {"lung","liver","bone","brain","meninges"}
-    dxs = str(row.get("original_dx", "")).lower()
+    # Systems already grouped
+    grouped_dx = str(row.get('original_dx_grouped', '')).strip()
+    if not grouped_dx or grouped_dx.lower() == 'nan':
+        return 0
 
-    systems_found = set(grouped.split(";"))
-    filtered = set()
+    # Ambiguous systems that require 'primary' to count
+    ambiguous = {"lung","brain","meninges","bone","liver"}
+
+    # Count how many PGC systems are in the grouped dx
+    systems_found = set(grouped_dx.split(';'))
+    count = 0
 
     for sys in systems_found:
         sys_lower = sys.lower()
+        if sys_lower not in pgc_cancers:
+            continue
+
         if sys_lower in ambiguous:
-            if "primary" in dxs:
-                filtered.add(sys_lower)
+            # Check if any diagnosis referring to this system contains 'primary'
+            for dx in original_dx.split(';'):
+                dx = dx.strip().lower()
+                if sys_lower in dx and 'primary' in dx:
+                    count += 1
+                    break
         else:
-            filtered.add(sys_lower)
+            count += 1
 
-    count = sum(sys in [c.lower() for c in pgc_cancers] for sys in filtered)
+    # Parent-child additions
+    parent_children = {
+        "Gastrointestinal": {"Neuroendocrine","Liver","Colorectal","Small_Intestines","Stomach","Appendix","Biliary","Esophagus","Pancreas"},
+        "Endocrine": {"Thyroid","Parathyroid"},
+        "Urinary": {"Kidney","Bladder"},
+        "Nervous": {"Eye","Brain","Meninges"}
+    }
 
-    # bump ambiguous-only cases
-    if count == 0:
-        for sys in systems_found:
-            if sys.lower() in ambiguous:
-                return 1
+    for parent, children in parent_children.items():
+        if parent in systems_found and not systems_found.intersection(children):
+            count += 1
+
     return count
 
 # --- Main ---
 if __name__ == "__main__":
     df = pd.read_csv("dfci-ufc.aou.phenos.tsv", sep="\t")
     df["original_dx_grouped"] = df.apply(group_dxs, axis=1)
-    df["Possibly_Genetic_Cancers"] = df.apply(count_pgc, axis=1)
+    df["Possibly_Syndromic_Cancers"] = df.apply(count_pgc_direct, axis=1)
     df.to_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t", index=False)
 
