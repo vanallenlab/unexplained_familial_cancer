@@ -509,7 +509,13 @@ cancer_ontology:
       types:
         - primary_malignant_neoplasm_of_endocrine_gland
 
-
+    - name: Liver # Most cases coocur w/ Biliary
+      types:
+        - liver_cell_carcinoma
+        - malignant_neoplasm_of_liver
+        - neoplasm_of_liver
+        - primary_malignant_neoplasm_of_liver
+        
     - name: ENT # Non Viral
       sub_systems:
         - name: Oral Cavity
@@ -546,12 +552,6 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_maxillary_sinus
         - primary_malignant_neoplasm_of_parotid_gland
         - malignant_tumor_of_parotid_gland
-    - name: Liver # Most cases coocur w/ Biliary
-      types:
-        - liver_cell_carcinoma
-        - malignant_neoplasm_of_liver
-        - neoplasm_of_liver
-        - primary_malignant_neoplasm_of_liver
     - name: Viral
       sub_systems:
         - name: Anus #HPV
