@@ -94,35 +94,65 @@ def clean_dx_grouped(row):
 # Apply to dataframe
 df['original_dx_grouped'] = df.apply(clean_dx_grouped, axis=1)
 
-# --- Function to count PGC cancers per patient (assume primary unless ambiguous system) ---
 def count_pgc(row):
     if row.get('cancer', '').strip().lower() == 'control':
         return 0
 
-    original_dx = str(row.get('original_dx', '')).strip().lower()
-    if not original_dx or original_dx == 'nan':
+    # Use the grouped column as canonical
+    grouped = str(row.get('original_dx_grouped', '')).strip().lower()
+    if not grouped or grouped == 'nan':
         return 0
 
     ambiguous_systems = {"lung", "bone", "brain", "liver"}
+    # Normalize pgc cancers
+    pgc_set = set([c.lower().replace(' ', '_') for c in pgc_cancers])
 
-    # Split diagnoses by semicolon
-    diagnoses = [dx.strip() for dx in original_dx.split(';')]
+    # Split grouped column into individual systems
+    systems_found = set([s.strip().replace(' ', '_') for s in grouped.split(';')])
 
-    mapped_systems = []
-    for dx in diagnoses:
-        if dx in dx_to_systems:
-            systems = dx_to_systems[dx]
-            for sys in systems:
-                sys_lower = sys.lower()
-                # Keep if non-ambiguous OR explicitly marked as "primary"
-                if sys_lower not in ambiguous_systems or "primary" in dx:
-                    mapped_systems.append(sys)
+    # Handle ambiguous systems: keep only if original_dx mentions "primary"
+    original_dx = str(row.get('original_dx', '')).lower()
+    filtered_systems = set()
+    for sys in systems_found:
+        if sys in ambiguous_systems:
+            if "primary" in original_dx:
+                filtered_systems.add(sys)
+        else:
+            filtered_systems.add(sys)
 
-    # Deduplicate to avoid double counting
-    unique_systems = set(sys.lower() for sys in mapped_systems)
+    # Count how many are in PGC cancers
+    return sum(sys in pgc_set for sys in filtered_systems)
 
-    # Count overlap with PGC cancers
-    return sum(sys in [c.lower() for c in pgc_cancers] for sys in unique_systems)
+
+# # --- Function to count PGC cancers per patient (assume primary unless ambiguous system) ---
+# def count_pgc(row):
+#     if row.get('cancer', '').strip().lower() == 'control':
+#         return 0
+
+#     original_dx = str(row.get('original_dx', '')).strip().lower()
+#     if not original_dx or original_dx == 'nan':
+#         return 0
+
+#     ambiguous_systems = {"lung", "bone", "brain", "liver"}
+
+#     # Split diagnoses by semicolon
+#     diagnoses = [dx.strip() for dx in original_dx.split(';')]
+
+#     mapped_systems = []
+#     for dx in diagnoses:
+#         if dx in dx_to_systems:
+#             systems = dx_to_systems[dx]
+#             for sys in systems:
+#                 sys_lower = sys.lower()
+#                 # Keep if non-ambiguous OR explicitly marked as "primary"
+#                 if sys_lower not in ambiguous_systems or "primary" in dx:
+#                     mapped_systems.append(sys)
+
+#     # Deduplicate to avoid double counting
+#     unique_systems = set(sys.lower() for sys in mapped_systems)
+
+#     # Count overlap with PGC cancers
+#     return sum(sys in [c.lower() for c in pgc_cancers] for sys in unique_systems)
 
 # Apply to dataframe
 df['Possibly_Genetic_Cancers'] = df.apply(count_pgc, axis=1)
