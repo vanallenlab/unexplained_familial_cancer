@@ -260,6 +260,8 @@ def main():
     parser.add_argument('--log-file', required=False, help='Path to log file')
     parser.add_argument('--cohorts',required=True, help='Comma delimited string denoting which cohorts to include')
     parser.add_argument('--use-original-dx', required=True, default=False, help='Option to use original_dx to get more niche subtypes.')
+    parser.add_argument('--family-cancer-subtype', required=False, default=None, help='Cancer Types to look for in family_dx')
+    parser.add_argument('--boolean-logic',required=False,default= "and", help = 'We need to look for AND/OR/NOR')
     args = parser.parse_args()
 
     # Make the log file
@@ -314,18 +316,42 @@ def main():
 
     # Filter to Cancer Subtypes of Interest
     print("Args Variables")
-    print(vars(args))
-    if args.cancer_subtype != "pancancer":
-        if not args.use_original_dx:
-            meta =meta[meta['cancer'].str.contains(f"control|{args.cancer_subtype}")]
+
+    # --- Filtering logic ---
+    if args.boolean_logic:  # Boolean logic takes priority
+        logic = args.boolean_logic.upper()
+        fam_mask = meta['family_dx'].str.contains(f"control|{args.family_cancer_subtype}")
+
+        if args.cancer_subtype == "pancancer":
+            # Only family_dx matters
+            orig_mask = True
         else:
-            meta =meta[(meta['cancer'] == "control") | (meta['original_dx'].str.contains(args.cancer_subtype))]
+            orig_mask = meta['original_dx'].str.contains(f"control|{args.cancer_subtype}")
+
+        if logic == "AND":
+            meta = meta[fam_mask & orig_mask]
+        elif logic == "OR":
+            meta = meta[fam_mask | orig_mask]
+        elif logic == "NOR":
+            meta = meta[~(fam_mask | orig_mask)]
+        else:
+            raise ValueError(f"Unsupported boolean logic: {args.boolean_logic}")
+
+    else:  # No boolean logic → simple subtype filtering
+        if args.cancer_subtype != "pancancer":
+            if args.use_original_dx:
+                cancer_mask = (meta['cancer'] == "control") | meta['original_dx'].str.contains(args.cancer_subtype)
+            else:
+                cancer_mask = meta['cancer'].str.contains(f"control|{args.cancer_subtype}")
+            meta = meta[cancer_mask]
+        # pancancer + no boolean_logic = no filtering
+
 
     # Filter to 0 cancers (controls) or more than X cancers if specified
     if args.min_cancers > 1:
         # Keep controls (0 cancers) OR cases with >= min_cancers
-        df = df[(df['Possibly_Genetic_Cancers'] == 0) | 
-                (df['Possibly_Genetic_Cancers'] >= args.min_cancers)]
+        meta = meta[(meta['Possibly_Genetic_Cancers'] == 0) | 
+                (meta['Possibly_Genetic_Cancers'] >= args.min_cancers)]
 
     # Remove samples with irrelevant cancer diagnosis for this study
     sample_size3 = len(meta)

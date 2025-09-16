@@ -10,23 +10,25 @@ workflow STEP_10_VISUALIZE_VEP {
     String step_9_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/sharded_vcfs" # Directory to STEP_9 Output VCFs
     File aou_subjects
     File gene_list
-    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/"
-    String chr = "1" 
+    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/"
   }
 
-  call Tasks.gather_a_chromosome_level_vcfs {
+  call Tasks.gather_chromosome_level_vcfs {
     input:
-      dir = step_9_output_dir,
-      chr_num = chr
+      dir = step_9_output_dir
   }
 
+  call Tasks.concatenateFiles {
+    input:
+      files = gather_chromosome_level_vcfs.out1,
+      output_name = "out"
+  }
   call Tasks.sort_vcf_list {
     input:
-      unsorted_vcf_list = gather_a_chromosome_level_vcfs.out1[0]
+      unsorted_vcf_list = concatenateFiles.out2
   }
 
-  Int negative_shards = 0
-
+  Int negative_shards = 2700
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     call Convert_To_TSV {
       input:
@@ -44,8 +46,7 @@ workflow STEP_10_VISUALIZE_VEP {
  
   call merge_variant_counts {
     input:
-      tsv_files = Filter_Vep_TSV.out1,
-      chr = chr
+      tsv_files = Filter_Vep_TSV.out1
   } 
 
   call Tasks.copy_file_to_storage{
@@ -60,7 +61,6 @@ workflow STEP_10_VISUALIZE_VEP {
 task merge_variant_counts {
   input {
     Array[File] tsv_files
-    String chr
   }
 
   Int default_mem_gb = ceil(size(tsv_files, "GB")) * 5 + 10
@@ -86,13 +86,13 @@ task merge_variant_counts {
 
       combined_df += df
 
-  combined_df.to_csv("ufc.chr~{chr}.variant_counts.tsv", sep="\t")
+  combined_df.to_csv("ufc.cpg.variant_counts.tsv", sep="\t")
 
   CODE
-  gzip ufc.chr~{chr}.variant_counts.tsv
+  gzip ufc.cpg.variant_counts.tsv
   >>>
   output {
-    File out1 = "ufc.chr~{chr}.variant_counts.tsv.gz"
+    File out1 = "ufc.cpg.variant_counts.tsv.gz"
   }
 
   runtime {
@@ -164,7 +164,7 @@ task Filter_Vep_TSV {
     df["REVEL_score"] = df["REVEL_score"].astype(str)
     df["REVEL_score_numeric"] = df["REVEL_score"].apply(process_revel_score).astype("float32")
 
-    def is_rare(row):
+    def is_rare(row,major_gnomAD_AF,minor_gnomAD_AF):
         low_cols = [
             'gnomAD_AF_non_cancer_afr', 'gnomAD_AF_non_cancer_amr', 'gnomAD_AF_non_cancer_eas',
             'gnomAD_AF_non_cancer_fin', 'gnomAD_AF_non_cancer_nfe', 'gnomAD_AF_non_cancer_sas', 'AF'
@@ -179,7 +179,7 @@ task Filter_Vep_TSV {
             if col in row and pd.notnull(row[col]):
                 try:
                     af = float(str(row[col]).split(',')[0])
-                    if af >= 0.01:
+                    if af >= major_gnomAD_AF:
                         return False
                 except ValueError:
                     continue
@@ -189,7 +189,7 @@ task Filter_Vep_TSV {
             if col in row and pd.notnull(row[col]):
                 try:
                     af = float(str(row[col]).split(',')[0])
-                    if af >= 0.1:
+                    if af >= minor_gnomAD_AF:
                         return False
                 except ValueError:
                     continue
@@ -203,16 +203,23 @@ task Filter_Vep_TSV {
     # Loop through each row
     for index, row in df.iterrows():
        
-        if not is_rare(row):
+        if not is_rare(row,major_gnomAD_AF=0.01,minor_gnomAD_AF=0.1):
            continue
 
         gene = row["SYMBOL"]
         consequence_col = row["Consequence"]
         impact = row['IMPACT']
+        clinvar_uncertain = row['clinvar_clnsig']
+
+        if clinvar_uncertain == "Uncertain_significance":
+          for patient in patients:
+            value = pd.to_numeric(row[patient],errors='coerce')
+            summary[(gene, "VUS_001", patient)] += value
+
         if impact == "HIGH":
           for patient in patients:
             value = pd.to_numeric(row[patient],errors='coerce')
-            summary[(gene, "HIGH", patient)] += value
+            summary[(gene, "HIGH_001", patient)] += value
           continue
 
         consequences = consequence_col.split('&')
@@ -222,10 +229,36 @@ task Filter_Vep_TSV {
             for patient in patients:
               value = pd.to_numeric(row[patient], errors='coerce')
               if row['REVEL_score_numeric'] >= 0.5:
-                summary[(gene, "REVEL050", patient)] += value
+                summary[(gene, "REVEL050_001", patient)] += value
                 if row['REVEL_score_numeric'] >= 0.75:
-                    summary[(gene, "REVEL075", patient)] += value
-        
+                    summary[(gene, "REVEL075_001", patient)] += value
+        if not is_rare(row,major_gnomAD_AF=0.01,minor_gnomAD_AF=0.1):
+           continue
+
+        if not is_rare(row,major_gnomAD_AF=0.01,minor_gnomAD_AF=0.1):
+           continue
+
+        if clinvar_uncertain == "Uncertain_significance":
+          for patient in patients:
+            value = pd.to_numeric(row[patient],errors='coerce')
+            summary[(gene, "VUS_0001", patient)] += value
+
+        if impact == "HIGH":
+          for patient in patients:
+            value = pd.to_numeric(row[patient],errors='coerce')
+            summary[(gene, "HIGH_0001", patient)] += value
+          continue
+
+        consequences = consequence_col.split('&')
+
+        for consequence in consequences:
+          if consequence == "missense_variant" and impact == "MODERATE":
+            for patient in patients:
+              value = pd.to_numeric(row[patient], errors='coerce')
+              if row['REVEL_score_numeric'] >= 0.5:
+                summary[(gene, "REVEL050_0001", patient)] += value
+                if row['REVEL_score_numeric'] >= 0.75:
+                    summary[(gene, "REVEL075_0001", patient)] += value 
 
     # Convert summary to a DataFrame
     summary_df = pd.DataFrame.from_dict(summary, orient='index', columns=["variant_count"])
@@ -261,67 +294,92 @@ task Convert_To_TSV {
   input {
     File vcf
     File aou_subjects
-    File gene_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/gencode.v47.autosomal.protein_coding.genes.list"
+    File gene_list
+
+    # Default AF cutoff for major gnomAD pops + cohort
+    Float default_af = 0.01
   }
+
   String output_file = basename(vcf, ".vcf.bgz") + ".tsv"
   Int default_disk_gb = ceil(size(vcf, "GB")) * 10 + 32
+
   command <<<
   set -euxo pipefail
 
-    # Filter to just All of Us cohort
-    bcftools view -S ~{aou_subjects} ~{vcf} -Oz -o aou.tmp.vcf.gz
-    bcftools view -i 'AC > 0' aou.tmp.vcf.gz -Oz -o aou.tmp2.vcf.gz
-    bcftools +fill-tags aou.tmp2.vcf.gz -Oz -o aou.tmp3.vcf.gz -- -t AF
-    bcftools index -t aou.tmp3.vcf.gz
+  echo "### Step 1: Filter to All of Us cohort"
+  bcftools view -S ~{aou_subjects} ~{vcf} -Oz -o aou.tmp.vcf.gz
+  bcftools view -i 'AC > 0' aou.tmp.vcf.gz -Oz -o aou.tmp2.vcf.gz
+  bcftools +fill-tags aou.tmp2.vcf.gz -Oz -o aou.tmp3.vcf.gz -- -t AF
+  bcftools index -t aou.tmp3.vcf.gz
 
-    # Filter to Rare Variants in All of Us cohort (less than 1%)
-    bcftools view -i 'AF <= 0.01' aou.tmp3.vcf.gz -Oz -o aou.vcf.gz
-    bcftools index -t aou.vcf.gz
+  echo "### Step 2: Filter to Rare Variants in cohort (< ~{default_af})"
+  bcftools view -i "AF <= ~{default_af}" aou.tmp3.vcf.gz -Oz -o aou.vcf.gz
+  bcftools index -t aou.vcf.gz
+  rm ~{vcf} aou.tmp.vcf.gz aou.tmp2.vcf.gz aou.tmp3.vcf.gz*
 
-    rm ~{vcf} aou.tmp.vcf.gz aou.tmp2.vcf.gz aou.tmp3.vcf.gz*
+  echo "### Step 3: Build Header"
+  {
+    echo -e "ID"
+    echo -e "AF"
+    echo -e "Consequence"
+    echo -e "IMPACT"
+    echo -e "SYMBOL"
+    echo -e "clinvar_clnsig"
+    echo -e "REVEL_score"
+    echo -e "gnomAD_AF_non_cancer"
+    echo -e "gnomAD_AF_non_cancer_afr"
+    echo -e "gnomAD_AF_non_cancer_ami"
+    echo -e "gnomAD_AF_non_cancer_amr"
+    echo -e "gnomAD_AF_non_cancer_asj"
+    echo -e "gnomAD_AF_non_cancer_eas"
+    echo -e "gnomAD_AF_non_cancer_fin"
+    echo -e "gnomAD_AF_non_cancer_mid"
+    echo -e "gnomAD_AF_non_cancer_nfe"
+    echo -e "gnomAD_AF_non_cancer_oth"
+    echo -e "gnomAD_AF_non_cancer_raw"
+    echo -e "gnomAD_AF_non_cancer_sas"
+    bcftools query -l aou.vcf.gz
+  } > vertical_header.txt
 
-    # Make the Header
-    echo -e "ID\nAF\nConsequence\nIMPACT\nSYMBOL\nclinvar_clnsig\nREVEL_score\ngnomAD_AF_non_cancer\ngnomAD_AF_non_cancer_afr\ngnomAD_AF_non_cancer_ami\ngnomAD_AF_non_cancer_amr\ngnomAD_AF_non_cancer_asj\ngnomAD_AF_non_cancer_eas\ngnomAD_AF_non_cancer_fin\ngnomAD_AF_non_cancer_mid\ngnomAD_AF_non_cancer_nfe\ngnomAD_AF_non_cancer_oth\ngnomAD_AF_non_cancer_raw\ngnomAD_AF_non_cancer_sas" > vertical_header.txt
-    bcftools query -l aou.vcf.gz >> vertical_header.txt
-    # Convert vertical header to horizontal tab-delimited format
-    tr '\n' '\t' < vertical_header.txt | sed 's/\t$/\n/' > ~{output_file}
- 
-    if bcftools view -h aou.vcf.gz | grep -q "gnomAD_AF_non_cancer"; then
-        bcftools +split-vep aou.vcf.gz -f '%ID\t%INFO/AF\t%Consequence\t%IMPACT\t%SYMBOL\t%clinvar_clnsig\t%REVEL_score\t%gnomAD_AF_non_cancer\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_oth\t%gnomAD_AF_non_cancer_raw\t%gnomAD_AF_non_cancer_sas\t[%GT\t]' -d > tmp.txt
-        # Clear Disk Space
-        rm aou.vcf.gz
+  tr '\n' '\t' < vertical_header.txt | sed 's/\t$/\n/' > ~{output_file}
 
-        # Filter to Gene List        
-        awk 'NR==FNR {cpg[$1]; next} $5 in cpg' ~{gene_list} tmp.txt > tmp1.txt
-        mv tmp1.txt tmp.txt
+  echo "### Step 4: Extract VEP annotations + genotype matrix"
+  if bcftools view -h aou.vcf.gz | grep -q "gnomAD_AF_non_cancer"; then
+    bcftools +split-vep aou.vcf.gz \
+      -f '%ID\t%INFO/AF\t%Consequence\t%IMPACT\t%SYMBOL\t%clinvar_clnsig\t%REVEL_score\t%gnomAD_AF_non_cancer\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_oth\t%gnomAD_AF_non_cancer_raw\t%gnomAD_AF_non_cancer_sas\t[%GT\t]' \
+      -d > tmp.txt
+    rm aou.vcf.gz
 
-    # Filter to Variants w/ <1% in 6 major gnomAD pops, < 10% in minor gnomAD pops, and < 1% in cohort
-    awk 'BEGIN{OFS="\t"} {$2=($2=="."?0:$2); $8=($8=="."?0:$8); $9=($9=="."?0:$9); $10=($10=="."?0:$10);$11=($11=="."?0:$11); $12=($12=="."?0:$12); $13=($13=="."?0:$13); $14=($14=="."?0:$14); $15=($15=="."?0:$15); $16=($16=="."?0:$16); $17=($17=="."?0:$17); $18=($18=="."?0:$18); $19=($19=="."?0:$19); if($2+0<0.01 && $14+0<0.01 && $9+0<0.01 && $11+0<0.01 && $13+0<0.01 && $19+0<0.01 && $16 < 0.01 && $10+0<0.1 && $12+0<0.1 && $15+0<0.1 && $17+0<0.1) print}' tmp.txt > tmp1.txt
+    echo "### Step 5: Restrict to Gene List"
+    awk 'NR==FNR {cpg[$1]; next} $5 in cpg' ~{gene_list} tmp.txt > tmp1.txt
     mv tmp1.txt tmp.txt
 
-    fi
+  fi
 
-    # Replace All Genotype Data with counts to cut memory in half
-    sed -i \
-      -e 's#0/0#0#g' \
-      -e 's#0/1#1#g' \
-      -e 's#1/1#1#g' \
-      -e 's#\./\.#0#g' \
-      -e 's#0|1#1#g' \
-      -e 's#1|0#1#g' \
-      -e 's#1|1#1#g' \
-      -e 's#0|0#0#g' \
-      tmp.txt || touch tmp.txt
+  echo "### Step 7: Collapse genotypes to allele counts"
+  sed -i \
+    -e 's#0/0#0#g' \
+    -e 's#0/1#1#g' \
+    -e 's#1/1#1#g' \
+    -e 's#\./\.#0#g' \
+    -e 's#0|1#1#g' \
+    -e 's#1|0#1#g' \
+    -e 's#1|1#1#g' \
+    -e 's#0|0#0#g' \
+    tmp.txt || touch tmp.txt
 
-    # Sort and Filter to High and Moderate Impact Variants
-    if grep -q -E 'HIGH|MODERATE' tmp.txt; then
-        grep -E 'HIGH|MODERATE' tmp.txt | sort -u >> ~{output_file}
-    fi
-    gzip ~{output_file}
+  echo "### Step 8: Keep HIGH/MODERATE impact"
+  if grep -q -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt; then
+    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u >> ~{output_file}
+  fi
+
+  gzip ~{output_file}
   >>>
+
   output {
     File out1 = "~{output_file}.gz"
   }
+
   runtime {
     docker: "vanallenlab/bcftools"
     disks: "local-disk ~{default_disk_gb} HDD"

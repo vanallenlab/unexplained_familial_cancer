@@ -35,6 +35,12 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_soft_tissues_of_upper_limb
 
     - name: Breast
+      sub_systems: 
+        -name: Male breast
+          - malignant_neoplasm_of_male_breast
+          - malignant_neoplasm_of_nipple_and_areola_of_male_breast
+          - overlapping_malignant_neoplasm_of_male_breast
+          - primary_malignant_neoplasm_of_male_breast
       types:
         - carcinoma_of_breast
         - carcinoma_of_breast__upper,_outer_quadrant
@@ -51,9 +57,7 @@ cancer_ontology:
         - malignant_neoplasm_of_female_breast
         - malignant_neoplasm_of_lowerinner_quadrant_of_female_breast
         - malignant_neoplasm_of_lowerouter_quadrant_of_female_breast
-        - malignant_neoplasm_of_male_breast
         - malignant_neoplasm_of_nipple_and_areola_of_female_breast
-        - malignant_neoplasm_of_nipple_and_areola_of_male_breast
         - malignant_neoplasm_of_upperinner_quadrant_of_female_breast
         - malignant_neoplasm_of_upperouter_quadrant_of_female_breast
         - malignant_tumor_of_breast
@@ -62,7 +66,6 @@ cancer_ontology:
         - neoplasm_of_nipple_of_female_breast
         - neoplasm_of_skin_of_breast
         - overlapping_malignant_neoplasm_of_female_breast
-        - overlapping_malignant_neoplasm_of_male_breast
         - primary_malignant_neoplasm_of_axillary_tail_of_breast
         - primary_malignant_neoplasm_of_axillary_tail_of_left_female_breast
         - primary_malignant_neoplasm_of_axillary_tail_of_right_female_breast
@@ -73,7 +76,6 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_female_breast
         - primary_malignant_neoplasm_of_lower_inner_quadrant_of_female_breast
         - primary_malignant_neoplasm_of_lower_outer_quadrant_of_female_breast
-        - primary_malignant_neoplasm_of_male_breast
         - primary_malignant_neoplasm_of_skin_of_breast
         - primary_malignant_neoplasm_of_upper_inner_quadrant_of_female_breast
         - primary_malignant_neoplasm_of_upper_outer_quadrant_of_female_breast
@@ -154,7 +156,7 @@ cancer_ontology:
         - neoplasm_of_digestive_tract
         - primary_malignant_neoplasm_of_gastrointestinal_tract
 
-    - name: Urinary_System
+    - name: Urinary
       sub_systems:
         - name: Bladder
           types:
@@ -187,7 +189,7 @@ cancer_ontology:
         - neoplasm_of_urinary_system
         - primary_malignant_neoplasm_of_urinary_system
         
-    - name: Gynecologic System
+    - name: Gynecologic
       sub_systems:
         - name: Ovary
           types:
@@ -217,7 +219,7 @@ cancer_ontology:
       types:
         - primary_malignant_neoplasm_of_parametrium
 
-    - name: Hematologic System
+    - name: Hematologic
       sub_systems:
         - name: Leukemia
           types:
@@ -385,8 +387,8 @@ cancer_ontology:
             - malignant_melanoma_of_head_and_neck
             - malignant_melanoma_of_hip
             - malignant_melanoma_of_lip
-            - malignant_melanoma_of_lower_limb
             - malignant_melanoma_of_right_choroid
+            - malignant_melanoma_of_lower_limb
             - malignant_melanoma_of_scalp_and/or_neck
             - malignant_melanoma_of_skin
             - malignant_melanoma_of_skin_of_breast
@@ -457,42 +459,56 @@ cancer_ontology:
       types:
         - primary_malignant_neoplasm_of_testis
     - name: Neuroendocrine
+      sub_systems:
+        - name: Pituitary
+          types:
+            - neoplasm_of_pituitary_gland
+            - primary_malignant_neoplasm_of_pituitary_gland
+        - name: GNET # Gastrointestinal Neuroendocrine
+          types:
+            - neuroendocrine_neoplasm_of_gastrointestinal_tract
+            - carcinoid_tumor_of_stomach
+            - carcinoid_tumor_of_intestine
+            - carcinoid_tumor_of_large_intestine
+            - carcinoid_tumor_of_small_intestine
+            - carcinoid_tumor_of_ileum
+            - malignant_carcinoid_tumor_of_colon
+            - malignant_carcinoid_tumor_of_ileum
+            - malignant_carcinoid_tumor_of_small_intestine
+            - malignant_neuroendocrine_tumor_of_duodenum
+            - malignant_neuroendocrine_tumor_of_ileum
+            - malignant_neuroendocrine_tumor_of_small_intestine
+            - primary_malignant_neuroendocrine_neoplasm_of_duodenum
+            - primary_malignant_neuroendocrine_neoplasm_of_ileum
+            - primary_malignant_neuroendocrine_neoplasm_of_small_intestine
+        - name: LNET # Lung Neuroendocrine
+          types:
+            - carcinoid_tumor_of_lung
+            - malignant_carcinoid_tumor_of_bronchus
+            - malignant_carcinoid_tumor_of_lung
+        - name: PNET # Pancreatic Neuroendocrine
+          types:
+            - primary_malignant_neoplasm_of_islets_of_langerhans
+        - name: Pheochromocytoma
+          types:
+            - primary_malignant_neoplasm_of_adrenal_gland
+            - primary_malignant_neoplasm_of_adrenal_medulla
+        - name: ANET # Appendix Neuroendocrine
+          types:
+            - carcinoid_tumor_of_appendix
+            - neuroendocrine_carcinoma_of_appendix
+        types:
+          - carcinoid_tumor
+          - malignant_carcinoid_tumor
+          - metastatic_carcinoid_tumor
+          - neuroendocrine_carcinoma
+          - neuroendocrine_tumor
+          - malignant_neuroendocrine_tumor
+          - malignant_poorly_differentiated_neuroendocrine_carcinoma
+          - medullary_thyroid_carcinoma # medullary thyroid is a neuroendocrine tumor
+    - name: Thymus
       types:
-        - carcinoid_tumor
-        - carcinoid_tumor_of_lung
-        - carcinoid_tumor_of_stomach
-        - carcinoid_tumor_of_ileum
-        - carcinoid_tumor_of_intestine
-        - carcinoid_tumor_of_large_intestine
-        - carcinoid_tumor_of_small_intestine
-        - malignant_carcinoid_tumor
-        - malignant_carcinoid_tumor_of_colon
-        - malignant_carcinoid_tumor_of_ileum
-        - malignant_carcinoid_tumor_of_small_intestine
-        - malignant_carcinoid_tumor_of_bronchus
-        - malignant_carcinoid_tumor_of_lung
-        - metastatic_carcinoid_tumor
-        - carcinoid_tumor_of_appendix
-        - neoplasm_of_pituitary_gland
-        - neuroendocrine_carcinoma
-        - neuroendocrine_carcinoma_of_appendix
-        - neuroendocrine_neoplasm_of_gastrointestinal_tract
-        - neuroendocrine_tumor
-        - malignant_neuroendocrine_tumor
-        - malignant_neuroendocrine_tumor_of_duodenum
-        - malignant_neuroendocrine_tumor_of_ileum
-        - malignant_neuroendocrine_tumor_of_small_intestine
-        - malignant_poorly_differentiated_neuroendocrine_carcinoma
-        - medullary_thyroid_carcinoma # medullary thyroid is a neuroendocrine tumor
-        - primary_malignant_neoplasm_of_adrenal_gland # adrenal is neuroendocrine or endocrine depending on if its in medulla or cortex: patient has neuroendocrine tumor
-        - primary_malignant_neoplasm_of_adrenal_medulla
-        - primary_malignant_neoplasm_of_islets_of_langerhans
-        - primary_malignant_neoplasm_of_pituitary_gland
         - primary_malignant_neoplasm_of_thymus
-        - primary_malignant_neuroendocrine_neoplasm_of_duodenum
-        - primary_malignant_neuroendocrine_neoplasm_of_ileum
-        - primary_malignant_neuroendocrine_neoplasm_of_small_intestine
-        
     - name: Endocrine
       sub_systems:
         - name: Thyroid
@@ -530,7 +546,7 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_lower_gum
             - primary_malignant_neoplasm_of_oral_cavity
             - primary_malignant_neoplasm_of_tongue
-        - name: Hypopharyngeal Laryngeal
+        - name: Hypopharyngeal
           types:
             - malignant_tumor_of_aryepiglottic_fold__laryngeal_aspect
             - malignant_tumor_of_supraglottis
@@ -550,6 +566,7 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_maxillary_sinus
         - primary_malignant_neoplasm_of_parotid_gland
         - malignant_tumor_of_parotid_gland
+
     - name: Viral
       sub_systems:
         - name: Anus #HPV
@@ -629,15 +646,18 @@ cancer_ontology:
         - tumor_of_respiratory_system
         - malignant_neoplasm_of_lower_respiratory_tract
 
-    - name: Environmental Miscellaneous
+   - name: Pleura
+     types:
+       - mesothelioma_malignant,_clinical_disorder
+       - malignant_mesothelioma_of_pleura
+       - primary_malignant_neoplasm_of_pleura
+
+    - name: Environmental Lymphoma
       types:
-        - mesothelioma_malignant,_clinical_disorder
-        - malignant_mesothelioma_of_pleura
-        - primary_malignant_neoplasm_of_pleura
         - large_cell_anaplastic_lymphoma
         - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
         
-    - name: Other
+    - name: Unspecific
       types:
         - malignant_neoplasm_of_canthus
         - malignant_neoplasm_of_lower_eyelid

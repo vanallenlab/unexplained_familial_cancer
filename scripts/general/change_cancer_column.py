@@ -15,6 +15,7 @@ cancel_out = {
     "primary_malignant_neoplasm_of_liver":"Gastrointestinal",
     "primary_malignant_neoplasm_of_renal_pelvis": "Kidney",
     "neuroendocrine_carcinoma_of_appendix": "Appendix",
+    "carcinoid_tumor_of_appendix": "Appendix",
     "malignant_neuroendocrine_tumor_of_duodenum": "Small_Intestines",
     "malignant_neuroendocrine_tumor_of_ileum": "Small_Intestines",
     "malignant_neuroendocrine_tumor_of_small_intestine": "Small_Intestines",
@@ -42,7 +43,9 @@ cancel_out = {
     "large_cell_anaplastic_lymphoma": "Non-Hodgkins",
     "large_cell_anaplastic_lymphoma": "Lymphoma",
     "extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma": "Non-Hodgkins",
-    "extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma": "Lymphoma"
+    "extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma": "Lymphoma",
+    "malignant_melanoma_of_right_choroid":"Eye",
+    "malignant_melanoma_of_right_choroid":"Nervous"
 }
 
 # --- Build dx → systems map + parent tracking ---
@@ -100,10 +103,10 @@ def group_dxs(row):
 
 # --- PGC cancers ---
 pgc_cancers = [
-    "appendix","biliary","bladder","bone","brain","breast","colorectal","esophagus","eye","kidney",
-    "leukemia","lung","lymphoma","melanoma","meninges","myelomastocytic","nervous","neuroendocrine",
-    "ovary","pancreas","parathyroid","prostate","stomach","small_intestines","soft_tissue",
-    "testis","thyroid","uterus"
+    "appendix","anet","biliary","bladder","bone","brain","breast","colorectal","esophagus","eye","gnet","kidney",
+    "leukemia","lung","lnet","lymphoma","melanoma","meninges","myelomastocytic","nervous","neuroendocrine",
+    "ovary","pancreas","parathyroid","pituitary","pnet","pheochromocytoma","prostate","stomach","small_intestines","soft_tissue",
+    "testis","thyroid","thymus","uterus"
 ]
 
 def count_pgc_direct(row):
