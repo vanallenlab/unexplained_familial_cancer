@@ -36,11 +36,12 @@ cancer_ontology:
 
     - name: Breast
       sub_systems: 
-        -name: Male breast
-          - malignant_neoplasm_of_male_breast
-          - malignant_neoplasm_of_nipple_and_areola_of_male_breast
-          - overlapping_malignant_neoplasm_of_male_breast
-          - primary_malignant_neoplasm_of_male_breast
+        - name: Male breast
+          types:
+            - malignant_neoplasm_of_male_breast
+            - malignant_neoplasm_of_nipple_and_areola_of_male_breast
+            - overlapping_malignant_neoplasm_of_male_breast
+            - primary_malignant_neoplasm_of_male_breast
       types:
         - carcinoma_of_breast
         - carcinoma_of_breast__upper,_outer_quadrant
