@@ -163,10 +163,13 @@ def count_pgc_direct(row):
 
     return count
 
+
 # --- Main ---
 if __name__ == "__main__":
     df = pd.read_csv("dfci-ufc.aou.phenos.tsv", sep="\t")
+    df2 = pd.read_csv("dfci-ufc.aou.family_cancers.tsv", sep='\t')
     df["original_dx_grouped"] = df.apply(group_dxs, axis=1)
     df["Possibly_Syndromic_Cancers"] = df.apply(count_pgc_direct, axis=1)
+    df = df.merge(df2, left_on = "original_id", right_on = "sample_id",how="left")
     df.to_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t", index=False)
 
