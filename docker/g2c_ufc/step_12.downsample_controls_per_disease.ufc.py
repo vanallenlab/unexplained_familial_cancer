@@ -270,7 +270,8 @@ def parse_complex_logic(logic_str, meta):
     
     # Tokenize by spaces and operators, keeping parentheses
     tokens = re.split(r'(\s+|\(|\))', logic_str)
-    
+    print("Tokens:", tokens)
+
     parsed_tokens = []
     for t in tokens:
         t = t.strip()
@@ -290,12 +291,15 @@ def parse_complex_logic(logic_str, meta):
             parsed_tokens.append(mask_name)
             # store in locals dict so we can eval later
             locals()[mask_name] = token_to_mask(t)
+            print(f"Token: {t}, Mask True Count: {mask_series.sum()}")
 
     # Combine all tokens into a Python boolean expression
     expr = " ".join(parsed_tokens)
-    
+    print("Boolean expression to eval:", expr)
+
     # Evaluate the expression in locals containing masks
     result_mask = eval(expr, {}, locals())
+    print("Result mask sum (number of True rows):", result_mask.sum())
     
     return result_mask
 
