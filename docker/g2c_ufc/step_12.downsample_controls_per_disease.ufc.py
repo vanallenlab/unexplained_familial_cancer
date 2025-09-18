@@ -269,7 +269,7 @@ def parse_complex_logic(logic_str, meta):
     logic_str = re.sub(r'\bNOR\b', ' not ', logic_str, flags=re.IGNORECASE)
     
     # Tokenize by spaces and operators, keeping parentheses
-    tokens = re.split(r'(\s+|\(|\))', logic_str)
+    tokens = re.findall(r'\(|\)|\w+:\w+|AND|OR|NOT', logic_str, flags=re.IGNORECASE)
     print("Tokens:", tokens)
 
     parsed_tokens = []
