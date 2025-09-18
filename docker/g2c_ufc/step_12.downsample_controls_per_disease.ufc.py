@@ -311,7 +311,7 @@ def main():
     parser.add_argument('--metadata', required=True, help='sample metadata .tsv')
     parser.add_argument('--phenotype-data', required=True, help='data describing phenotypes')
     parser.add_argument('--sample-list', required=True, help='list of samples to keep compared to larger G2C study')
-    parser.add_argument('--cancer-subtype', required=True, help='cancer subtype being analyzed')
+    parser.add_argument('--cancer-subtype', required=False, help='cancer subtype being analyzed')
     parser.add_argument('--pca', required = True, help='.eigenvec file')
     parser.add_argument('--kinship', required = False, help='plink king file represtenting sparse matrix of kinship')
     parser.add_argument('--keep-samples', required = False, help='list of IDs to retain during ' +
@@ -335,7 +335,10 @@ def main():
 
     # Make the log file
     if not args.log_file:
-        args.log_file = f"{args.cancer_subtype}.cohort.log"
+        if args.cancer_subtype:
+            args.log_file = f"{args.cancer_subtype}.cohort.log"
+        else:
+            args.log_file = "cancer.cohort.log"
 
     with open(args.log_file, "w") as f:
         f.write("Size\tNum_Filtered\tPercent_Filtered\tExclusion_Criteria\n")
@@ -416,17 +419,14 @@ def main():
             meta = meta[cancer_mask]
 
 
-    # Filter to 0 cancers (controls) or more than X cancers if specified
-    if args.min_cancers > 1:
-        # Keep controls (0 cancers) OR cases with >= min_cancers
-        meta = meta[(meta['Possibly_Genetic_Cancers'] == 0) | 
-                (meta['Possibly_Genetic_Cancers'] >= args.min_cancers)]
-
     # Remove samples with irrelevant cancer diagnosis for this study
     sample_size3 = len(meta)
 
     with open(args.log_file, "a") as f:
-        f.write(f"{sample_size3}\t{(sample_size2 - sample_size3)}\t{round(((sample_size2 - sample_size3)/sample_size2),3) * 100}\tRemove samples that are not controls nor {args.cancer_subtype.replace('|',',')} diagnosis.\n") 
+        if args.cancer_subtype:
+            f.write(f"{sample_size3}\t{(sample_size2 - sample_size3)}\t{round(((sample_size2 - sample_size3)/sample_size2),3) * 100}\tRemove samples that are not controls nor {args.cancer_subtype.replace('|',',')} diagnosis.\n") 
+        else:
+            f.write(f"{sample_size3}\t{(sample_size2 - sample_size3)}\t{round(((sample_size2 - sample_size3)/sample_size2),3) * 100}\tRemove samples that are not controls nor specific cancer diagnosis.\n") 
 
     # Do initial filtering of dataset
     if args.sex_karyotypes:
@@ -481,10 +481,11 @@ def main():
         f.write("\n\n")
 
         # Count per cancer
-        f.write("Counts by cancer:\n")
-        f.write(f"{args.cancer_subtype}\t{(meta['cancer'] != 'control').sum()}\n")
-        f.write(f"Controls\t{(meta['cancer'] == 'control').sum()}\n")
-        f.write("\n\n")
+        if args.cancer_subtype:
+            f.write("Counts by cancer:\n")
+            f.write(f"{args.cancer_subtype}\t{(meta['cancer'] != 'control').sum()}\n")
+            f.write(f"Controls\t{(meta['cancer'] == 'control').sum()}\n")
+            f.write("\n\n")
 
         # Count per sex_karyotype
         f.write("Counts by sex_karyotype:\n")

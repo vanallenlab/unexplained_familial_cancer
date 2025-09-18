@@ -7,9 +7,9 @@ version 1.0
 
 workflow STEP_12_FILTER_COHORT {
   input {
-    Array[String] cancer_types = ["Basal_Cell_Carcinoma","Breast","Bone_and_Soft_Tissue_System","Colorectal","Gastrointestinal_System","Thyroid","Urinary_System","Gynecologic_System","Head_and_Neck_System","Hematologic_System","Lymphoma","Melanoma","Prostate","Squamous_Cell_Carcinoma","Oropharyngeal","Respiratory_System","Nervous_System","Testis"]
-    Array[String] lower_case_name = ["basal_cell","breast","bone_and_soft_tissue","colorectal","gastrointestinal","thyroid","urinary","gynecologic","head_and_neck","hematologic","lymphoma","melanoma","prostate","squamous_cell","oropharyngeal","respiratory","nervous","testis"]
-    Array[String] sex_arr = ["XX,XY","XX","XX,XY","XX,XY","XX,XY","XX,XY","XX,XY","XX","XX,XY","XX,XY","XX,XY","XX,XY","XY","XX,XY","XX,XY","XX,XY","XX,XY","XY"]
+    Array[String] cancer_types = ["Basal_Cell_Carcinoma","Bladder","Breast","Colorectal","Gastrointestinal","Hematologic","Kidney","Lung","Melanoma","Neuroendocrine","Nervous","Non-Hodgkins","Ovary","Prostate","Sarcoma","Squamous_Cell_Carcinoma","Thyroid","Uterus","Viral"]
+    Array[String] lower_case_name = ["basal_cell","bladder","breast","colorectal","gastrointestinal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","prostate","sarcoma","squamous_cell","thyroid","uterus","viral"]
+    Array[String] sex_arr = ["XX,XY","XX,XY","XX","XX,XY","XX,XY","XX,XY","XX,XY","XX,XY","XX,XY","XX,XY","XX,XY","XX,XY","XX","XY","XX,XY","XX,XY","XX,XY","XX,XY","XX,XY"]
     Int max_age = 200
     Int min_age = 0
     String cohorts = "aou"

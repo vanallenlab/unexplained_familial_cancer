@@ -189,17 +189,14 @@ def map_and_concat(row):
         "Stomach": "Stomach",
         "Thyroid": "Thyroid",
         "Uterus": "Uterus",
-        "Oropharynx": "HNSCC",
-        "ENT": "HNSCC"
+        "Skin":"Skin"
     }
-    # --- handle original_dx ---
-    if pd.notna(row["original_dx"]):
-        for term in str(row["original_dx"]).split(";"):
+    # --- handle original_dx_grouped ---
+    if pd.notna(row["original_dx_grouped"]):
+        for term in str(row["original_dx_grouped"]).split(";"):
             term = term.strip()
             if term in mapping:
                 terms.add(mapping[term])
-            else:
-                terms.add(term)  # keep unmapped terms too
 
     # --- handle cancers_in_FDRs ---
     if pd.notna(row["cancers_in_FDRs"]):
