@@ -17,6 +17,7 @@ import pandas as pd
 import random
 import string
 import math
+import re
 import networkx as nx
 from scipy.stats import chisquare, fisher_exact
 
@@ -234,6 +235,71 @@ def get_min_case_control_ratio(meta: pd.DataFrame):
     print(f"Ratio Series: {ratio_series}")
     return min_val
 
+
+def parse_complex_logic(logic_str, meta):
+    """
+    Parse a complex logic string and return a boolean mask for filtering meta.
+    
+    logic_str examples:
+      "(Breast:patient AND Prostate:family) OR (Prostate:patient AND Breast:family)"
+    
+    meta must have columns:
+      - 'original_dx' (patient cancers)
+      - 'family_dx' (family cancers)
+    """
+    
+    # Helper: convert a single token Cancer:axis -> boolean Series
+    def token_to_mask(token):
+        token = token.strip()
+        if ':' not in token:
+            raise ValueError(f"Invalid token {token}, expected CancerType:axis")
+        cancer, axis = token.split(":")
+        axis = axis.lower()
+        cancer = cancer.strip()
+        if axis == "patient":
+            return meta['original_dx'].str.contains(cancer, na=False)
+        elif axis == "family":
+            return meta['family_dx'].str.contains(cancer, na=False)
+        elif axis == "both":
+            return meta['original_dx'].str.contains(cancer, na=False) | meta['family_dx'].str.contains(cancer, na=False)
+        else:
+            raise ValueError(f"Unsupported axis: {axis} in token {token}")
+
+    # Replace NOR with Python-friendly syntax
+    logic_str = re.sub(r'\bNOR\b', ' not ', logic_str, flags=re.IGNORECASE)
+    
+    # Tokenize by spaces and operators, keeping parentheses
+    tokens = re.split(r'(\s+|\(|\))', logic_str)
+    
+    parsed_tokens = []
+    for t in tokens:
+        t = t.strip()
+        if not t:
+            continue
+        if t.upper() == "AND":
+            parsed_tokens.append("&")
+        elif t.upper() == "OR":
+            parsed_tokens.append("|")
+        elif t.upper() == "NOT":  # in case used
+            parsed_tokens.append("~")
+        elif t == "(" or t == ")":
+            parsed_tokens.append(t)
+        else:
+            # token like Breast:patient -> convert to boolean mask reference
+            mask_name = f"__mask_{len(parsed_tokens)}"
+            parsed_tokens.append(mask_name)
+            # store in locals dict so we can eval later
+            locals()[mask_name] = token_to_mask(t)
+
+    # Combine all tokens into a Python boolean expression
+    expr = " ".join(parsed_tokens)
+    
+    # Evaluate the expression in locals containing masks
+    result_mask = eval(expr, {}, locals())
+    
+    return result_mask
+
+
 def main():
     """
     Main block
@@ -261,7 +327,10 @@ def main():
     parser.add_argument('--cohorts',required=True, help='Comma delimited string denoting which cohorts to include')
     parser.add_argument('--use-original-dx', required=True, default=False, help='Option to use original_dx to get more niche subtypes.')
     parser.add_argument('--family-cancer-subtype', required=False, default=None, help='Cancer Types to look for in family_dx')
-    parser.add_argument('--boolean-logic',required=False,default= "and", help = 'We need to look for AND/OR/NOR')
+    parser.add_argument('--complex-logic', required=False, default=None,
+                    help='Complex filtering logic string, e.g., '
+                         '"(Breast:patient AND Prostate:family) OR (Prostate:patient AND Breast:family)"')
+
     args = parser.parse_args()
 
     # Make the log file
@@ -318,24 +387,25 @@ def main():
     print("Args Variables")
 
     # --- Filtering logic ---
-    if args.boolean_logic:  # Boolean logic takes priority
-        logic = args.boolean_logic.upper()
-        fam_mask = meta['family_dx'].str.contains(f"control|{args.family_cancer_subtype}")
+
+    # 1) Complex logic has highest priority
+    if args.complex_logic:
+        # Assume we have a function `parse_complex_logic` that returns a boolean mask for meta
+        mask = parse_complex_logic(args.complex_logic, meta)
+        meta = meta[mask]
+
+    # 2) Family cancer filter (simple AND: patient has subtype, family has at least one family_cancer_subtype)
+    elif args.family_cancer_subtype:
+        fam_subtypes = [x.strip() for x in args.family_cancer_subtype.split(",")]
+        fam_mask = meta['family_dx'].str.contains("|".join(fam_subtypes), na=False)
 
         if args.cancer_subtype == "pancancer":
             # Only family_dx matters
-            orig_mask = True
+            meta = meta[fam_mask]
         else:
-            orig_mask = meta['original_dx'].str.contains(f"control|{args.cancer_subtype}")
-
-        if logic == "AND":
-            meta = meta[fam_mask & orig_mask]
-        elif logic == "OR":
-            meta = meta[fam_mask | orig_mask]
-        elif logic == "NOR":
-            meta = meta[~(fam_mask | orig_mask)]
-        else:
-            raise ValueError(f"Unsupported boolean logic: {args.boolean_logic}")
+            orig_mask = meta['original_dx'].str.contains(args.cancer_subtype, na=False)
+            # Keep rows where patient has cancer_subtype AND family has one of the family_subtypes
+            meta = meta[orig_mask & fam_mask]
 
     else:  # No boolean logic → simple subtype filtering
         if args.cancer_subtype != "pancancer":
@@ -344,7 +414,6 @@ def main():
             else:
                 cancer_mask = meta['cancer'].str.contains(f"control|{args.cancer_subtype}")
             meta = meta[cancer_mask]
-        # pancancer + no boolean_logic = no filtering
 
 
     # Filter to 0 cancers (controls) or more than X cancers if specified

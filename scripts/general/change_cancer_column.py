@@ -164,6 +164,56 @@ def count_pgc_direct(row):
     return count
 
 
+
+def map_and_concat(row):
+    terms = set()
+    # --- mapping dictionary ---
+    mapping = {
+        "Bladder": "Bladder",
+        "Hemotologic_System": "Blood_Soft_Tissue",
+        "Sarcoma": "Blood_Soft_Tissue",
+        "Lymphoma": "Blood_Soft_Tissue",
+        "Bone": "Bone",
+        "Brain": "Brain",
+        "Meninges": "Brain",
+        "Breast": "Breast",
+        "Cervix": "Cervix",
+        "Colorectal": "Colorectal",
+        "Esophagus": "Esophagus",
+        "Eye": "Eye",
+        "Kidney": "Kidney",
+        "Lung": "Lung",
+        "Ovary": "Ovary",
+        "Pancreas": "Pancreas",
+        "Prostate": "Prostate",
+        "Stomach": "Stomach",
+        "Thyroid": "Thyroid",
+        "Uterus": "Uterus",
+        "Oropharynx": "HNSCC",
+        "ENT": "HNSCC"
+    }
+    # --- handle original_dx ---
+    if pd.notna(row["original_dx"]):
+        for term in str(row["original_dx"]).split(";"):
+            term = term.strip()
+            if term in mapping:
+                terms.add(mapping[term])
+            else:
+                terms.add(term)  # keep unmapped terms too
+
+    # --- handle cancers_in_FDRs ---
+    if pd.notna(row["cancers_in_FDRs"]):
+        for term in str(row["cancers_in_FDRs"]).split(";"):
+            term = term.strip()
+            if term in mapping:
+                terms.add(mapping[term])
+            else:
+                terms.add(term)
+
+    # --- return unique semi-colon joined string ---
+    return ";".join(sorted(terms))
+
+
 # --- Main ---
 if __name__ == "__main__":
     df = pd.read_csv("dfci-ufc.aou.phenos.tsv", sep="\t")
@@ -171,6 +221,7 @@ if __name__ == "__main__":
     df["original_dx_grouped"] = df.apply(group_dxs, axis=1)
     df["Possibly_Syndromic_Cancers"] = df.apply(count_pgc_direct, axis=1)
     df = df.merge(df2, left_on = "Sample", right_on = "sample_id",how="left")
+    df["all_fam_dx"] = df.apply(map_and_concat, axis=1)
     df = df.fillna("NA")
     df.to_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t", index=False)
 

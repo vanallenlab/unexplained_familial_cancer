@@ -498,15 +498,15 @@ cancer_ontology:
           types:
             - carcinoid_tumor_of_appendix
             - neuroendocrine_carcinoma_of_appendix
-        types:
-          - carcinoid_tumor
-          - malignant_carcinoid_tumor
-          - metastatic_carcinoid_tumor
-          - neuroendocrine_carcinoma
-          - neuroendocrine_tumor
-          - malignant_neuroendocrine_tumor
-          - malignant_poorly_differentiated_neuroendocrine_carcinoma
-          - medullary_thyroid_carcinoma # medullary thyroid is a neuroendocrine tumor
+      types:
+        - carcinoid_tumor
+        - malignant_carcinoid_tumor
+        - metastatic_carcinoid_tumor
+        - neuroendocrine_carcinoma
+        - neuroendocrine_tumor
+        - malignant_neuroendocrine_tumor
+        - malignant_poorly_differentiated_neuroendocrine_carcinoma
+        - medullary_thyroid_carcinoma # medullary thyroid is a neuroendocrine tumor
     - name: Thymus
       types:
         - primary_malignant_neoplasm_of_thymus
@@ -531,7 +531,7 @@ cancer_ontology:
         - neoplasm_of_liver
         - primary_malignant_neoplasm_of_liver
         
-    - name: ENT # Non Viral
+    - name: HN # Non Viral
       sub_systems:
         - name: Oral Cavity
           types:
@@ -647,11 +647,11 @@ cancer_ontology:
         - tumor_of_respiratory_system
         - malignant_neoplasm_of_lower_respiratory_tract
 
-   - name: Pleura
-     types:
-       - mesothelioma_malignant,_clinical_disorder
-       - malignant_mesothelioma_of_pleura
-       - primary_malignant_neoplasm_of_pleura
+    - name: Pleura
+      types:
+        - mesothelioma_malignant,_clinical_disorder
+        - malignant_mesothelioma_of_pleura
+        - primary_malignant_neoplasm_of_pleura
 
     - name: Environmental Lymphoma
       types:

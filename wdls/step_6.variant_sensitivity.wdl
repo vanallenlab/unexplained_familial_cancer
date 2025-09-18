@@ -65,25 +65,6 @@ workflow STEP_6_VARIANT_SENSITIVITY {
       snp_or_indel = "indel"
   }
 
-  # Doubleton, Tripleton, False Positives
-  #call Probabilities as Doubletons_Probabilities{
-  #  input:
-  #    variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/Extract_AF/01a73628-a1d3-4efc-a3cf-2ce29872ccdb/call-concatenateDoubletonTPs/cacheCopy/doubleton_tps_list.tsv",
-  #    rf_predictions = rf_predictions,
-  #    snp_or_indel = "All"
-  #}
-  #call Probabilities as Tripletons_Probabilities{
-  #  input:
-  #    variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/Extract_AF/2816eb47-faa1-46af-9631-bd4dbb2d1a16/call-concatenateTripletons/tripletons_list.tsv",
-  #    rf_predictions = rf_predictions,
-  #    snp_or_indel = "All"
-  #}
-  #call Probabilities as False_Positives_Probabilities{
-  #  input:
-  #    variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/Extract_AF/01a73628-a1d3-4efc-a3cf-2ce29872ccdb/call-concatenateFPs/cacheCopy/false_positive_list.tsv",
-  #    rf_predictions = rf_predictions,
-  #    snp_or_indel = "indel"
-  #}
   # Plotting Sensitivity
   call plot_sensitivity as plot_sensitivity_snps{
     input:
@@ -96,119 +77,6 @@ workflow STEP_6_VARIANT_SENSITIVITY {
       tsv_file = INDEL_Probabilities.tp_prob_output,
       snp_or_indel = "indel",
       max_sensitivity = INDEL_Probabilities.max_sensitivity
-  }
-  #call plot_sensitivity_all {
-  #  input:
-  #    doubletons = Tripletons_Probabilities.tp_prob_output,
-  #    tripletons = Tripletons_Probabilities.tp_prob_output,
-  #    #false_positives = Tripletons_Probabilities.tp_prob_output,
-  #    snp_or_indel = "all",
-  #    doubletons_max_sensitivity = Tripletons_Probabilities.max_sensitivity,
-  #    tripletons_max_sensitivity = Tripletons_Probabilities.max_sensitivity
-      #false_positives_max_sensitivity = Tripletons_Probabilities.max_sensitivity
-  #}
-}
-
-task plot_sensitivity_all {
-  input {
-    File doubletons
-    File tripletons
-    #File false_positives
-    String snp_or_indel
-    Float doubletons_max_sensitivity
-    Float tripletons_max_sensitivity
-    #Float false_positives_max_sensitivity
-  }
-
-  command <<<
-  # Exit immediately if a command exits with a non-zero status
-  set -eu -o pipefail
-  cp ~{doubletons} doubletons.tsv
-  cp ~{tripletons} tripletons.tsv
-  #cp {false_positives} false_positives.tsv
-
-  python3 <<CODE
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  import numpy as np
-
-  # Load the TSV files
-  df_doubletons = pd.read_csv("doubletons.tsv", sep='\t')
-  df_tripletons = pd.read_csv("tripletons.tsv", sep='\t')
-  #df_false_positives = pd.read_csv("false_positives.tsv", sep='\t')
-
-  # Sort by tp_prob in ascending order
-  df_doubletons = df_doubletons.sort_values(by='tp_prob', ascending=True)
-  df_tripletons = df_tripletons.sort_values(by='tp_prob', ascending=True)
-  #df_false_positives = df_false_positives.sort_values(by='tp_prob', ascending=True)
-  
-  # Define probability thresholds from 0 to 1 in increments of 0.01
-  thresholds = np.arange(0, 1.01, 0.01)
-
-  # Initialize list to store sensitivity at each threshold
-  doubletons_sensitivity = []
-  tripletons_sensitivity = []
-  #false_positives_sensitivity = []
-
-  # Calculate sensitivity at each threshold
-  doubleton_total_positives = len(df_doubletons)
-  tripleton_total_positives = len(df_tripletons)
-  #false_total_positives = len(df_false_positives)
-
-  for threshold in thresholds:
-      # Count how many rows have tp_prob >= current threshold
-      doubletons_true_positives_at_threshold = df_doubletons[df_doubletons['tp_prob'] >= threshold].shape[0]
-      tripletons_true_positives_at_threshold = df_tripletons[df_tripletons['tp_prob'] >= threshold].shape[0]
-      #false_positives_at_threshold = df_false_positives[df_false_positives['tp_prob'] >= threshold].shape[0]
-
-      # Sensitivity is TP / Total positives
-      doubletons_sensitivity_at_threshold = (doubletons_true_positives_at_threshold / doubleton_total_positives) * ~{doubletons_max_sensitivity}
-      tripletons_sensitivity_at_threshold = (tripletons_true_positives_at_threshold / tripleton_total_positives) * ~{tripletons_max_sensitivity}
-      #false_positives_sensitivity_at_threshold = (false_positives_at_threshold / false_total_positives) * {false_positives_max_sensitivity}
-
-
-      doubletons_sensitivity.append(doubletons_sensitivity_at_threshold)
-      tripletons_sensitivity.append(tripletons_sensitivity_at_threshold)
-      #false_positives_sensitivity.append(false_positives_sensitivity_at_threshold)
-
-  # Plot the sensitivity curve
-  plt.figure(figsize=(8, 6))
-  plt.plot(thresholds, doubletons_sensitivity, linestyle='-', color='b',label='Doubletons')
-  plt.plot(thresholds, tripletons_sensitivity, linestyle='-', color='r', label = 'Tripletons')
-  #plt.plot(thresholds, false_positives_sensitivity, linestyle='-', color='g', label = 'False Positives')
-
-  plt.xlabel('tp_prob')
-  plt.ylabel('Sensitivity')  
-  plt.title('Sensitivity Curve for Doubleton and Tripleton Variants')
-  plt.grid(True)
-  plt.legend()
-
-  # Save the plot
-  plt.savefig("sensitivity_plot_all_metrics_~{snp_or_indel}.png")
-  plt.close()
-
-  # Create a DataFrame with thresholds and sensitivity
-  df_sensitivity = pd.DataFrame({
-      'tp_prob': thresholds,
-      'doubletons_sensitivity': doubletons_sensitivity,
-      'tripletons_sensitivity': tripletons_sensitivity,
-      #'false_positives_sensitivity': false_positives_sensitivity,
-  })
-
-  # Save the DataFrame to a TSV file
-  df_sensitivity.to_csv("sensitivity_output_all_metrics_~{snp_or_indel}.tsv", sep='\t', index=False)
-  CODE
-  >>>
-
-  output {
-    File sensitivity_plot = "sensitivity_plot_all_metrics_~{snp_or_indel}.png"
-    File sensitivity_tsv = "sensitivity_output_all_metrics_~{snp_or_indel}.tsv"
-  }
-
-  runtime {
-    docker: "vanallenlab/pydata_stack"
-    #memory: "4G"
-    #disks: "local-disk 10 HDD"
   }
 }
 
@@ -361,7 +229,7 @@ task Probabilities {
   runtime {
     docker: "vanallenlab/pydata_stack"
     disks: "local-disk 100 HDD"
-    memory: "16G"
+    memory: "32G"
   }
 }
 
@@ -382,7 +250,7 @@ task Extract_Variants_From_VCF {
 
 task SliceRemoteFiles {
   input {
-    String vcf
+    File vcf
     File vcf_idx
     String callset_name
 
@@ -390,21 +258,43 @@ task SliceRemoteFiles {
     Float mem_gb = 12
     Int n_cpu = 4
 
-    String chromosome = "chr22"
-
     String docker = "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base:2023-07-28-v0.28.1-beta-e70dfbd7"
   }
 
   command <<<
-    set -eu -o pipefail
+    set -euxo pipefail
 
     echo -e "\nSLICING QUERY REGIONS FROM VCF, REMOTELY\n"
-    mv ~{vcf_idx} ./
+    #mv ~{vcf_idx} ./
     # Generate a BED file with intervals from 1 to 300,000,000 with steps of 1,000,000
-    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 300000000; i += 1000000) { print "~{chromosome}", i, (i + 1000000 - 1) } }' \
+    (
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 280000000; i += 1000000) { print "chr1", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 280000000; i += 1000000) { print "chr2", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 230000000; i += 1000000) { print "chr3", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 220000000; i += 1000000) { print "chr4", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 210000000; i += 1000000) { print "chr5", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 200000000; i += 1000000) { print "chr6", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 190000000; i += 1000000) { print "chr7", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 180000000; i += 1000000) { print "chr8", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 170000000; i += 1000000) { print "chr9", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 160000000; i += 1000000) { print "chr10", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 160000000; i += 1000000) { print "chr11", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 160000000; i += 1000000) { print "chr12", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 140000000; i += 1000000) { print "chr13", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 140000000; i += 1000000) { print "chr14", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 130000000; i += 1000000) { print "chr15", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 120000000; i += 1000000) { print "chr16", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 110000000; i += 1000000) { print "chr17", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 1100000000; i += 1000000) { print "chr18", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 90000000; i += 1000000) { print "chr19", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 90000000; i += 1000000) { print "chr20", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 70000000; i += 1000000) { print "chr21", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 70000000; i += 1000000) { print "chr22", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 180000000; i += 1000000) { print "chrX", i, (i + 1000000 - 1) } }' ;
+    awk -v OFS="\t" 'BEGIN { for (i = 1; i <= 90000000; i += 1000000) { print "chrY", i, (i + 1000000 - 1) } }' ;
+    ) \
     | bgzip -c \
     > query.bed.gz
-
     echo -e "\nSLICING REMOTE ANNOTATION FILES:\n"
     mkdir remote_slices
 
@@ -417,7 +307,7 @@ task SliceRemoteFiles {
       interval="${chr}:${start}-${end}"
       output_file="remote_slices/${chr}_${start}_${end}.vcf.gz"
       echo -e "$output_file"
-      export GCS_OAUTH_TOKEN=`gcloud auth application-default print-access-token`
+      export GCS_OAUTH_TOKEN='gcloud auth application-default print-access-token'
       tabix -h -R <(echo -e "${chr}\t${start}\t${end}") ~{vcf} | bgzip -c > "${output_file}"
 
       if [ $(bcftools view -H "${output_file}"| wc -l)  -eq 0 ]; then
