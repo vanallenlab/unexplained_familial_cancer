@@ -290,7 +290,8 @@ def parse_complex_logic(logic_str, meta):
             mask_name = f"__mask_{len(parsed_tokens)}"
             parsed_tokens.append(mask_name)
             # store in locals dict so we can eval later
-            locals()[mask_name] = token_to_mask(t)
+            mask_series = token_to_mask(t)
+            locals()[mask_name] = mask_series
             print(f"Token: {t}, Mask True Count: {mask_series.sum()}")
 
     # Combine all tokens into a Python boolean expression
