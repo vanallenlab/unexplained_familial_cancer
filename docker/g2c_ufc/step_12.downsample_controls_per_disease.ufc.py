@@ -400,7 +400,8 @@ def main():
     if args.complex_logic:
         # Assume we have a function `parse_complex_logic` that returns a boolean mask for meta
         mask = parse_complex_logic(args.complex_logic, meta)
-        meta = meta[mask]
+        control_mask = meta['cancer'] == "control"
+        meta = meta[mask | control_mask]
 
     # 2) Family cancer filter (simple AND: patient has subtype, family has at least one family_cancer_subtype)
     elif args.family_cancer_subtype:
