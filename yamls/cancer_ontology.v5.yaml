@@ -36,7 +36,7 @@ cancer_ontology:
 
     - name: Breast
       sub_systems: 
-        - name: Male breast
+        - name: Male Breast
           types:
             - malignant_neoplasm_of_male_breast
             - malignant_neoplasm_of_nipple_and_areola_of_male_breast
@@ -222,12 +222,14 @@ cancer_ontology:
 
     - name: Hematologic
       sub_systems:
+        - name: ALL
+          types:
+            - acute_lymphoid_leukemia
+            - acute_lymphoid_leukemia_in_remission
         - name: Leukemia
           types:
             - acute_leukemia
             - acute_leukemia_in_remission
-            - acute_lymphoid_leukemia
-            - acute_lymphoid_leukemia_in_remission
             - acute_megakaryoblastic_leukemia
             - acute_monocytic_leukemia
             - acute_myeloid_leukemia,_disease
@@ -459,6 +461,9 @@ cancer_ontology:
     - name: Testis
       types:
         - primary_malignant_neoplasm_of_testis
+    - name: Uveal Melanoma
+      types:
+        - malignant_melanoma_of_right_choroid
     - name: Neuroendocrine
       sub_systems:
         - name: Pituitary
