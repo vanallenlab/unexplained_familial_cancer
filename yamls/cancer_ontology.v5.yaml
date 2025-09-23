@@ -461,6 +461,11 @@ cancer_ontology:
     - name: Testis
       types:
         - primary_malignant_neoplasm_of_testis
+    - name: SCLC # Small Cell Lung Cancer
+      types:
+        - carcinoid_tumor_of_lung
+        - malignant_carcinoid_tumor_of_bronchus
+        - malignant_carcinoid_tumor_of_lung
     - name: Uveal Melanoma
       types:
         - malignant_melanoma_of_right_choroid
@@ -487,11 +492,6 @@ cancer_ontology:
             - primary_malignant_neuroendocrine_neoplasm_of_duodenum
             - primary_malignant_neuroendocrine_neoplasm_of_ileum
             - primary_malignant_neuroendocrine_neoplasm_of_small_intestine
-        - name: LNET # Lung Neuroendocrine
-          types:
-            - carcinoid_tumor_of_lung
-            - malignant_carcinoid_tumor_of_bronchus
-            - malignant_carcinoid_tumor_of_lung
         - name: PNET # Pancreatic Neuroendocrine
           types:
             - primary_malignant_neoplasm_of_islets_of_langerhans
