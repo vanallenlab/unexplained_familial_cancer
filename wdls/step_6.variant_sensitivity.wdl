@@ -40,6 +40,10 @@ workflow STEP_6_VARIANT_SENSITIVITY {
         vcf = SliceRemoteFiles_indels.remote_slices[idx]
     }
   }
+  call split_tsv_chunks{
+    input:
+      tsv_file = rf_predictions
+  }
   
   # 1000Genome Data
   call concatenateFiles as concatenateFiles_snps{
@@ -47,11 +51,18 @@ workflow STEP_6_VARIANT_SENSITIVITY {
       files = Extract_SNPs_From_VCF.variants,
       callset_name = "1000G_snps"
   }
-  call Probabilities as SNP_Probabilities{
+  scatter( i in range(length(split_tsv_chunks.chunk_files))){
+  #scatter( i in range(length(split_tsv_chunks.out1))){
+    call Probabilities as SNP_Probabilities{
+      input:
+        variants = concatenateFiles_snps.out,
+        rf_predictions = split_tsv_chunks.chunk_files[i],
+        snp_or_indel = "snp"
+    }
+  }
+  call concat_and_weight {
     input:
-      variants = concatenateFiles_snps.out,
-      rf_predictions = rf_predictions,
-      snp_or_indel = "snp"
+      input_files = SNP_Probabilities.tp_prob_output,
   }
   call concatenateFiles as concatenateFiles_indels{
     input:
@@ -68,9 +79,9 @@ workflow STEP_6_VARIANT_SENSITIVITY {
   # Plotting Sensitivity
   call plot_sensitivity as plot_sensitivity_snps{
     input:
-      tsv_file = SNP_Probabilities.tp_prob_output,
+      tsv_file = concat_and_weight.out1,
       snp_or_indel = "snp",
-      max_sensitivity = SNP_Probabilities.max_sensitivity
+      max_sensitivity = "0.81"
   }
   call plot_sensitivity as plot_sensitivity_indels{
     input:
@@ -147,7 +158,7 @@ task plot_sensitivity {
 
   runtime {
     docker: "vanallenlab/pydata_stack"
-    memory: "8G"
+    memory: "16G"
     disks: "local-disk 50 HDD"
   }
 }
@@ -172,7 +183,11 @@ task Probabilities {
   echo "$(wc -l ~{variants})"
 
   # Filter tmp.tsv so we just have snps or indels in the HQ vcf sites
-  grep -Fwf ~{variants} tmp.tsv  >> filtered_predictions.tsv
+  split -l 50000 ~{variants} snp_chunk_
+  for f in snp_chunk_*; do
+      grep -Fwf "$f" tmp.tsv >> filtered_predictions.tsv || true
+  done
+
   echo "Number of Matched Variants:"
   echo "$(wc -l < filtered_predictions.tsv)"
 
@@ -229,7 +244,50 @@ task Probabilities {
   runtime {
     docker: "vanallenlab/pydata_stack"
     disks: "local-disk 100 HDD"
-    memory: "32G"
+    memory: "8G"
+  }
+}
+
+task concat_and_weight {
+  input {
+    Array[File] input_files   # TSVs with header
+  }
+
+  command <<<
+    set -euo pipefail
+
+    out_file="concatenated.tsv"
+    header_written=0
+
+    i=0
+    for f in ~{sep=" " input_files}; do
+
+      # Count non-header lines
+      n_lines=$(($(wc -l < "$f") - 1))
+
+      # Concatenate (keep header only once)
+      if [ $header_written -eq 0 ]; then
+        cat "$f" >> "$out_file"
+        header_written=1
+      else
+        tail -n +2 "$f" >> "$out_file"
+      fi
+
+      # Save pair (weight, value)
+      i=$((i+1))
+    done
+
+  >>>
+
+  output {
+    File out1 = "concatenated.tsv"
+  }
+
+  runtime {
+    docker: "vanallenlab/pydata_stack"
+    memory: "4G"
+    disks: "local-disk 100 HDD"
+    preemptible: 3
   }
 }
 
@@ -350,3 +408,50 @@ task concatenateFiles {
     File out = "~{callset_name}.tsv"
   }
 }
+
+task split_tsv_chunks {
+  input {
+    File tsv_file
+    Int n_chunks = 100
+  }
+
+  command <<<
+    set -euxo pipefail
+
+    # Count total lines including header
+    total_lines=$(wc -l < ~{tsv_file})
+
+    # Calculate lines per chunk (subtract 1 for header)
+    lines_per_chunk=$(( (total_lines - 1 + ~{n_chunks} - 1) / ~{n_chunks} ))
+
+    # Extract header
+    head -n 1 ~{tsv_file} > header.tsv
+    awk -F'\t' 'NR==1 || $4=="snp"' ~{tsv_file} > filtered.tsv
+    rm ~{tsv_file}
+
+    # Split remaining lines
+    tail -n +2 filtered.tsv | split -l $lines_per_chunk - chunk_
+
+    rm filtered.tsv
+
+    # Prepend header to each chunk
+    for f in chunk_*; do
+        cat header.tsv "$f" > "${f}.tsv"
+    done
+
+    # Move chunk files to final output names
+    mkdir -p chunks
+    mv chunk_*.tsv chunks/
+  >>>
+
+  output {
+    Array[File] chunk_files = glob("chunks/*.tsv")
+  }
+
+  runtime {
+    docker: "ubuntu:latest"
+    memory: "4G"
+    disks: "local-disk 100 HDD"
+  }
+}
+

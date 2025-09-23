@@ -10,7 +10,7 @@ workflow ANALYSIS_4B_PRS {
   input {
     File raw_prs_basename = "PGS004691.raw.pgs" 
     String PGS_ID = "PGS004691"
-    Array[String] cancer_types = ["kidney","bladder","respiratory"]
+    Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","gastrointestinal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","prostate","sarcoma","squamous_cell","thyroid","uterus","viral"]
     String analysis_4_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
   }
