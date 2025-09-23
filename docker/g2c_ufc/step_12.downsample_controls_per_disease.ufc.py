@@ -397,10 +397,10 @@ def main():
     # --- Filtering logic ---
 
     # 1) Complex logic has highest priority
+    control_mask = meta['cancer'] == "control"
     if args.complex_logic:
         # Assume we have a function `parse_complex_logic` that returns a boolean mask for meta
         mask = parse_complex_logic(args.complex_logic, meta)
-        control_mask = meta['cancer'] == "control"
         meta = meta[mask | control_mask]
 
     # 2) Family cancer filter (simple AND: patient has subtype, family has at least one family_cancer_subtype)
@@ -410,11 +410,11 @@ def main():
 
         if args.cancer_subtype == "pancancer":
             # Only family_dx matters
-            meta = meta[fam_mask]
+            meta = meta[fam_mask | control_mask]
         else:
             orig_mask = meta['original_dx'].str.contains(args.cancer_subtype, na=False)
             # Keep rows where patient has cancer_subtype AND family has one of the family_subtypes
-            meta = meta[orig_mask & fam_mask]
+            meta = meta[(orig_mask & fam_mask) | control_mask]
 
     else:  # No boolean logic → simple subtype filtering
         if args.cancer_subtype != "pancancer":
@@ -422,7 +422,7 @@ def main():
                 cancer_mask = (meta['cancer'] == "control") | meta['original_dx'].str.contains(args.cancer_subtype)
             else:
                 cancer_mask = meta['cancer'].str.contains(f"control|{args.cancer_subtype}")
-            meta = meta[cancer_mask]
+            meta = meta[cancer_mask | control_mask]
 
 
     # Remove samples with irrelevant cancer diagnosis for this study
