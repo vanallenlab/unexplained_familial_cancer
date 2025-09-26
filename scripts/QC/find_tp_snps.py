@@ -18,22 +18,25 @@ merged_df = pd.merge(merged_df, denovo_df, on='tp_prob')
 merged_df = pd.merge(merged_df, total_df, on='tp_prob')
 
 # Normalize the 'total_snps' column by dividing by the max value
-merged_df['median_SNPs_norm'] = merged_df['median_SNPs_variants'] / merged_df['median_SNPs_variants'].max()
-merged_df['median_DeNovo_SNPs_norm'] = merged_df['median_DeNovo_SNPs_variants'] / merged_df['median_DeNovo_SNPs_variants'].max()
+merged_df['median_SNPs_norm'] = abs(merged_df['median_SNPs_variants'] - 3800000) / 3800000
+merged_df['median_DeNovo_SNPs_norm'] = abs(merged_df['median_DeNovo_SNPs_variants'] - 65) / 65
+merged_df['sensitivity_norm'] = merged_df['sensitivity'] / merged_df['sensitivity'].max()
 merged_df['median_p_hwe_1_percent_euro_norm'] = merged_df['median_p_hwe_1_percent_euro'] / merged_df['median_p_hwe_1_percent_euro'].max()
 
 # Define columns to optimize
-max_cols = ['median_SNPs_norm', 'sensitivity']  # Columns to maximize
-min_cols = ['median_DeNovo_SNPs_variants', 'median_p_hwe_1_percent_euro']  # Columns to minimize
+max_cols = ['median_SNPs_norm', 'sensitivity_norm']  # Columns to maximize
+min_cols = ['median_DeNovo_SNPs', 'median_p_hwe_1_percent_euro']  # Columns to minimize
 
 #merged_df.head()
 pd.set_option('display.max_rows', None)
 # Calculate the Euclidean distance for each row
 merged_df['euclidean_distance'] = np.sqrt(
-    (1-merged_df['median_SNPs_norm']) ** 2 + (1- merged_df['sensitivity']) ** 2 + (merged_df['median_DeNovo_SNPs_norm']) ** 2 + (merged_df['median_p_hwe_1_percent_euro_norm']) ** 2
+    (1 * (1 - merged_df['median_SNPs_norm'])) ** 2 +  # Maximizing
+    (1 * (1 - merged_df['sensitivity_norm'])) ** 2 +  # Maximizing
+    (1 * merged_df['median_DeNovo_SNPs_norm']) ** 2 + # Minimizing
+    (1 * merged_df['median_p_hwe_1_percent_euro_norm']) ** 2  # Minimizing
 )
-
-
+merged_df.to_csv("snps_tmp.tsv",sep='\t',index=False)
 # Assuming your DataFrame is named df and has columns 'tp_prob' and 'euclidean_distance'
 plt.plot(merged_df['tp_prob'], merged_df['euclidean_distance'], marker='o', linestyle='-', color='b')
 

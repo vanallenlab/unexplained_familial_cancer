@@ -28,7 +28,7 @@ workflow STEP_10_VISUALIZE_VEP {
       unsorted_vcf_list = concatenateFiles.out2
   }
 
-  Int negative_shards = 2700
+  Int negative_shards = 2950
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     call Convert_To_TSV {
       input:
@@ -232,10 +232,8 @@ task Filter_Vep_TSV {
                 summary[(gene, "REVEL050_001", patient)] += value
                 if row['REVEL_score_numeric'] >= 0.75:
                     summary[(gene, "REVEL075_001", patient)] += value
-        if not is_rare(row,major_gnomAD_AF=0.01,minor_gnomAD_AF=0.1):
-           continue
 
-        if not is_rare(row,major_gnomAD_AF=0.01,minor_gnomAD_AF=0.1):
+        if not is_rare(row,major_gnomAD_AF=0.001,minor_gnomAD_AF=0.01):
            continue
 
         if clinvar_uncertain == "Uncertain_significance":

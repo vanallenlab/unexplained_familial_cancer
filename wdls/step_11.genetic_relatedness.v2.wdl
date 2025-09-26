@@ -203,4 +203,25 @@ task T9_calculate_plink_pcs {
   }
 }
 
+task GetVariantIDs {
+  input {
+    File vcf
+  }
 
+  command <<<
+    # Use bcftools query with a filter: only variants where FILTER == "PASS" and AF between 0.01 and 0.99.
+    # Note: the condition string uses double equals for FILTER comparison.
+    bcftools query -f '%CHROM\_%POS\_%REF\_%ALT\n' -i 'FILTER=="PASS" && AF>=0.01 && AF<=0.99' ~{vcf} > variant_ids.txt
+  >>>
+
+  output {
+    File out1 = "variant_ids.txt"
+  }
+
+  runtime {
+    docker: "vanallenlab/g2c_pipeline"
+    cpu: 1
+    memory: "2G"
+    preemptible: 3
+  }
+}

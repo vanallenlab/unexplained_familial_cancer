@@ -8,74 +8,85 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_5_GSEA {
   input {
-    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP"
-    Array[String] cancer_types = ["basal_cell","bladder","bone","soft_tissue","uterus","endometrial","ovary","breast","colorectal","kidney","hematologic","lymphoma","nervous","prostate","squamous_cell","melanoma","thyroid","respiratory"]
+    String step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz"
+    Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","gastrointestinal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","prostate","sarcoma","squamous_cell","thyroid","uterus","viral"]
+    #Array[String] cancer_types = ["basal_cell","bladder"]
     String analysis_5_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5_GSEA/"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
-    String biological_pathway = "tsg_dominant"
+    String biological_pathway = "all_cpg"
   }
   
   scatter( cancer_type in cancer_types){
     File sample_data = "gs://" + workspace_bucket + "/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
-    #File gene_list = "gs://" + workspace_bucket + "/UFC_REFERENCE_FILES/gene_list/" + biological_pathway + ".gene_list"
-    File gene_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/all_tsg.list"
+    File gene_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/all_cpg_genes.list"
     Int negative_shards = 0
 
-    # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
-    call Tasks.list_files_from_directory {
+
+    call T1_get_rows {
       input:
-        dir = step_10_output_dir,
-        suffix = ".tsv.gz" 
+        gene_list = gene_list,
+        variant_tsv = step_10_cpg_file
     }
 
-    scatter (i in range(length(list_files_from_directory.out1) - negative_shards)){
-      call T1_get_rows {
-        input:
-          gene_list = gene_list,
-          variant_tsv = list_files_from_directory.out1[i]
-      }
-    }
-    call Tasks.concatenateFiles_noheader as concat1a {
+    # Perform Analysis
+    call T2_gsea as T2_gsea_revel050_001{
       input:
-        files = T1_get_rows.out1,
-        callset_name = biological_pathway
-    }
-    call Tasks.concatenateFiles_noheader as concat1b {
-      input:
-        files = T1_get_rows.out2,
-        callset_name = biological_pathway
-    }
-    call T2_gsea as T2_gsea_revel050{
-      input:
-        variants_tsv = concat1a.out1,
+        variants_tsv = T1_get_rows.out1,
         sample_metadata = sample_data,
         cancer_type = cancer_type,
         path_threshold = "REVEL_050",
-        allele_frequency = "1%"
+        allele_frequency = "0.01"
     }
-    call T2_gsea as T2_gsea_revel075{
+    call T2_gsea as T2_gsea_revel075_001{
       input:
-        variants_tsv = concat1b.out1,
+        variants_tsv = T1_get_rows.out3,
         sample_metadata = sample_data,
         cancer_type = cancer_type,
         path_threshold = "REVEL_075",
-        allele_frequency = "1%"
+        allele_frequency = "0.01"
+    }
+    # Perform Analysis
+    call T2_gsea as T2_gsea_revel050_0001{
+      input:
+        variants_tsv = T1_get_rows.out2,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "REVEL_050",
+        allele_frequency = "0.001"
+    }
+    call T2_gsea as T2_gsea_revel075_0001{
+      input:
+        variants_tsv = T1_get_rows.out4,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "REVEL_075",
+        allele_frequency = "0.001"
     }
   }
   call Tasks.concatenateFiles_noheader as concat2a{
     input:
-      files = T2_gsea_revel050.out1,
+      files = T2_gsea_revel050_001.out1,
       callset_name = biological_pathway + "_" + "001"
   }
   call Tasks.concatenateFiles_noheader as concat2b{
     input:
-      files = T2_gsea_revel075.out1,
+      files = T2_gsea_revel075_001.out1,
       callset_name = biological_pathway + "_" + "001"
+  }
+  call Tasks.concatenateFiles_noheader as concat2c{
+    input:
+      files = T2_gsea_revel050_0001.out1,
+      callset_name = biological_pathway + "_" + "0001"
+  }
+  call Tasks.concatenateFiles_noheader as concat2d{
+    input:
+      files = T2_gsea_revel075_0001.out1,
+      callset_name = biological_pathway + "_" + "0001"
   }
   call Tasks.concatenateFiles_noheader as concat3{
     input:
-      files = [concat2a.out2,concat2b.out2],
-      callset_name = biological_pathway + "_" + "001"
+      files = [concat2a.out2,concat2b.out2,concat2c.out2,concat2d.out2],
+      callset_name = biological_pathway
   }
 }
 
@@ -98,20 +109,34 @@ task T1_get_rows {
 
   # Filter where gene_impact is in genes
   df_050 = df[df['gene_impact'].isin(
-      [f"{g}_{suffix}" for g in genes for suffix in ["REVEL050", "REVEL075"]]
+      [f"{g}_{suffix}" for g in genes for suffix in ["REVEL050_001"]]
   )]
-  df_050.to_csv("revel050.tsv",sep='\t',index=False)
+  df_050.to_csv("revel050_001.tsv",sep='\t',index=False)
 
   # Filter where gene_impact is in genes
   df_075 = df[df['gene_impact'].isin(
-      [f"{g}_{suffix}" for g in genes for suffix in ["REVEL075"]]
+      [f"{g}_{suffix}" for g in genes for suffix in ["REVEL075_001"]]
   )]
-  df_075.to_csv("revel075.tsv",sep='\t',index=False) 
+  df_075.to_csv("revel075_001.tsv",sep='\t',index=False)
+
+  # Filter where gene_impact is in genes
+  df_050 = df[df['gene_impact'].isin(
+      [f"{g}_{suffix}" for g in genes for suffix in ["REVEL050_0001"]]
+  )]
+  df_050.to_csv("revel050_0001.tsv",sep='\t',index=False)
+
+  # Filter where gene_impact is in genes
+  df_075 = df[df['gene_impact'].isin(
+      [f"{g}_{suffix}" for g in genes for suffix in ["REVEL075_0001"]]
+  )]
+  df_075.to_csv("revel075_0001.tsv",sep='\t',index=False) 
   CODE
   >>>
   output{
-    File out1 = "revel050.tsv"
-    File out2 = "revel075.tsv"
+    File out1 = "revel050_001.tsv"
+    File out2 = "revel050_0001.tsv"
+    File out3 = "revel075_001.tsv"
+    File out4 = "revel075_0001.tsv"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"
@@ -136,16 +161,16 @@ task T2_gsea {
 
   python3 <<CODE
   import pandas as pd
-  from scipy.stats import zscore
   import statsmodels.api as sm
+  from scipy.stats import zscore
   import numpy as np
+  import scipy.stats as stats
 
   # Load the filtered data
   df = pd.read_csv("~{variants_tsv}", sep="\t",index_col=False)
 
   # Drop potential duplicates before summing
   df = df.drop_duplicates(subset=["gene_impact"])
-  df = df.replace(2, 0) 
   # -----------------
   # 2. Sum across rows to get ALL_HIGH
   # -----------------
@@ -178,8 +203,8 @@ task T2_gsea {
   # Define covariates to zscore
   covariates = [f"PC{i}" for i in range(1, 5)] + ['age']
   merged[covariates] = merged[covariates].apply(zscore)
-  merged['num_pathogenic_variants_bin'] = (merged['num_pathogenic_variants'] >= 1).astype(int)
-  covariates.append('num_pathogenic_variants_bin')
+  #merged['num_pathogenic_variants_bin'] = (merged['num_pathogenic_variants'] >= 1).astype(int)
+  covariates.append('num_pathogenic_variants')
 
   # Add 'sex_binary' to covariates only if it varies
   if merged['sex_binary'].nunique() > 1:
@@ -202,9 +227,19 @@ task T2_gsea {
   X = sm.add_constant(X)
   y = merged["is_case"]
 
-  # Fit logistic regression
-  model = sm.Logit(y, X)
-  result = model.fit()
+  # Case/control summaries
+  cases_vals = merged.loc[merged["is_case"] == 1, "num_pathogenic_variants"]
+  controls_vals = merged.loc[merged["is_case"] == 0, "num_pathogenic_variants"]
+
+  def five_num(x):
+      if x.empty:
+          return "NA\tNA\tNA\tNA\tNA"
+      q1, q2, q3 = np.percentile(x, [25, 50, 75])
+      return f"{x.min():.2f}\t{q1:.2f}\t{q2:.2f}\t{q3:.2f}\t{x.max():.2f}"
+
+
+  cases_summary = five_num(cases_vals)
+  controls_summary = five_num(controls_vals)
 
   try:
       # Fit logistic regression
@@ -216,15 +251,15 @@ task T2_gsea {
       ci_low, ci_high = result.conf_int().iloc[1]  # 95% CI
       pval = result.pvalues[1]             # p-value
 
-      row = f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\t{pval:.3e}\t{coef:.4f}\t{ci_low:.4f}\t{ci_high:.4f}\n"
+      row = f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\t{pval:.3e}\t{coef:.4f}\t{ci_low:.4f}\t{ci_high:.4f}\t{cases_summary}\t{controls_summary}\n"
 
   except Exception:
       # If it fails, return NA line
-      row = f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\tNA\tNA\tNA\tNA\n"
+      row = f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\tNA\tNA\tNA\tNA\t{cases_summary}\t{controls_summary}\n"
 
   # Write header + result
   with open("logistic_regression_summary.txt", "w") as f:
-      f.write("cancer\tPathogenic_Threshold\tAF\tp_value\tbeta\t95%_CI_lower\t95%_CI_upper\n")
+      f.write("cancer\tPathogenic_Threshold\tAF\tp_value\tbeta\t95%_CI_lower\t95%_CI_upper\tcases_min\tcases_Q1\tcases_Q2\tcases_Q3\tcases_max\tcontrols_min\tcontrols_Q1\tcontrols_Q2\tcontrols_Q3\tcontrols_max\n")
       f.write(row)
 
   CODE
