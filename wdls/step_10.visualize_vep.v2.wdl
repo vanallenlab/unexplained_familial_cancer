@@ -36,13 +36,11 @@ workflow STEP_10_VISUALIZE_VEP {
         aou_subjects = aou_subjects,
         gene_list = gene_list
     }
-    # Only run Filter_Vep_TSV if Convert_To_TSV.out1 exists
-    if defined(Convert_To_TSV.out1) {
-      call Filter_Vep_TSV{
+
+    call Filter_Vep_TSV{
         input:
           input_tsv = Convert_To_TSV.out1,
           subjects_list = aou_subjects
-      }
     }
   }
  
@@ -369,33 +367,15 @@ task Convert_To_TSV {
     tmp.txt || touch tmp.txt
 
   echo "### Step 8: Keep HIGH/MODERATE impact"
-  #if grep -q -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt; then
-  #  grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u >> ~{output_file}
-  #fi
-
-  echo "### Step 8: Keep HIGH/MODERATE impact"
-  # Filter lines
   if grep -q -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt; then
-    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u > filtered.tmp
-
-    # Check line count
-    line_count=$(wc -l < filtered.tmp)
-
-    if [ "$line_count" -gt 1 ]; then
-      # Append to output file
-      cat filtered.tmp >> ~{output_file}
-      gzip ~{output_file}
-    else
-      echo "No valid variants found — skipping output."
-    fi
-
-    rm -f filtered.tmp
+    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u >> ~{output_file}
   fi
 
+  gzip ~{output_file}
   >>>
 
   output {
-    File out1? = "~{output_file}.gz"
+    File out1 = "~{output_file}.gz"
   }
 
   runtime {
