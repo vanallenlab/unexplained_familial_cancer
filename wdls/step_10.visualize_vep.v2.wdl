@@ -36,11 +36,13 @@ workflow STEP_10_VISUALIZE_VEP {
         aou_subjects = aou_subjects,
         gene_list = gene_list
     }
-
-    call Filter_Vep_TSV{
-      input:
-        input_tsv = Convert_To_TSV.out1,
-        subjects_list = aou_subjects
+    # Only run Filter_Vep_TSV if Convert_To_TSV.out1 exists
+    if defined(Convert_To_TSV.out1) {
+      call Filter_Vep_TSV{
+        input:
+          input_tsv = Convert_To_TSV.out1,
+          subjects_list = aou_subjects
+      }
     }
   }
  

@@ -262,6 +262,9 @@ def parse_complex_logic(logic_str, meta):
             return meta['family_dx'].str.contains(cancer, na=False)
         elif axis == "both":
             return meta['original_dx'].str.contains(cancer, na=False) | meta['family_dx'].str.contains(cancer, na=False)
+        elif axis == "sex":
+            # For simplicity cancer is 'Male or Female' to be consistent with the rest of the function.
+            return meta['inferred_sex'].fillna("").str.lower() == cancer.lower()
         else:
             raise ValueError(f"Unsupported axis: {axis} in token {token}")
 
