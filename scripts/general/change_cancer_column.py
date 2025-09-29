@@ -220,5 +220,9 @@ if __name__ == "__main__":
     df = df.merge(df2, left_on = "Sample", right_on = "sample_id",how="left")
     df["all_fam_dx"] = df.apply(map_and_concat, axis=1)
     df = df.fillna("NA")
+    df = df.rename(columns={
+        'original_dx_grouped': 'original_dx',
+        'original_dx': 'original_dx_ungrouped'
+    })
     df.to_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t", index=False)
 
