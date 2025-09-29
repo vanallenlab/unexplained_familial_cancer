@@ -28,7 +28,7 @@ workflow STEP_10_VISUALIZE_VEP {
       unsorted_vcf_list = concatenateFiles.out2
   }
 
-  Int negative_shards = 2950
+  Int negative_shards = 0
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     call Convert_To_TSV {
       input:
@@ -138,7 +138,7 @@ task Filter_Vep_TSV {
 
     # Read in the TSV file
     df = pd.read_csv("~{unzipped_tsv}", sep='\t', index_col=False, dtype=dtype_map)
-    df = df[~df['Consequence'].str.contains('nmd_transcript_variant')]
+    df = df[~df['Consequence'].str.contains('NMD_transcript_variant', case=False)]
 
     # Group by 'ID', and join 'Consequence' with '&'
     df = df.groupby("ID", as_index=False).agg({
@@ -367,15 +367,33 @@ task Convert_To_TSV {
     tmp.txt || touch tmp.txt
 
   echo "### Step 8: Keep HIGH/MODERATE impact"
+  #if grep -q -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt; then
+  #  grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u >> ~{output_file}
+  #fi
+
+  echo "### Step 8: Keep HIGH/MODERATE impact"
+  # Filter lines
   if grep -q -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt; then
-    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u >> ~{output_file}
+    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u > filtered.tmp
+
+    # Check line count
+    line_count=$(wc -l < filtered.tmp)
+
+    if [ "$line_count" -gt 1 ]; then
+      # Append to output file
+      cat filtered.tmp >> ~{output_file}
+      gzip ~{output_file}
+    else
+      echo "No valid variants found — skipping output."
+    fi
+
+    rm -f filtered.tmp
   fi
 
-  gzip ~{output_file}
   >>>
 
   output {
-    File out1 = "~{output_file}.gz"
+    File out1? = "~{output_file}.gz"
   }
 
   runtime {

@@ -199,8 +199,8 @@ def map_and_concat(row):
                 terms.add(mapping[term])
 
     # --- handle cancers_in_FDRs ---
-    if pd.notna(row["cancers_in_FDRs"]):
-        for term in str(row["cancers_in_FDRs"]).split(";"):
+    if pd.notna(row["family_dx"]):
+        for term in str(row["family_dx"]).split(";"):
             term = term.strip()
             if term in mapping:
                 terms.add(mapping[term])
