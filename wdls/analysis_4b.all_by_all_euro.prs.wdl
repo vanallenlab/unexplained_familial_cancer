@@ -8,8 +8,9 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_4B_PRS {
   input {
-    File raw_prs_basename = "PGS004691.raw.pgs" 
-    String PGS_ID = "PGS004691"
+    File raw_prs_basename = "PGS000783.raw.pgs" 
+    String PGS_ID = "PGS000783"
+    #Array[String] cancer_types = ["basal_cell","bladder"]
     Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","gastrointestinal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","prostate","sarcoma","squamous_cell","thyroid","uterus","viral"]
     String analysis_4_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
@@ -46,13 +47,20 @@ workflow ANALYSIS_4B_PRS {
 
     call Tasks.copy_file_to_storage as copy2{
       input:
-        text_file = T4_control_for_ancestry.out1,
+        text_file = T4_control_for_ancestry_euro.out1,
         output_dir = analysis_4_output_dir + "ADJUSTED_PRS/"
     }
 
     call T5_get_summary_statistics {
       input:
         adjusted_prs = T4_control_for_ancestry.out1,
+        sample_data = specific_cohort_sample_data,
+        cancer_type = cancer_type,
+        PGS_ID = PGS_ID
+    }
+    call T5_get_summary_statistics as T5_get_summary_statistics_euro{
+      input:
+        adjusted_prs = T4_control_for_ancestry_euro.out1,
         sample_data = specific_cohort_sample_data,
         cancer_type = cancer_type,
         PGS_ID = PGS_ID
@@ -65,12 +73,23 @@ workflow ANALYSIS_4B_PRS {
       output_name = PGS_ID
   }
 
+  call Tasks.concatenateFiles as concatenateFiles_euro{
+    input:
+      files = T5_get_summary_statistics_euro.out1,
+      output_name = PGS_ID + "_euro"
+  }
+
   call Tasks.copy_file_to_storage as copy3{
     input:
       text_file = concatenateFiles.out1,
       output_dir = analysis_4_output_dir + "ALL_BY_ALL/"
   }
 
+  call Tasks.copy_file_to_storage as copy4{
+    input:
+      text_file = concatenateFiles_euro.out1,
+      output_dir = analysis_4_output_dir + "ALL_BY_ALL/"
+  }
 }
 
 task T1_prepare_scores_file {
@@ -138,9 +157,10 @@ task T4_control_for_ancestry {
   prs_df = pd.read_csv("~{raw_prs}", sep='\t', index_col=False)
   sample_data = pd.read_csv("~{sample_data}", sep='\t', index_col=False)
 
+  print("1")
   # Limit to just Europeans for Sensitivity Analysis
   euro = "~{euro}" == "True"
-  if euro == "True":
+  if euro:
     sample_data = sample_data[sample_data['intake_qc_pop'] == "EUR"]
 
   # Convert merge keys to string
@@ -156,7 +176,7 @@ task T4_control_for_ancestry {
   covariates = ['PC1', 'PC2', 'PC3', 'PC4']
   if merged_df['male_sex'].nunique() > 1:
     covariates.append('male_sex')
-
+  print("2")
   # Set up regression: regress PGS ~ PC1 + PC2 + PC3 + PC4 + male_sex
   X = merged_df[covariates]
   X = sm.add_constant(X)
@@ -183,7 +203,7 @@ task T4_control_for_ancestry {
   CODE
   >>>
   output {
-    File out1 = "~{cancer_type}.~{PGS_ID}*.pgs"
+    File out1 = glob("~{cancer_type}.~{PGS_ID}*.pgs")[0]
   }
   runtime {
     docker: "vanallenlab/pydata_stack"
