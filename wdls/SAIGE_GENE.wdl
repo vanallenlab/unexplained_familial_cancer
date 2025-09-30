@@ -608,7 +608,7 @@ task make_group_file_part2 {
   df = df[df['Gene'] != '.']
   #df = df[~df['Consequence'].str.contains('&',na=False)]
   # Drop Instances of Nonsense Mediated Decay Variants
-  df = df.loc[~df['Consequence'].str.contains('nmd_transcript_variant', na=False)]
+  df = df.loc[~df['Consequence'].str.contains('NMD_transcript_variant', case=False, na=False)]
   df.loc[df['Consequence'].str.contains('synonymous_variant', na=False), 'Consequence'] = 'synonymous_variant'
  
   df = df[~df['Gene'].str.contains('-', na=False)]

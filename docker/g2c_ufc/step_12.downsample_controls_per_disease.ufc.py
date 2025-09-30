@@ -265,6 +265,8 @@ def parse_complex_logic(logic_str, meta):
         elif axis == "sex":
             # For simplicity cancer is 'Male or Female' to be consistent with the rest of the function.
             return meta['inferred_sex'].fillna("").str.lower() == cancer.lower()
+        elif axis == "age":
+            return meta['age'].fillna(float('inf')) < int(cancer)
         else:
             raise ValueError(f"Unsupported axis: {axis} in token {token}")
 
