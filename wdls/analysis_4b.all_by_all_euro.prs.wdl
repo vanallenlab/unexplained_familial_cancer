@@ -262,14 +262,9 @@ task T5_get_summary_statistics {
   # 4. Logistic regression of cancer status on PGS with covariates
   # Prepare design matrix
   merged_df['sex_binary'] = merged_df['inferred_sex'].map({'male': 1, 'm': 1, 'female': 0, 'f': 0})
-  merged_df['smoking_history'] = (
-      merged_df['smoking_history']
-      .replace("NA", 0)        # turn 'NA' into 0
-      .astype(float)           # force numeric dtype
-  )
 
   # Base covariates
-  covariates = ['pgs_score', 'PC1', 'PC2', 'PC3', 'PC4', 'age', 'smoking_history']
+  covariates = ['pgs_score', 'PC1', 'PC2', 'PC3', 'PC4', 'age']
 
   # Add 'sex_binary' if it varies
   if merged_df['sex_binary'].nunique() > 1:
@@ -279,18 +274,6 @@ task T5_get_summary_statistics {
 
   # Now safely split cancer out to y
   y = Xy['cancer'].apply(lambda x: 0 if x == 'control' else 1)
-
-  # Check smoking history distribution by group
-  if 'smoking_history' in covariates:
-      tab = pd.crosstab(y, Xy['smoking_history'], dropna=False)
-
-      # Case group (y=1) and control group (y=0)
-      cases = Xy.loc[y == 1, 'smoking_history']
-      controls = Xy.loc[y == 0, 'smoking_history']
-
-      # Drop if all cases or all controls are the same (0 or 1 only)
-      if cases.nunique(dropna=True) <= 1 or controls.nunique(dropna=True) <= 1:
-          covariates.remove('smoking_history')
 
   X = Xy[covariates]
 

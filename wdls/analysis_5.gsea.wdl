@@ -235,11 +235,6 @@ task T2_gsea {
 
   # Create binary 'sex_binary': 0 = female, 1 = male (or anything else)
   merged['sex_binary'] = merged['inferred_sex'].apply(lambda x: 0 if x == 'female' else 1)
-  # Convert smoking_history to numeric (force errors to NaN, then fill with 0)
-  merged['smoking_history'] = (
-      pd.to_numeric(merged['smoking_history'], errors='coerce')
-      .fillna(0)     # or could use .fillna(merged['smoking_history'].mean())
-  )
 
   # Define covariates to zscore
   covariates = [f"PC{i}" for i in range(1, 5)] + ['age']
@@ -253,16 +248,6 @@ task T2_gsea {
   # Add 'sex_binary' to covariates only if it varies
   if merged['sex_binary'].nunique() > 1:
       covariates.append('sex_binary')
-
-  # Add 'smoking_history' to covariates only if it varies
-  if merged['smoking_history'].nunique() > 1:
-      # Check for perfect separation
-      cases = merged.loc[merged['is_case'] == 1, 'smoking_history']
-      controls = merged.loc[merged['is_case'] == 0, 'smoking_history']
-    
-      # Drop if all cases or all controls are the same (0 or 1 only)
-      if cases.nunique(dropna=True) > 1 and controls.nunique(dropna=True) > 1:
-          covariates.append('smoking_history')
 
   # Covariates
   X = merged[covariates]
