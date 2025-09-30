@@ -62,6 +62,23 @@ workflow ANALYSIS_5_GSEA {
         path_threshold = "REVEL_075",
         allele_frequency = "0.001"
     }
+    # Perform Analysis
+    call T2_gsea as T2_gsea_VUS_001{
+      input:
+        variants_tsv = T1_get_rows.out5,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "VUS_001",
+        allele_frequency = "0.01"
+    }
+    call T2_gsea as T2_gsea_VUS_0001{
+      input:
+        variants_tsv = T1_get_rows.out6,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "VUS_0001",
+        allele_frequency = "0.001"
+    }
   }
   call Tasks.concatenateFiles_noheader as concat2a{
     input:
@@ -83,9 +100,19 @@ workflow ANALYSIS_5_GSEA {
       files = T2_gsea_revel075_0001.out1,
       callset_name = biological_pathway + "_" + "0001"
   }
+  call Tasks.concatenateFiles_noheader as concat2e{
+    input:
+      files = T2_gsea_VUS_001.out1,
+      callset_name = biological_pathway + "_" + "0001"
+  }
+  call Tasks.concatenateFiles_noheader as concat2f{
+    input:
+      files = T2_gsea_VUS_0001.out1,
+      callset_name = biological_pathway + "_" + "0001"
+  }
   call Tasks.concatenateFiles_noheader as concat3{
     input:
-      files = [concat2a.out2,concat2b.out2,concat2c.out2,concat2d.out2],
+      files = [concat2a.out2,concat2b.out2,concat2c.out2,concat2d.out2,concat2e.out2,concat2f.out2],
       callset_name = biological_pathway
   }
 }
@@ -129,7 +156,19 @@ task T1_get_rows {
   df_075 = df[df['gene_impact'].isin(
       [f"{g}_{suffix}" for g in genes for suffix in ["REVEL075_0001"]]
   )]
-  df_075.to_csv("revel075_0001.tsv",sep='\t',index=False) 
+  df_075.to_csv("revel075_0001.tsv",sep='\t',index=False)
+
+  # Filter where gene_impact is in genes
+  df_VUS = df[df['gene_impact'].isin(
+      [f"{g}_{suffix}" for g in genes for suffix in ["VUS_001"]]
+  )]
+  df_VUS.to_csv("VUS_001.tsv",sep='\t',index=False)
+
+  # Filter where gene_impact is in genes
+  df_VUS = df[df['gene_impact'].isin(
+      [f"{g}_{suffix}" for g in genes for suffix in ["VUS_0001"]]
+  )]
+  df_VUS.to_csv("VUS_0001.tsv",sep='\t',index=False) 
   CODE
   >>>
   output{
@@ -137,6 +176,8 @@ task T1_get_rows {
     File out2 = "revel050_0001.tsv"
     File out3 = "revel075_001.tsv"
     File out4 = "revel075_0001.tsv"
+    File out5 = "VUS_001.tsv"
+    File out6 = "VUS_0001.tsv"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"
@@ -203,8 +244,11 @@ task T2_gsea {
   # Define covariates to zscore
   covariates = [f"PC{i}" for i in range(1, 5)] + ['age']
   merged[covariates] = merged[covariates].apply(zscore)
-  #merged['num_pathogenic_variants_bin'] = (merged['num_pathogenic_variants'] >= 1).astype(int)
-  covariates.append('num_pathogenic_variants')
+  merged['num_pathogenic_variants_bin'] = (merged['num_pathogenic_variants'] >= 1).astype(int)
+  #merged = merged.rename(columns={
+  #  'num_pathogenic_variants_bin': 'num_pathogenic_variants',
+  #})
+  covariates.append('num_pathogenic_variants_bin')
 
   # Add 'sex_binary' to covariates only if it varies
   if merged['sex_binary'].nunique() > 1:
@@ -246,10 +290,10 @@ task T2_gsea {
       model = sm.Logit(y, X)
       result = model.fit(disp=False)
 
-      coef = result.params[1]              # beta
-      se = result.bse[1]                   # standard error
-      ci_low, ci_high = result.conf_int().iloc[1]  # 95% CI
-      pval = result.pvalues[1]             # p-value
+      coef = result.params['num_pathogenic_variants_bin']              # beta
+      se = result.bse['num_pathogenic_variants_bin']                   # standard error
+      ci_low, ci_high = result.conf_int().loc['num_pathogenic_variants_bin']  # 95% CI
+      pval = result.pvalues['num_pathogenic_variants_bin']             # p-value
 
       row = f"~{cancer_type}\t~{path_threshold}\t~{allele_frequency}\t{pval:.3e}\t{coef:.4f}\t{ci_low:.4f}\t{ci_high:.4f}\t{cases_summary}\t{controls_summary}\n"
 
