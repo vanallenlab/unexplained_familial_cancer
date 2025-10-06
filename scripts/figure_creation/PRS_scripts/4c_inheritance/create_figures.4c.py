@@ -10,21 +10,22 @@ import sys, os
 # 1. Input and output setup
 # -------------------------------
 input_file = sys.argv[1]
-base = os.path.splitext(input_file)[0]
-output_path = "../../../../results/analysis_4c_results/"
-png_file = f"{output_path + base}.results.png"
-stats_file = f"{output_path + base}.results.stats"
+base = os.path.splitext(os.path.basename(input_file))[0]  # just filename without path or extension
+output_path = ""
 
-cancer_type = f"{base.split('.')[0]}"
-PGS_ID = f"{base.split('.')[1]}"
+png_file = f"{output_path}{base}.results.png"
+stats_file = f"{output_path}{base}.results.stats"
+
+# Extract cancer_type and PGS_ID
+cancer_type = base.split('.')[0]  # "breast"
+PGS_ID = base.split('.')[1]
 
 # -------------------------------
 # 2. Load and validate data
 # -------------------------------
 df = pd.read_csv(input_file, sep="\t")
-df = df[df['group'].isin(['Control', f"Sporadic_{cancer_type.capitalize()}", f"Familial_{cancer_type.capitalize()}"])].copy()
-
-print(f"Sporadic_{cancer_type.capitalize()}")
+df = df[df['group'].isin(['Control', f"Isolated {cancer_type.capitalize()}", f"Familial {cancer_type.capitalize()}"])].copy()
+print(f"Isolated {cancer_type.capitalize()}")
 # -------------------------------
 # 3. Summary stats per group
 # -------------------------------
@@ -35,9 +36,9 @@ summary_str = summary.to_string()
 # 4. Compute pairwise comparisons (independent t-tests)
 # -------------------------------
 pairs = [
-    ('Control', 'Sporadic_Breast'),
-    ('Control', 'Familial_Breast'),
-    ('Sporadic_Breast', 'Familial_Breast')
+    ('Control', f"Isolated {cancer_type.capitalize()}"),
+    ('Control', f"Familial {cancer_type.capitalize()}"),
+    (f"Isolated {cancer_type.capitalize()}", f"Familial {cancer_type.capitalize()}")
 ]
 p_values = {}
 or_values = {}
@@ -72,7 +73,7 @@ for g1, g2 in pairs:
 # 5. Plot with significance annotations
 # -------------------------------
 
-group_order = ['Control', 'Sporadic_Breast', 'Familial_Breast']
+group_order = ['Control', f"Isolated {cancer_type.capitalize()}", f"Familial {cancer_type.capitalize()}"]
 
 # --- Compute counts per group ---
 counts = df['group'].value_counts().to_dict()
@@ -84,32 +85,34 @@ for g in group_order:
     label_count = f"<20" if n < 20 else str(n)
     group_labels.append(f"{g}\n(n={label_count})")
 
-plt.figure(figsize=(8,6))
+plt.figure(figsize=(4,3))
 
 
 sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette="Set2", showfliers=False)
-sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=3, alpha=0.5)
+sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=2, alpha=0.5)
 
 y_max = df['PGS'].max()
 y_min = df['PGS'].min()
 y_range = y_max - y_min
 spacing = 0.15 * y_range
 
+print(pairs)
 for i, (g1, g2) in enumerate(pairs):
+    print(g1 + "-" + g2)
     x1, x2 = group_order.index(g1), group_order.index(g2)
     y = y_max + (i+1) * spacing
-    plt.plot([x1, x1, x2, x2], [y-0.01, y, y, y-0.01], lw=1.5, c='black')
+    plt.plot([x1, x1, x2, x2], [y-0.01, y, y, y-0.01], lw=1.0, c='black')
 
     p_val = p_values[(g1, g2)]
-    p_text = "p < 0.001" if p_val < 0.001 else f"p = {p_val:.3f}"
-    plt.text((x1+x2)/2, y + 0.01, p_text, ha='center', va='bottom', fontsize=10)
+    p_text = "p < 1e-15" if p_val < 1e-15 else f"p = {p_val:.2e}"
+    plt.text((x1+x2)/2, y + 0.01, p_text, ha='center', va='bottom', fontsize=5)
 
-plt.title(f"PGS ({PGS_ID}) distribution by {cancer_type.capitalize()} Family History")
-plt.ylabel(f"PGS ({PGS_ID})")
-plt.xlabel(f"{cancer_type.capitalize()} Cohort")
+plt.title(f"PGS ({PGS_ID}) distribution by {cancer_type.capitalize()} Family History",fontsize=7)
+plt.ylabel(f"PGS ({PGS_ID}) Z-Score",fontsize=5)
+plt.xlabel("")
 
 # --- Replace default x-axis labels with custom labels ---
-plt.xticks(ticks=range(len(group_order)), labels=group_labels, rotation=20)
+plt.xticks(ticks=range(len(group_order)), labels=group_labels, rotation=20,fontsize=5)
 plt.ylim(y_min - 0.1*y_range, y_max + len(pairs)*spacing + 0.1*y_range)
 plt.tight_layout()
 plt.savefig(png_file, dpi=300)
