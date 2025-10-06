@@ -237,7 +237,7 @@ task T2_gsea {
   merged['sex_binary'] = merged['inferred_sex'].apply(lambda x: 0 if x == 'female' else 1)
 
   # Define covariates to zscore
-  covariates = [f"PC{i}" for i in range(1, 5)] + ['age']
+  covariates = [f"PC{i}" for i in range(1, 5)]
   merged[covariates] = merged[covariates].apply(zscore)
   merged['num_pathogenic_variants_bin'] = (merged['num_pathogenic_variants'] >= 1).astype(int)
   #merged = merged.rename(columns={

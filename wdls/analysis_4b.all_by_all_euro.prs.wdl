@@ -8,9 +8,8 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_4B_PRS {
   input {
-    File raw_prs_basename = "PGS000783.raw.pgs" 
-    String PGS_ID = "PGS000783"
-    #Array[String] cancer_types = ["basal_cell","bladder"]
+    Array[String] matched_cancer_prs = ["breast","breast","breast","breast","bladder","bladder","bladder","viral","viral","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","hematologic","lung","lung","lung","lung","melanoma","melanoma","melanoma","non-hodgkins","non-hodgkins","viral","ovary","ovary","ovary","ovary","gastrointestinal","gastrointestinal","gastrointestinal","prostate","prostate","prostate","prostate"]
+    Array[String] PGS_IDS = ["PGS000783","PGS003380","PGS004242","PGS004688","PGS004241","PGS000782","PGS004687","PGS000784","PGS003389","PGS000785","PGS003386","PGS004243","PGS004689","PGS000786","PGS003381","PGS004244","PGS000787","PGS004690","PGS004245","PGS000788","PGS000789","PGS003391","PGS004246","PGS004691","PGS000790","PGS003382","PGS004247","PGS000791","PGS004248","PGS000792","PGS000793","PGS003385","PGS004249","PGS004692","PGS000794","PGS004250","PGS004693","PGS000795","PGS003383","PGS004251","PGS004694"]
     Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","gastrointestinal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","prostate","sarcoma","squamous_cell","thyroid","uterus","viral"]
     String analysis_4_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
@@ -18,78 +17,125 @@ workflow ANALYSIS_4B_PRS {
   File sample_data = "gs://~{workspace_bucket}/UFC_REFERENCE_FILES/analysis/"
   Int negative_shards = 0
 
-  String raw_prs_file = analysis_4_output_dir + raw_prs_basename
 
-  scatter( cancer_type in cancer_types){
-    File specific_cohort_sample_data = sample_data + cancer_type + "/" + cancer_type + ".metadata"
-    call T4_control_for_ancestry {
+  scatter (i in range(length(PGS_IDS))) {
+    String PGS_ID = PGS_IDS[i]
+    scatter( cancer_type in cancer_types){
+      File specific_cohort_sample_data = sample_data + cancer_type + "/" + cancer_type + ".metadata"
+      call T4_control_for_ancestry {
+        input:
+          raw_prs = analysis_4_output_dir + PGS_ID + ".raw.pgs",
+          sample_data = specific_cohort_sample_data,
+          cancer_type = cancer_type,
+          PGS_ID = PGS_ID,
+          appropriate_cancer_type = matched_cancer_prs[i]
+      }
+
+      call Tasks.copy_file_to_storage as copy1{
+        input:
+          text_file = T4_control_for_ancestry.out1,
+          output_dir = analysis_4_output_dir + "ADJUSTED_PRS/"
+      }
+
+      call T4_control_for_ancestry as T4_control_for_ancestry_euro {
+        input:
+          raw_prs = analysis_4_output_dir + PGS_ID + ".raw.pgs",
+          sample_data = specific_cohort_sample_data,
+          cancer_type = cancer_type,
+          PGS_ID = PGS_ID,
+          appropriate_cancer_type = matched_cancer_prs[i],
+          euro = "True"
+      }
+
+      call Tasks.copy_file_to_storage as copy2{
+        input:
+          text_file = T4_control_for_ancestry_euro.out1,
+          output_dir = analysis_4_output_dir + "ADJUSTED_PRS/"
+      }
+
+      call T5_get_summary_statistics {
+        input:
+          adjusted_prs = T4_control_for_ancestry.out1,
+          sample_data = specific_cohort_sample_data,
+          cancer_type = cancer_type,
+          PGS_ID = PGS_ID
+      }
+      call T5_get_summary_statistics as T5_get_summary_statistics_euro{
+        input:
+          adjusted_prs = T4_control_for_ancestry_euro.out1,
+          sample_data = specific_cohort_sample_data,
+          cancer_type = cancer_type,
+          PGS_ID = PGS_ID
+      }
+    }
+    call T6_Combine_Values as T6_Combine_Pvalues{
       input:
-        raw_prs = raw_prs_file,
-        sample_data = specific_cohort_sample_data,
-        cancer_type = cancer_type,
+        files = T5_get_summary_statistics.out2_p,
+        appropriate_cancer_type = matched_cancer_prs[i],
         PGS_ID = PGS_ID
     }
-
-    call Tasks.copy_file_to_storage as copy1{
+    call T6_Combine_Values as T6_Combine_OR{
       input:
-        text_file = T4_control_for_ancestry.out1,
-        output_dir = analysis_4_output_dir + "ADJUSTED_PRS/"
-    }
-
-    call T4_control_for_ancestry as T4_control_for_ancestry_euro {
-      input:
-        raw_prs = raw_prs_file,
-        sample_data = specific_cohort_sample_data,
-        cancer_type = cancer_type,
-        PGS_ID = PGS_ID,
-        euro = "True"
-    }
-
-    call Tasks.copy_file_to_storage as copy2{
-      input:
-        text_file = T4_control_for_ancestry_euro.out1,
-        output_dir = analysis_4_output_dir + "ADJUSTED_PRS/"
-    }
-
-    call T5_get_summary_statistics {
-      input:
-        adjusted_prs = T4_control_for_ancestry.out1,
-        sample_data = specific_cohort_sample_data,
-        cancer_type = cancer_type,
+        files = T5_get_summary_statistics.out3_or,
+        appropriate_cancer_type = matched_cancer_prs[i],
         PGS_ID = PGS_ID
     }
-    call T5_get_summary_statistics as T5_get_summary_statistics_euro{
+    call T6_Combine_Values as T6_Combine_Pvalues_euro{
       input:
-        adjusted_prs = T4_control_for_ancestry_euro.out1,
-        sample_data = specific_cohort_sample_data,
-        cancer_type = cancer_type,
-        PGS_ID = PGS_ID
+        files = T5_get_summary_statistics_euro.out2_p,
+        appropriate_cancer_type = matched_cancer_prs[i],
+        PGS_ID = PGS_ID + "-euro"
+    }
+    call T6_Combine_Values as T6_Combine_OR_euro{
+      input:
+        files = T5_get_summary_statistics_euro.out3_or,
+        appropriate_cancer_type = matched_cancer_prs[i],
+        PGS_ID = PGS_ID + "-euro"
+    }
+    call Tasks.concatenateFiles_noheader as concatenateFiles_noheader_Pvalues{
+      input:
+        files = [T6_Combine_Pvalues.out1,T6_Combine_Pvalues_euro.out1],
+        callset_name = PGS_ID + ".pvalue"
+    }
+    call Tasks.concatenateFiles_noheader as concatenateFiles_noheader_OR {
+      input:
+        files = [T6_Combine_OR.out1,T6_Combine_OR_euro.out1],
+        callset_name = PGS_ID + ".OR"
     }
   }
-
-  call Tasks.concatenateFiles {
+  call Tasks.concatenateFiles_noheader as concatenateFiles_noheader_Pvalues_meta{
     input:
-      files = T5_get_summary_statistics.out1,
-      output_name = PGS_ID
+      files = concatenateFiles_noheader_Pvalues.out2,
+      callset_name =  "FINAL_PRS.pvalue"
   }
-
-  call Tasks.concatenateFiles as concatenateFiles_euro{
+  call Tasks.concatenateFiles_noheader as concatenateFiles_noheader_OR_meta {
     input:
-      files = T5_get_summary_statistics_euro.out1,
-      output_name = PGS_ID + "_euro"
+      files = concatenateFiles_noheader_OR.out2,
+      callset_name = "FINAL_PRS.OR"
   }
+  #call Tasks.concatenateFiles {
+  #  input:
+  #    files = T5_get_summary_statistics.out1,
+  #    output_name = PGS_ID
+  #}
 
-  call Tasks.copy_file_to_storage as copy3{
-    input:
-      text_file = concatenateFiles.out1,
-      output_dir = analysis_4_output_dir + "ALL_BY_ALL/"
-  }
+  #call Tasks.concatenateFiles as concatenateFiles_euro{
+  #  input:
+  #    files = T5_get_summary_statistics_euro.out1,
+  #    output_name = PGS_ID + "_euro"
+  #}
 
-  call Tasks.copy_file_to_storage as copy4{
-    input:
-      text_file = concatenateFiles_euro.out1,
-      output_dir = analysis_4_output_dir + "ALL_BY_ALL/"
-  }
+  #call Tasks.copy_file_to_storage as copy3{
+  #  input:
+  #    text_file = concatenateFiles.out1,
+  #    output_dir = analysis_4_output_dir + "ALL_BY_ALL/"
+  #}
+
+  #call Tasks.copy_file_to_storage as copy4{
+  #  input:
+  #    text_file = concatenateFiles_euro.out1,
+  #    output_dir = analysis_4_output_dir + "ALL_BY_ALL/"
+  #}
 }
 
 task T1_prepare_scores_file {
@@ -145,6 +191,7 @@ task T4_control_for_ancestry {
     File sample_data
     String cancer_type
     String PGS_ID
+    String appropriate_cancer_type
     String euro = "False"
   }
   command <<<
@@ -157,7 +204,11 @@ task T4_control_for_ancestry {
   prs_df = pd.read_csv("~{raw_prs}", sep='\t', index_col=False)
   sample_data = pd.read_csv("~{sample_data}", sep='\t', index_col=False)
 
-  print("1")
+  if "~{appropriate_cancer_type}" == "~{cancer_type}":
+    pass
+  else:
+    sample_data = sample_data[~sample_data['original_dx'].str.contains("~{appropriate_cancer_type}", case = False)]
+
   # Limit to just Europeans for Sensitivity Analysis
   euro = "~{euro}" == "True"
   if euro:
@@ -176,7 +227,6 @@ task T4_control_for_ancestry {
   covariates = ['PC1', 'PC2', 'PC3', 'PC4']
   if merged_df['male_sex'].nunique() > 1:
     covariates.append('male_sex')
-  print("2")
   # Set up regression: regress PGS ~ PC1 + PC2 + PC3 + PC4 + male_sex
   X = merged_df[covariates]
   X = sm.add_constant(X)
@@ -264,7 +314,7 @@ task T5_get_summary_statistics {
   merged_df['sex_binary'] = merged_df['inferred_sex'].map({'male': 1, 'm': 1, 'female': 0, 'f': 0})
 
   # Base covariates
-  covariates = ['pgs_score', 'PC1', 'PC2', 'PC3', 'PC4', 'age']
+  covariates = ['pgs_score', 'PC1', 'PC2', 'PC3', 'PC4']
 
   # Add 'sex_binary' if it varies
   if merged_df['sex_binary'].nunique() > 1:
@@ -293,17 +343,83 @@ task T5_get_summary_statistics {
   # Write formatted table to file
   f.write(summary_df.to_string())
 
-  # Print summary of coefficients
-  #f.write(result.summary2().as_text())
   f.close()
+
+  coef_row = summary_df.loc['pgs_score']
+
+  # Compute odds ratio and confidence interval
+  or_value = np.exp(coef_row["Coef."])
+  ci_low = np.exp(coef_row["[0.025"])
+  ci_high = np.exp(coef_row["0.975]"])
+  pval = coef_row["P>|z|"]
+
+  # File 1: p-value label file
+  pval_filename = f"~{cancer_type}.pvalue"
+  with open(pval_filename, "w") as pf:
+    pf.write(f"~{cancer_type}\n")
+    pf.write(f"{pval}\n")
+
+  # File 2: odds ratio label file
+  or_filename = f"~{cancer_type}.or"
+  with open(or_filename, "w") as of:
+    of.write(f"~{cancer_type}\n")
+    of.write(f"{or_value:.3f} ({ci_low:.3f}, {ci_high:.3f})\n")
   CODE
   >>>
   output {
     File out1 = "~{cancer_type}.~{PGS_ID}.stats"
+    File out2_p = "~{cancer_type}.pvalue"
+    File out3_or = "~{cancer_type}.or"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"
     preemptible: 3
     memory: "8GB"
+  }
+}
+
+
+
+
+
+task T6_Combine_Values {
+  input {
+    Array[File] files
+    String PGS_ID
+    String appropriate_cancer_type
+  }
+
+  command <<<
+  python3 <<CODE
+  # WDL inputs
+  pvalue_files = "~{sep=' ' files}".split(" ")   # WDL will substitute the file paths
+  output_file = "~{PGS_ID}.row"
+
+  pairs = []
+  for f in pvalue_files:
+      with open(f) as fh:
+          lines = [line.strip() for line in fh if line.strip()]
+          if len(lines) != 2:
+              raise ValueError(f"File {f} does not have exactly 2 lines")
+          label, value = lines
+          pairs.append((label, value))
+
+  pairs.sort(key=lambda x: x[0])
+
+  with open(output_file, "w") as out:
+      labels = "\t".join(["Intended_Cancer_Type","PGS_ID"] + [label for label, _ in pairs])
+      values = "\t".join(["~{appropriate_cancer_type}","~{PGS_ID}"] + [value for _, value in pairs])
+      out.write(f"{labels}\n{values}\n")
+  CODE
+  >>>
+
+  output {
+    File out1 = "~{PGS_ID}.row"
+  }
+
+  runtime {
+    docker: "vanallenlab/pydata_stack"
+    memory: "1G"
+    preemptible:3
   }
 }
