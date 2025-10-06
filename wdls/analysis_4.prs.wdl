@@ -180,14 +180,14 @@ task T3_sum_scores {
               total_scores[sample] = total_scores.get(sample, 0.0) + score
 
   # Write final output
-  with open("~{cancer_type}.~{PGS_ID}.raw.pgs", "w") as out:
+  with open("~{PGS_ID}.raw.pgs", "w") as out:
       out.write("sample\tPGS\n")
       for sample, score in sorted(total_scores.items()):
           out.write(f"{sample}\t{round(score, 10)}\n")
   CODE
   >>>
   output {
-    File out1 = "~{cancer_type}.~{PGS_ID}.raw.pgs"
+    File out1 = "~{PGS_ID}.raw.pgs"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"

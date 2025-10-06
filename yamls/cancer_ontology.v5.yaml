@@ -196,6 +196,9 @@ cancer_ontology:
         
     - name: Gynecologic
       sub_systems:
+        - name: Bilateral_Ovary
+          types:
+            - primary_malignant_neoplasm_of_both_ovaries
         - name: Ovary
           types:
             - clear_cell_adenocarcinoma_of_ovary
