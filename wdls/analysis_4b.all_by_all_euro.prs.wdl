@@ -10,7 +10,7 @@ workflow ANALYSIS_4B_PRS {
   input {
     Array[String] matched_cancer_prs = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","leukemia","lung","lung","lung","lung","melanoma","melanoma","melanoma","non-hodgkins","non-hodgkins","ovary","ovary","ovary","ovary","pancreas","pancreas","pancreas","prostate","prostate","prostate","prostate","thyroid","brain","esophagus"]
     Array[String] PGS_IDS = ["PGS000783","PGS003380","PGS004242","PGS004688","PGS004241","PGS000782","PGS004687","PGS000784","PGS003389","PGS000785","PGS003386","PGS004243","PGS004689","PGS000786","PGS003381","PGS004244","PGS000787","PGS004690","PGS004245","PGS000788","PGS000789","PGS003391","PGS004246","PGS004691","PGS000790","PGS003382","PGS004247","PGS000791","PGS004248","PGS000793","PGS003385","PGS004249","PGS004692","PGS000794","PGS004250","PGS004693","PGS000795","PGS003383","PGS004251","PGS004694","PGS000797","PGS003384","PGS003388"]
-    Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","cervix","esophagus","gastrointestinal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","pancreas","prostate","sarcoma","squamous_cell","thyroid","uterus"]
+    Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","cervix","esophagus","gastrointestinal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","pancreas","prostate","sarcoma","squamous_cell","thyroid","uterus","leukemia"]
     String analysis_4_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
   }
@@ -18,7 +18,7 @@ workflow ANALYSIS_4B_PRS {
   Int negative_shards = 0
 
 
-  scatter (i in range(length(PGS_IDS))) {
+  scatter (i in range(length(PGS_IDS) - negative_shards)) {
     String PGS_ID = PGS_IDS[i]
     scatter( cancer_type in cancer_types){
       File specific_cohort_sample_data = sample_data + cancer_type + "/" + cancer_type + ".metadata"
@@ -35,6 +35,12 @@ workflow ANALYSIS_4B_PRS {
         input:
           text_file = T4_control_for_ancestry.out1,
           output_dir = analysis_4_output_dir + "ADJUSTED_PRS/"
+      }
+
+      call Tasks.copy_file_to_storage as copy1_anon{
+        input:
+          text_file = T4_control_for_ancestry.out2,
+          output_dir = analysis_4_output_dir + "ADJUSTED_PRS_ANON/"
       }
 
       call T4_control_for_ancestry as T4_control_for_ancestry_euro {
@@ -246,14 +252,18 @@ task T4_control_for_ancestry {
   # Choose filename
   suffix = ".euro" if euro else ""
   outname = f"~{cancer_type}.~{PGS_ID}{suffix}.pgs"
-
+  outname2 = f"~{cancer_type}.~{PGS_ID}{suffix}.anon_pgs"
   # Write final output
   merged_df[['sample', 'PGS']].to_csv(outname, sep='\t', index=False)
 
+  # Output Anonymized Files
+  merged_df['case'] = (merged_df['cancer'] != 'control').astype(int)
+  merged_df[['case', 'PGS']].to_csv(outname2, sep='\t', index=False)
   CODE
   >>>
   output {
     File out1 = glob("~{cancer_type}.~{PGS_ID}*.pgs")[0]
+    File out2 = glob("~{cancer_type}.~{PGS_ID}*.anon_pgs")[0]
   }
   runtime {
     docker: "vanallenlab/pydata_stack"

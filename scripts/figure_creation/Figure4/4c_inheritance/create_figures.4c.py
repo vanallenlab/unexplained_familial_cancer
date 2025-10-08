@@ -11,10 +11,10 @@ import sys, os
 # -------------------------------
 input_file = sys.argv[1]
 base = os.path.splitext(os.path.basename(input_file))[0]  # just filename without path or extension
-output_path = ""
+output_path = "/Users/noah/Desktop/ufc_repository/results/analysis_4c_results/"
 
-png_file = f"{output_path}{base}.results.png"
-stats_file = f"{output_path}{base}.results.stats"
+png_file = f"{output_path}pngs/{base}.results.png"
+stats_file = f"{output_path}stats/{base}.results.stats"
 
 # Extract cancer_type and PGS_ID
 cancer_type = base.split('.')[0]  # "breast"
@@ -89,7 +89,16 @@ plt.figure(figsize=(4,3))
 
 
 sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette="Set2", showfliers=False)
-sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=2, alpha=0.5)
+#sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=2, alpha=0.5)
+
+# --- Overlay points only if group has >20 samples ---
+for g in group_order:
+    subset = df[df['group'] == g]
+    if len(subset) > 20:
+        sns.stripplot(
+            data=subset, x='group', y='PGS',
+            order=group_order, color='black', size=2, alpha=0.5
+        )
 
 y_max = df['PGS'].max()
 y_min = df['PGS'].min()
