@@ -11,7 +11,7 @@ import sys, os, yaml
 # -------------------------------
 input_file = sys.argv[1]
 base = os.path.splitext(os.path.basename(input_file))[0]  # filename only
-output_path = ""
+output_path = "/Users/noah/Desktop/ufc_repository/results/analysis_4e_results/"
 
 png_file = f"{output_path}{base}.results.png"
 stats_file = f"{output_path}{base}.results.stats"

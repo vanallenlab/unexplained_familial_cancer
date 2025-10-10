@@ -2,68 +2,37 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-from matplotlib.patches import Patch
 
 
-def parse_color_file(filepath: str) -> dict:
-    """
-    Parse a color mapping file and return a dictionary of name → hex color.
-
-    Each line should look like:
-      Breast: "#FFC0CB"  # pink
-
-    The function ignores comments and blank lines.
-    """
-    color_map = {}
-
-    with open(filepath, "r") as infile:
-        for line in infile:
-            # Strip whitespace and skip empty/comment lines
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-
-            # Split key and value
-            if ":" in line:
-                key, value = line.split(":", 1)
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-
-                color_map[key.lower()] = value
-
-    return color_map
-
-cancer_color = parse_color_file("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml")
-print(cancer_color)
 or_table = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_by_all/FINAL_PRS.OR.tsv",sep='\t',index_col=False)
 pval_table = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_by_all/FINAL_PRS.pvalue.tsv",sep='\t',index_col=False)
 
-
 # Define the PGS identifiers per cancer
-#"basal_cell":     ["PGS000790"],
+# PGP000186, PGP000413, PGP000542, PGP000596
 cancer_configs = {
-    "breast":       ["PGS004688"],
-    "prostate":     ["PGS004694"],
-    "colorectal":   ["PGS003386"],
-    "cervix": ["PGS000784"],
-    "kidney": ["PGS004690"],
-    "melanoma":     ["PGS003382"],
-    "squamous_cell":     ["PGS000790"],
-    "thyroid": ["PGS000797"],
-    "nervous": ["PGS003384"],
-    "non-hodgkins": ["PGS000791"]
+    "breast":       ["PGS000783", "PGS003380", "PGS004242", "PGS004688"],
+    "prostate":     ["PGS000795", "PGS003383", "PGS004251", "PGS004694"],
+    "colorectal":   ["PGS000785", "PGS003386", "PGS004243", "PGS004689"],
+    "cervix": ["PGS000784","PGS003389","",""],
+    "kidney": ["PGS000787","PGS004245","","PGS004690"],
+    "melanoma":     ["PGS000790", "PGS003382", "PGS004247",""],
+    "basal_cell":     ["PGS000790", "PGS003382", "PGS004247",""],
+    "squamous_cell":     ["PGS000790", "PGS003382", "PGS004247",""],
+    "thyroid": ["PGS000797","","",""],
+    "nervous": ["","PGS003384","",""],
+    "non-hodgkins": ["PGS000791","","PGS004248",""]
 }
 
 # Set up plot style
 #sns.set(style="whitegrid")
 plt.rcParams.update({
-    'axes.labelsize': 10,
+    'axes.labelsize': 5,
     'axes.labelweight': 'bold',
-    'xtick.labelsize': 10,
-    'ytick.labelsize': 10,
+    'xtick.labelsize': 5,
+    'ytick.labelsize': 5,
     'xtick.major.width': 1.5,
     'ytick.major.width': 1.5,
-    'axes.titlesize': 12,
+    'axes.titlesize': 7,
     'axes.titleweight': 'bold',
 })
 
@@ -71,8 +40,9 @@ plt.rcParams.update({
 pgs_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_4a_prs/")
 
 # Set up the figure: 4 rows × 5 columns
-fig, axes = plt.subplots(2, 5, figsize=(20, 4))
-fig.subplots_adjust(hspace=0.8, wspace=0.5)
+#fig, axes = plt.subplots(4, 11, figsize=(44, 32))
+fig, axes = plt.subplots(4, 11, figsize=(22, 18))
+fig.subplots_adjust(hspace=0.6, wspace=0.4)
 axes = axes.T.flatten()  # Fill left-to-right by cancer
 
 plot_idx = 0
@@ -107,24 +77,10 @@ for cancer, pgs_ids in cancer_configs.items():
             continue
 
         ax = axes[plot_idx]
-
-        # Define color mapping for case vs control
-        palette = {
-            1: cancer_color[cancer.lower()],  # case color depends on cancer type
-            0: "#A9A9A9"                      # control = gray
-        }
-
         plot = sns.kdeplot(
             data=df, x="PGS", hue="case", ax=ax,
-            common_norm=False, fill=True, alpha=0.4, legend=False,palette = palette
+            common_norm=False, fill=True, alpha=0.4, legend=False
         )
-        # plot = sns.kdeplot(
-        #     data=df, x="PGS",
-        #     color=cancer_color[cancer.lower()],
-        #     ax=ax,
-        #     fill=True, alpha=0.4, common_norm=False, legend=False
-        # )
-
 
         # Store legend handles/labels only once
         if plot_handles_labels is None:
@@ -137,12 +93,12 @@ for cancer, pgs_ids in cancer_configs.items():
             f"OR = {or_value:.2f}\np = {p_val:.2e}",
             transform=ax.transAxes,  # use axes coordinates (0-1)
             ha='right', va='top',
-            fontsize=9,
+            fontsize=6,
             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.7)
         )
 
-        ax.set_title(f"{cancer.upper().replace("_"," ")} ({pgs_id})")
-        ax.set_xlabel("PGS Score (Z-Score)")
+        ax.set_title(f"{cancer.upper().replace("_"," ")} - {pgs_id}")
+        ax.set_xlabel("PGS Score")
         ax.set_ylabel("Density")
         ax.tick_params(width=1.5)
         plot_idx += 1
@@ -160,33 +116,6 @@ for i in range(plot_idx, len(axes)):
 #         fontsize=13, title_fontsize=14
 #     )
 
-# Define colors to match your plot
-legend_elements = [
-    Patch(facecolor=cancer_color["control"], linewidth=1.5, label="Control")
-]
-
-# Add one legend on the right
-legend = fig.legend(
-    handles=legend_elements,
-    loc='center right',
-    title="Group",
-    fontsize=13,
-    title_fontsize=12,
-    frameon=True
-)
-
-# Customize legend frame and text
-legend.get_frame().set_edgecolor("black")   # black border
-legend.get_frame().set_linewidth(1)      # thicker frame
-#legend.get_frame().set_boxstyle("round,pad=0.5")  # rounded frame
-
-# Customize text colors and title style
-for text in legend.get_texts():
-    text.set_color("black")  # legend font color
-
-legend.get_title().set_weight("bold")  # bold title
-legend.get_title().set_color("black")  # title color
-
-plt.tight_layout(rect=[0, 0, 0.93, 1])  # leave room for legend
+#plt.tight_layout(rect=[0, 0, 0.93, 1])  # leave room for legend
 plt.savefig("pgs_case_control_density_grid.png", dpi=300)
 #plt.show()

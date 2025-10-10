@@ -1,26 +1,22 @@
-Control: "#A9A9A9"       # gray
-Pancancer: "#000000"     # black
-Breast: "#FFC0CB"        # pink
-Prostate: "#ADD8E6"      # baby blue
-Lung: "#66C2A5"
-Gastrointestal: "#FC8D62"
-Nervous: "#666699"
-Pancreas: "#9933ff"
-Colorectal: "#000099"
-Ovary: "#008080"
-Basal Cell: "#ffa500"
-Squamous Cell: "#ff0066"
-Bladder: "#ffff00"
-Kidney: "#66ff66" # light green
-Sarcoma: "#ffff99" # light yellow
-Uterus: "#ffc299" # peach
-Hematologic: "#ff4d4d" # red
-Melanoma: "#808080" # dark gray
-Thyroid: "#66b3ff"
-Cervix: "#ffb3ff"
-Non-Hodgkins: "#b366ff"
-Neuroendocrine: "#33cc33"
-mesa: "#cc0000"
-ufc: "#99ccff"
-ceph: "#ffbf80"
-aou: "#0000b3"
+Control: "#B0B0B0"
+Pancancer: "#000000"
+Breast: "#FF6F61"
+Prostate: "#1F77B4"
+Lung: "#2CA02C"
+Gastrointestal: "#FF7F0E"
+Nervous: "#9467BD"
+Pancreas: "#8C564B"
+Colorectal: "#17BECF"
+Ovary: "#BCBD22"
+Basal_Cell: "#E377C2"
+Squamous_Cell: "#A0522D"
+Bladder: "#AEC7E8"
+Kidney: "#98DF8A"
+Sarcoma: "#FFD700"
+Uterus: "#FFB6C1"
+Hematologic: "#D62728"
+Melanoma: "#393B79"
+Thyroid: "#9EDAE5"
+Cervix: "#F7B6D2"
+Non-Hodgkins: "#C49C94"
+Neuroendocrine: "#8CA252"

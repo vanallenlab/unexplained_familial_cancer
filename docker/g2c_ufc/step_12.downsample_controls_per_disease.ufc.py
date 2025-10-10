@@ -254,8 +254,10 @@ def parse_complex_logic(logic_str, meta):
         if ':' not in token:
             raise ValueError(f"Invalid token {token}, expected CancerType:axis")
         cancer, axis = token.split(":")
-        axis = axis.lower()
+        #axis = axis.lower()
         cancer = cancer.strip()
+        if axis is int:
+            optional_cancers = cancer.split('-')
         if axis == "patient":
             return meta['original_dx'].str.contains(cancer, na=False)
         elif axis == "family":

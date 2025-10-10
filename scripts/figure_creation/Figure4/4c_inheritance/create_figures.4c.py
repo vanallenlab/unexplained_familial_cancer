@@ -5,6 +5,42 @@ import seaborn as sns
 from scipy.stats import ttest_ind
 import numpy as np
 import sys, os
+import matplotlib.colors as mcolors
+
+def darken_color(color, factor=0.7):
+    """Darken a color by multiplying (0–1 scale) by `factor` < 1."""
+    c = mcolors.to_rgb(color)
+    return tuple(max(0, min(1, channel * factor)) for channel in c)
+
+def parse_color_file(filepath: str) -> dict:
+    """
+    Parse a color mapping file and return a dictionary of name → hex color.
+
+    Each line should look like:
+      Breast: "#FFC0CB"  # pink
+
+    The function ignores comments and blank lines.
+    """
+    color_map = {}
+
+    with open(filepath, "r") as infile:
+        for line in infile:
+            # Strip whitespace and skip empty/comment lines
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            # Split key and value
+            if ":" in line:
+                key, value = line.split(":", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+
+                color_map[key.lower()] = value
+
+    return color_map
+
+cancer_color = parse_color_file("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml")
 
 # -------------------------------
 # 1. Input and output setup
@@ -87,8 +123,19 @@ for g in group_order:
 
 plt.figure(figsize=(4,3))
 
-
-sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette="Set2", showfliers=False)
+sns.boxplot(
+    data=df,
+    x='group',
+    y='PGS',
+    order=group_order,
+    palette={
+        f"Isolated {cancer_type.capitalize()}": cancer_color[cancer_type],
+        f"Familial {cancer_type.capitalize()}": darken_color(cancer_color[cancer_type], factor=0.6),
+        'Control': cancer_color["control"]
+    },
+    showfliers=False
+)
+#sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette="Set2", showfliers=False)
 #sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=2, alpha=0.5)
 
 # --- Overlay points only if group has >20 samples ---
@@ -105,9 +152,9 @@ y_min = df['PGS'].min()
 y_range = y_max - y_min
 spacing = 0.15 * y_range
 
-print(pairs)
+#print(pairs)
 for i, (g1, g2) in enumerate(pairs):
-    print(g1 + "-" + g2)
+    #print(g1 + "-" + g2)
     x1, x2 = group_order.index(g1), group_order.index(g2)
     y = y_max + (i+1) * spacing
     plt.plot([x1, x1, x2, x2], [y-0.01, y, y, y-0.01], lw=1.0, c='black')
@@ -138,5 +185,5 @@ with open(stats_file, "w") as f:
     for (g1, g2), p_val in p_values.items():
         f.write(f"{g1} vs {g2}:\tp = {p_val:.4e},\tOR≈{or_values[(g1,g2)]:.3f}\n")
 
-print(f"✅ Saved plot: {png_file}")
-print(f"✅ Saved stats: {stats_file}")
+#print(f"✅ Saved plot: {png_file}")
+#print(f"✅ Saved stats: {stats_file}")

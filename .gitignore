@@ -4,3 +4,6 @@ results/*
 # But keep the directory itself so it shows up empty
 !results/.gitkeep
 
+# Ignore all images
+*.png
+*.jpeg
