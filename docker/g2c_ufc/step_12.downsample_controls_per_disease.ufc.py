@@ -256,9 +256,28 @@ def parse_complex_logic(logic_str, meta):
         cancer, axis = token.split(":")
         #axis = axis.lower()
         cancer = cancer.strip()
-        if axis is int:
+
+        if axis == "2fam":
             optional_cancers = cancer.split('-')
-        if axis == "patient":
+            # Count how many of the optional_cancers are in meta['original_dx']
+            count = sum(c in meta["family_dx"].lower() for c in optional_cancers)
+            return count >= 2
+        elif axis == "2patient":
+            optional_cancers = cancer.split('-')
+            # Count how many of the optional_cancers are in meta['original_dx']
+            count = sum(c in meta["original_dx"].lower() for c in optional_cancers)
+            return count >= 2
+        if axis == "3fam":
+            optional_cancers = cancer.split('-')
+            # Count how many of the optional_cancers are in meta['original_dx']
+            count = sum(c in meta["family_dx"].lower() for c in optional_cancers)
+            return count >= 3
+        elif axis == "3patient":
+            optional_cancers = cancer.split('-')
+            # Count how many of the optional_cancers are in meta['original_dx']
+            count = sum(c in meta["original_dx"].lower() for c in optional_cancers)
+            return count >= 3
+        elif axis == "patient":
             return meta['original_dx'].str.contains(cancer, na=False)
         elif axis == "family":
             return meta['family_dx'].str.contains(cancer, na=False)

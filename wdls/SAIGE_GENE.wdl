@@ -518,27 +518,45 @@ task make_group_file_part1 {
 
   # Get the VEP HIGH and MODERATE IMPACT Variants
   echo "Checkpoint 1"
-  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%IMPACT\n' -d > tmp0.txt
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%IMPACT\t%clinvar_clnsig\n' -d > tmp0.txt
   grep -v '^\.' tmp0.txt > tmp1.txt || touch tmp1.txt
-  grep -E 'HIGH|MODERATE' tmp1.txt > tmp2.txt || touch tmp2.txt
+  grep -E 'HIGH|MODERATE' tmp1.txt | grep -Ev 'Benign|Likely_bengin|Benign/Likely_benign' | cut -f1-3 > tmp2.txt || touch tmp2.txt
   grep -v '^$' tmp2.txt > tmp3.txt || touch tmp3.txt
   sort -u --compress-program=gzip < tmp3.txt > vep_impact.txt || touch vep_impact.txt
 
   # Get the ClinVar Important Variants
   #head vep_impact.txt
   #echo "Checkpoint 2"
-  #bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%clinvar_clnsig\t%IMPACT\n' -d > tmp1.txt
+  #bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%clinvar_clnsig\n' -d > tmp1.txt
   #grep -E 'Pathogenic|Likely_pathogenic|Pathogenic/Likely_pathogenic' tmp1.txt > tmp2.txt || touch tmp2.txt
-  #rm tmp1.txt 
   ## Remove instances that are MODERATE or LOW because these variants are pathogenic in other genes most likely
   #grep -Ev 'MODIFIER|LOW' tmp2.txt | cut -f1-3 > tmp3.txt || touch tmp3.txt
   #rm tmp2.txt
-  #sort -u tmp3.txt > vep_clinvar.txt || touch vep_clinvar.txt
-  #rm tmp3.txt
+  #sort -u tmp2.txt > vep_plp_clinvar.txt || touch vep_plp_clinvar.txt
+
+  # Get known Benign or Likely_Benign variants to exclude later on
+  #grep -E 'Benign|Likely_bengin|Benign/Likely_benign' tmp1.txt > tmp2.txt || touch tmp2.txt
+  #sort -u tmp2.txt > vep_blb_clinvar.txt || touch vep_blb_clinvar.txt
+  #rm tmp1.txt tmp2.txt
+
+
+  # Keep variants if they are Alpha Missense Likely_pathogenic
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%am_class\t%Consequence\t%clinvar_clnsig\n' -d | \
+    grep 'likely_pathogenic' | grep 'missense_variant' | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | \
+    cut -f1-3 | uniq > am_scores.tsv || touch am_scores.tsv
+
+  # Keep variants if they are PrimateAI Deleterious (D)
+  bcftools +split-vep ~{vcf} \
+    -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%PrimateAI_score\t%PrimateAI_pred\t%clinvar_clnsig\t%Consequence\n' -d | \
+    awk -F'\t' '$4 == "D"' | grep 'missense_variant' | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | \
+    cut -f1,2,4 | uniq > primateAI_scores.tsv || touch primateAI_scores.tsv
 
   # Keep variants if they are greater than 0.5 and are classified as missense variants
-  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%REVEL_score\t%Consequence\n' -d | \
-  grep "missense_variant" > tmp.txt || touch tmp.txt
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%REVEL_score\t%Consequence\t%clinvar_clnsig\n' -d | \
+    grep "missense_variant" | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' > tmp.txt || touch tmp.txt
   cut -f1-3 < tmp.txt | uniq > revel_scores.tsv
 
   # CODE to parse VEP REVEL Scores
@@ -571,7 +589,7 @@ task make_group_file_part1 {
   sort -u --compress-program=gzip < tmp4.txt > synonymous.txt || touch synonymous.txt  
 
   echo "Checkpoint 3"
-  cat vep_impact.txt vep_revel_score.txt synonymous.txt > vep_output.tmp.txt
+  cat vep_impact.txt vep_revel_score.txt am_scores.tsv primateAI_scores.tsv synonymous.txt > vep_output.tmp.txt
   awk 'NR==FNR {genes[$1]; next} $1 in genes' ~{autosomal_gene_file} vep_output.tmp.txt > vep_output.txt
 
   echo "Make Important Variant ID List"
@@ -608,29 +626,36 @@ task make_group_file_part2 {
   df = df[df['Gene'] != '.']
   #df = df[~df['Consequence'].str.contains('&',na=False)]
   # Drop Instances of Nonsense Mediated Decay Variants
-  df = df.loc[~df['Consequence'].str.contains('NMD_transcript_variant', case=False, na=False)]
-  df.loc[df['Consequence'].str.contains('synonymous_variant', na=False), 'Consequence'] = 'synonymous_variant'
+  #df = df.loc[~df['Consequence'].str.contains('NMD_transcript_variant', case=False, na=False)]
+  #df.loc[df['Consequence'].str.contains('synonymous_variant', na=False), 'Consequence'] = 'synonymous_variant'
  
   df = df[~df['Gene'].str.contains('-', na=False)]
-  df['Consequence'] = df['Consequence'].replace('Pathogenic/Likely_pathogenic', 'PLP')
+  #df['Consequence'] = df['Consequence'].replace('Pathogenic/Likely_pathogenic', 'PLP')
   # Removing Pathogenic Clinvar Terms, but if that same variant is annotated otherwise it remains in analysis
-  df = df[~df['Consequence'].isin(['Pathogenic', 'Likely_pathogenic', 'PLP'])]
+  #df = df[~df['Consequence'].isin(['Pathogenic', 'Likely_pathogenic', 'PLP'])]
  
   # Print the number of unique values in 'Gene' and 'Variant'
-  print(f"Unique values in 'Gene': {df['Gene'].nunique()}")
-  print(f"Unique values in 'Variant': {df['Variant'].nunique()}")
+  #print(f"Unique values in 'Gene': {df['Gene'].nunique()}")
+  #print(f"Unique values in 'Variant': {df['Variant'].nunique()}")
 
   # Define the hierarchy for 'Consequence'
+  # consequence_hierarchy = {
+  #     'Pathogenic': 1,
+  #     'PLP': 2,
+  #     'Likely_pathogenic': 3,
+  #     'HIGH': 4,
+  #     'REVEL075': 5,
+  #     'REVEL050': 6,
+  #     'MODERATE': 7,
+  #     "synonymous_variant": 8,
+  #     'LOW': 9
+  # }
   consequence_hierarchy = {
-      'Pathogenic': 1,
-      'PLP': 2,
-      'Likely_pathogenic': 3,
-      'HIGH': 4,
-      'REVEL075': 5,
-      'REVEL050': 6,
+      'HIGH': 1,
+      'Tier1': 2,
+      'Tier2': 3,
       'MODERATE': 7,
       "synonymous_variant": 8,
-      'LOW': 9
   }
 
   # Add a rank column based on the hierarchy
@@ -890,13 +915,13 @@ task saige_gene_step1 {
   # Examples of when this should be True are Breast, Prostate, Ovarian, etc
   if [ "~{single_sex_analysis}" = "False" ]; then
     CMD="$CMD \
-      --covarColList=PC1,PC2,PC3,PC4,age,sex \
+      --covarColList=PC1,PC2,PC3,PC4,sex \
       --sexCol=sex_karyotype \
       --FemaleCode=XO,XX,XXX \
       --MaleCode=XY,XYY,XXY"
   else
     CMD="$CMD \
-      --covarColList=PC1,PC2,PC3,PC4,age"
+      --covarColList=PC1,PC2,PC3,PC4"
   fi
 
   # Run the final command
@@ -939,6 +964,7 @@ task saige_gene_step2 {
     --minMAC=0.5 \
     --sampleFile=~{sampleFile} \
     --GMMATmodelFile=~{rda} \
+    --max_MAC_for_ER=10 \
     --varianceRatioFile=~{varianceRatio} \
     --sparseGRMFile=~{sparseGRMFile} \
     --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
@@ -960,7 +986,7 @@ task saige_gene_step2 {
   runtime{
     docker:"wzhou88/saige:1.3.0"
     disks: "local-disk 64 HDD"
-    preemptible: 3
+    preemptible: 1
     memory: "8 GB" 
   }
 }
@@ -992,6 +1018,7 @@ task saige_gene_step2_beta {
     --GMMATmodelFile=~{rda} \
     --varianceRatioFile=~{varianceRatio} \
     --sparseGRMFile=~{sparseGRMFile} \
+    --max_MAC_for_ER=10 \
     --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
     --groupFile=~{group_file} \
     --is_no_weight_in_groupTest=TRUE \
@@ -1078,9 +1105,8 @@ task sortSAIGE_Output {
     awk 'BEGIN{OFS="\t"} NR==1 {print; next} { $3 = 0.001; print }' tmp.updated_0001.tsv > tmp.updated_again_0001.tsv
     sort -k4,4g tmp.updated_again_0001.tsv > tmp.final_0001.tsv
 
-    cat tmp.final_001.tsv tmp.final_0001.tsv | sort -k4,4g > tmp.final_all.tsv
     # Put it all together
-    cat header.txt tmp.final_all.tsv > ~{out_filename}
+    cat header.txt tmp.final_001.tsv tmp.final_0001.tsv > ~{out_filename}
   >>>
   runtime{
     docker:"ubuntu:latest"

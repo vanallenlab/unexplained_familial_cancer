@@ -5,6 +5,42 @@ import seaborn as sns
 from scipy.stats import ttest_ind
 import numpy as np
 import sys, os, yaml
+import matplotlib.colors as mcolors
+
+def darken_color(color, factor=0.7):
+    """Darken a color by multiplying (0–1 scale) by `factor` < 1."""
+    c = mcolors.to_rgb(color)
+    return tuple(max(0, min(1, channel * factor)) for channel in c)
+    
+def parse_color_file(filepath: str) -> dict:
+    """
+    Parse a color mapping file and return a dictionary of name → hex color.
+
+    Each line should look like:
+      Breast: "#FFC0CB"  # pink
+
+    The function ignores comments and blank lines.
+    """
+    color_map = {}
+
+    with open(filepath, "r") as infile:
+        for line in infile:
+            # Strip whitespace and skip empty/comment lines
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            # Split key and value
+            if ":" in line:
+                key, value = line.split(":", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+
+                color_map[key.lower()] = value
+
+    return color_map
+
+cancer_color = parse_color_file("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml")
 
 # -------------------------------
 # 1. Input and output setup
@@ -90,7 +126,19 @@ for g in group_order:
 
 plt.figure(figsize=(3,3))
 
-sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette=palette, showfliers=False)
+sns.boxplot(
+    data=df,
+    x='group',
+    y='PGS',
+    order=group_order,
+    palette={
+        f"Not-Inherited {cancer_type.capitalize()}": cancer_color["control"],
+        f"Familial {cancer_type.capitalize()}": darken_color(cancer_color[cancer_type], factor=0.6),
+    },
+    showfliers=False
+)
+
+#sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette=palette, showfliers=False)
 sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=2, alpha=0.5)
 
 y_max = df['PGS'].max()
