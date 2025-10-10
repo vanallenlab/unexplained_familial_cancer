@@ -652,24 +652,58 @@ task make_group_file_part2 {
   # }
   consequence_hierarchy = {
       'HIGH': 1,
-      'Tier1': 2,
-      'Tier2': 3,
-      'MODERATE': 7,
-      "synonymous_variant": 8,
+      'TIER1': 2,
+      'TIER2': 3,
+      'MODERATE': 4,
+      "synonymous_variant": 5,
   }
+  # Example mapping function for one group of consequences
+  def assign_consequence_v1(group):
+      consequences = set(group['Consequence'])
+      
+      # Rule 1: HIGH present
+      if any('HIGH' in c for c in consequences):
+          return 1
+      
+      # Rule 2: at least two of [REVEL075, likely_pathogenic, D]
+      severe_hits = [c for c in consequences if any(x in c for x in ['REVEL075', 'likely_pathogenic', 'D'])]
+      if len(severe_hits) >= 2:
+          return 2
+      
+      # Rule 3: at least one of [REVEL050, REVEL075, likely_pathogenic, D]
+      if any(any(x in c for x in ['REVEL050', 'REVEL075', 'likely_pathogenic', 'D']) for c in consequences):
+          return 3
+      
+      # Rule 4: MODERATE present
+      if any('MODERATE' in c for c in consequences):
+          return 4
+      
+      # Rule 5: synonymous_variant present
+      if any('synonymous_variant' in c for c in consequences):
+          return 5
+      
+      # Default if none matched
+      return None
+  
+  # Apply groupby and map back to full df
+  df['Consequence_Rank'] = (
+      df.groupby(['Gene', 'Variant'], group_keys=False)
+        .apply(assign_consequence_v1)
+        .reindex(df.index)
+  )
 
   # Add a rank column based on the hierarchy
-  df['Consequence_Rank'] = df['Consequence'].map(consequence_hierarchy)
+  #df['Consequence_Rank'] = df['Consequence'].map(consequence_hierarchy)
 
   # Sort by Gene, Variant, and Consequence_Rank
-  df_sorted = df.sort_values(by=['Gene', 'Variant', 'Consequence_Rank'])
+  #df_sorted = df.sort_values(by=['Gene', 'Variant', 'Consequence_Rank'])
 
   # Drop duplicates, keeping the first (highest-ranked Consequence)
-  df_filtered = df_sorted.drop_duplicates(subset=['Gene', 'Variant'], keep='first')
+  #df_filtered = df_sorted.drop_duplicates(subset=['Gene', 'Variant'], keep='first')
 
   # Drop the rank column (optional)
-  df_filtered = df_filtered.drop(columns=['Consequence_Rank'])
-  df = df_filtered
+  #df_filtered = df_filtered.drop(columns=['Consequence_Rank'])
+  #df = df_filtered
 
   # Extract and format data
   grouped = df.groupby('Gene')
@@ -678,7 +712,7 @@ task make_group_file_part2 {
   output = []
   for gene, group in grouped:
       variants = " ".join(group['Variant'].tolist())
-      annotations = " ".join(group['Consequence'].tolist())
+      annotations = " ".join(group['Consequence_Rank'].tolist())
       output.append(f"{gene} var {variants}")
       output.append(f"{gene} anno {annotations}")
 
@@ -969,7 +1003,7 @@ task saige_gene_step2 {
     --sparseGRMFile=~{sparseGRMFile} \
     --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
     --groupFile=~{group_file} \
-    --annotation_in_groupTest=HIGH,HIGH:REVEL075,HIGH:REVEL075:REVEL050,HIGH:REVEL075:REVEL050:MODERATE,synonymous_variant \
+    --annotation_in_groupTest=HIGH,HIGH:TIER1,HIGH:TIER1:TIER2,HIGH:TIER1:TIER2:MODERATE,synonymous_variant \
     --maxMAF_in_groupTest=0.05 \
     2>&1 | tee saige.~{cancer_type}.log ; then
   

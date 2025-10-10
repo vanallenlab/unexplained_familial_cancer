@@ -130,6 +130,10 @@ task Filter_Vep_TSV {
         "Consequence": "category",
         "REVEL_score": "string",
         "SYMBOL": "string",
+        "am_class": "string",
+        "primateAI_pred": "string",
+        "LOFTEE": "string",
+        "SpliceAI": "float32"
     }
 
     # Read in files

@@ -7,10 +7,10 @@ version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 workflow ANALYSIS_1C_LOGISTIC_REGRESSION {
   input {
-    String cancer_type = ""
+    String cancer_type = "thyroid"
  
-    String analysis_1a_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1A_GENES/"
-    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1C_RESULTS/" 
+    String analysis_1a_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1B_GENES_50kb/"
+    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1C_RESULTS_GENES_50kb/" 
   }
 
   File step_12_data = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
@@ -45,7 +45,7 @@ workflow ANALYSIS_1C_LOGISTIC_REGRESSION {
   call Tasks.concatenateGzippedFiles_noheader as concat2 {
     input:
       files = concat1.out1,
-      callset_name = cancer_type
+      callset_name = cancer_type + "_roh"
   }
   call Tasks.copy_file_to_storage {
     input:
@@ -117,19 +117,25 @@ task T2_RunLogisticRegression {
 
   # Read in dataframes
   haplotype_df = pd.read_csv("~{raw_roh_hwas}", sep='\t', index_col=False)
-  df = pd.read_csv("~{sample_data}", sep='\t', index_col=False)
+  df = pd.read_csv("~{sample_data}", sep='\t').set_index('original_id')
+  sample_order = [s for s in df.index if s in haplotype_df.columns]
   df['is_case'] = df["cancer"].apply(lambda x: 0 if x == "control" else 1)
   df['sex_binary'] = df['inferred_sex'].apply(lambda x: 0 if x == "female" else 1)
-  sample_list = [str(s).strip() for s in df['original_id']]
+  #sample_list = [str(s).strip() for s in df['original_id']]
 
   # Clean haplotype_df column names
   haplotype_df.columns = haplotype_df.columns.astype(str).str.strip()
 
+  # Add columns for any missing samples, filled with 0
+  #for s in sample_list:
+  #    if s not in haplotype_df.columns:
+  #        haplotype_df[s] = 0
+
   # Subset haplotype_df to only include columns in sample_list
-  haplotype_df = haplotype_df.loc[:, ['Haplotype'] + sample_list]
+  haplotype_df = haplotype_df.loc[:, ['Genomic_Region'] + sample_order]
 
   # Covariates
-  covariates = [f"PC{i}" for i in range(1, 5)] + ["age"]
+  covariates = [f"PC{i}" for i in range(1, 5)] #+ ["age"]
   df[covariates] = df[covariates].apply(zscore)
 
   # Add 'sex_binary' if it varies
@@ -145,49 +151,55 @@ task T2_RunLogisticRegression {
   # Iterate over haplotypes
   for _, row in haplotype_df.iterrows():
       hap_id = row['Genomic_Region']
-      values = row[sample_list].astype(float).values
+      #values = row[sample_list].fillna(0).astype(float).values
+      #values = row[sample_list].astype(float).values
+      hap_values = row[sample_order].astype(float)
 
       # Skip invariant haplotypes
-      if np.all(values == values[0]):
+      if np.all(hap_values == hap_values[0]):
           continue
 
       # Z-score normalize ROH values
+      #hap_values = row[sample_order].astype(float)
       #hap_values = (values - values.mean()) / values.std()
-      hap_values = ((values - values.mean()) / values.std()).round().astype(int)
+      #hap_values = values.astype(int)
 
       # Design matrix
-      X = df[covariates].copy()
-      X['roh_score'] = hap_values
+      X = df.loc[sample_order, covariates].copy()
+      X['roh_score'] = hap_values.values
       X = sm.add_constant(X)
 
-      y = df['is_case']
+      y = df.loc[sample_order, 'is_case']
 
       if X.isnull().values.any():
-          #print(f"NaN detected for haplotype {hap_id}")
-          #print(X.isnull().sum())
           continue
 
       if np.isinf(X.values).any():
-          #print(f"Inf detected for haplotype {hap_id}")
           continue
         
 
       model = sm.Logit(y, X)
       try:
           # Fit logistic regression
-          #print(f"Running {hap_id}")
           result = model.fit(disp=0)
           beta = result.params['roh_score']
+          se_beta = result.bse['roh_score']
           pval = result.pvalues['roh_score']
-      except:
-          #print(f"Fail {hap_id}")
-          beta, pval = np.nan, np.nan
 
-      results.append({
-          'haplotype': hap_id,
-          'beta_roh_score': beta,
-          'pvalue_roh_score': pval
-      })
+          # Mean haplotype values for cases and controls
+          mean_case = hap_values[df['is_case'] == 1].mean()
+          mean_ctrl = hap_values[df['is_case'] == 0].mean()
+
+          results.append({
+              'haplotype': hap_id,
+              'beta_roh_score': beta,
+              'se_beta_roh_score': se_beta,
+              'pvalue_roh_score': pval,
+              'mean_case_value': mean_case,
+              'mean_control_value': mean_ctrl
+          })
+      except:
+          continue
 
   # Save results
   results_df = pd.DataFrame(results)
