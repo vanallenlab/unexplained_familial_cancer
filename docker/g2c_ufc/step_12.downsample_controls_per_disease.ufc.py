@@ -257,21 +257,33 @@ def parse_complex_logic(logic_str, meta):
         #axis = axis.lower()
         cancer = cancer.strip()
 
-        if axis == "2family":
-            optional_cancers = cancer.split('-')
-            # Count how many of the optional_cancers are in meta['original_dx']
-            count = sum(c in meta["family_dx"].lower() for c in optional_cancers)
-            return count >= 2
+
+        if re.match(r"^\d+family$", axis):
+            # Extract the required number (e.g., "3family" → 3)
+            required_count = int(re.match(r"^(\d+)", axis).group(1))
+            optional_cancers = [c.strip().lower() for c in cancer.split('-')]
+
+            def count_matches(dx_count_str):
+                """Return number of optional cancers present in this family_dx_count string."""
+                if pd.isna(dx_count_str):
+                    return 0
+                dx_dict = {}
+                for entry in str(dx_count_str).split(','):
+                    if ':' in entry:
+                        cancer_type, count = entry.split(':', 1)
+                        dx_dict[cancer_type.strip().lower()] = int(count.strip())
+                return sum(c in dx_dict for c in optional_cancers)
+
+            maternal_count = count_matches(meta.get("maternal_family_dx_count", ""))
+            paternal_count = count_matches(meta.get("paternal_family_dx_count", ""))
+
+            # Each side must independently meet the threshold
+            return (maternal_count >= required_count) or (paternal_count >= required_count)
         elif axis == "2patient":
             optional_cancers = cancer.split('-')
             # Count how many of the optional_cancers are in meta['original_dx']
             count = sum(c in meta["original_dx"].lower() for c in optional_cancers)
             return count >= 2
-        if axis == "3family":
-            optional_cancers = cancer.split('-')
-            # Count how many of the optional_cancers are in meta['original_dx']
-            count = sum(c in meta["family_dx"].lower() for c in optional_cancers)
-            return count >= 3
         elif axis == "3patient":
             optional_cancers = cancer.split('-')
             # Count how many of the optional_cancers are in meta['original_dx']
@@ -280,14 +292,14 @@ def parse_complex_logic(logic_str, meta):
         elif axis == "patient":
             return meta['original_dx'].str.contains(cancer, na=False)
         elif axis == "family":
-            return meta['family_dx'].str.contains(cancer, na=False)
+            return meta['maternal_family_dx'].str.contains(cancer, na=False) | meta['paternal_family_dx'].str.contains(cancer, na=False)
         elif axis == "both":
-            return meta['original_dx'].str.contains(cancer, na=False) | meta['family_dx'].str.contains(cancer, na=False)
+            return meta['original_dx'].str.contains(cancer, na=False) & (meta['maternal_family_dx'].str.contains(cancer, na=False) | meta['paternal_family_dx'].str.contains(cancer, na=False))
         elif axis == "sex":
             # For simplicity cancer is 'Male or Female' to be consistent with the rest of the function.
             return meta['inferred_sex'].fillna("").str.lower() == cancer.lower()
         elif axis == "age":
-            return meta['age'].fillna(float('inf')) < int(cancer)
+            return meta['age'].fillna(float('inf')) <= int(cancer)
         else:
             raise ValueError(f"Unsupported axis: {axis} in token {token}")
 
