@@ -97,6 +97,9 @@ reset_qc_plot_dir() {
   staging_dir=$1
   wid_suffix=$2
   gs_metric_dir=$3
+  if [ $# -eq 4 ]; then
+    prev_stats=$4
+  fi
 
   cat << EOF > $staging_dir/main_keys.list
 size_distrib
@@ -185,7 +188,7 @@ EOF
   done
 
 # Write input .json
-cat << EOF | python -m json.tool > cromshell/inputs/Plot$wid_suffix.inputs.json
+cat << EOF | python -m json.tool > $staging_dir/Plot$wid_suffix.inputs.json
 {
   "PlotVcfQcMetrics.af_distribution_tsvs": $( collapse_txt $staging_dir/af_distrib.uris.list ),
   "PlotVcfQcMetrics.all_sv_beds": $( collapse_txt $staging_dir/all_svs_bed.uris.list ),
@@ -193,8 +196,8 @@ cat << EOF | python -m json.tool > cromshell/inputs/Plot$wid_suffix.inputs.json
   "PlotVcfQcMetrics.benchmark_interval_names": ["Easy", "Hard"],
   "PlotVcfQcMetrics.common_af_cutoff": 0.01,
   "PlotVcfQcMetrics.common_sv_beds": $( collapse_txt $staging_dir/common_svs_bed.uris.list ),
-  "PlotVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:7d85acf",
-  "PlotVcfQcMetrics.linux_docker": "marketplace.gcr.io/google/ubuntu1804",
+  "PlotVcfQcMetrics.custom_qc_target_metrics": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.sv.qc_targets.tsv",
+  "PlotVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:8c7214e",
   "PlotVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.$wid_suffix",
   "PlotVcfQcMetrics.peak_ld_stat_tsvs": $( collapse_txt $staging_dir/ld_stats.uris.list ),
   "PlotVcfQcMetrics.ref_af_distribution_tsvs": $( collapse_txt $staging_dir/gnomAD_af_distribution.uris.list ),
@@ -232,6 +235,20 @@ cat << EOF | python -m json.tool > cromshell/inputs/Plot$wid_suffix.inputs.json
                                                          $( collapse_txt $staging_dir/twin_genotype_benchmark_distribs.giab_hard.uris.list ) ]
 }
 EOF
+
+  # Add previous stats to input .json if optioned
+  if ! [ -z $prev_stats ]; then
+    echo -e "{\"PlotVcfQcMetrics.previous_stats\": \"$prev_stats\"}" \
+    > $staging_dir/prev_stats.json
+    code/scripts/update_json.py \
+      -i $staging_dir/Plot$wid_suffix.inputs.json \
+      -u $staging_dir/prev_stats.json \
+      -o cromshell/inputs/Plot$wid_suffix.inputs.json
+  else
+    cp \
+      $staging_dir/Plot$wid_suffix.inputs.json \
+      cromshell/inputs/Plot$wid_suffix.inputs.json
+  fi
 }
 
 
@@ -321,7 +338,7 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.inputs.template.json
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
-  "CollectVcfQcMetrics.linux_docker": "marketplace.gcr.io/google/ubuntu1804",
+  "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
   "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.initial_qc.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
@@ -373,6 +390,13 @@ code/scripts/manage_chromshards.py \
 staging_dir=staging/initial_qc
 if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 
+# Make file for target number of SVs per genome
+echo -e "variants_per_genome.sv:median\t9124" > $staging_dir/dfci-ufc.sv.qc_targets.tsv
+echo -e "variants_per_genome.all:median\t9124" >> $staging_dir/dfci-ufc.sv.qc_targets.tsv
+gsutil -m cp \
+  $staging_dir/dfci-ufc.sv.qc_targets.tsv \
+  $WORKSPACE_BUCKET/data/misc/
+
 # Reset inputs
 reset_qc_plot_dir \
   $staging_dir \
@@ -399,13 +423,12 @@ cromshell -t 120 list-outputs \
 | gsutil -m cp -I \
   $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc/
 
-# TODO: UPDATE THIS
-# # Clear Cromwell execution & output buckets for patch jobs
-# gsutil -m ls $( cat cromshell/job_ids/GnarlyJointGenotypingPart1.inputs.$contig.patch.job_ids.list \
-#                 | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell/*/GnarlyJointGenotypingPart1/" \
-#                   '{ print bucket_prefix$1"/**" }' ) \
-# > uris_to_delete.list
-# cleanup_garbage
+# Clear Cromwell execution & output buckets
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotInitialVcfQcMetrics.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+                  '{ print bucket_prefix$1"/**" }' ) \
+> uris_to_delete.list
+cleanup_garbage
 
 
 #########################################
@@ -426,8 +449,8 @@ cat << EOF > $staging_dir/FilterGenotypes.inputs.template.json
                                     "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38_umap_s100.bed.gz",
                                     "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38_umap_s24.bed.gz"],
   "FilterGenotypes.gq_recalibrator_model_file": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/gatk-sv-recalibrator.aou_phase_1.v1.model",
-  "FilterGenotypes.linux_docker": "marketplace.gcr.io/google/ubuntu1804",
-  "FilterGenotypes.no_call_rate_cutoff": 1,
+  "FilterGenotypes.linux_docker": "ubuntu:plucky-20251001",
+  "FilterGenotypes.no_call_rate_cutoff": 0.1,
   "FilterGenotypes.output_prefix": "dfci-ufc.v1.\$CONTIG",
   "FilterGenotypes.ped_file": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/refs/dfci-g2c.all_samples.ped",
   "FilterGenotypes.ploidy_table": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/module-outputs/17/dfci-g2c.v1.ploidy.tsv",
@@ -451,6 +474,7 @@ code/scripts/manage_chromshards.py \
   --status-tsv cromshell/progress/FilterGenotypes.progress.tsv \
   --workflow-id-log-prefix "dfci-ufc.v1" \
   --outer-gate 30 \
+  --submission-gate 0.1 \
   --max-attempts 2
 
 
@@ -472,9 +496,10 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postFilterGenotypes.inputs.templat
                                                   "gs://dfci-g2c-refs/giab/\$CONTIG/giab.hg38.broad_callable.hard.\$CONTIG.bed.gz"],
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
+  "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
   "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
-  "CollectVcfQcMetrics.linux_docker": "marketplace.gcr.io/google/ubuntu1804",
+  "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 4568,
   "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_filtergenotypes.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
@@ -515,7 +540,7 @@ code/scripts/manage_chromshards.py \
   --workflow-id-log-prefix "dfci-ufc.sv.v1" \
   --outer-gate 30 \
   --submission-gate 0.1 \
-  --max-attempts 3
+  --max-attempts 4
 
 
 #########################################
@@ -530,7 +555,8 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 reset_qc_plot_dir \
   $staging_dir \
   QcPostFilterGenotypes \
-  $WORKSPACE_BUCKET/qc/post_filtergenotypes
+  $WORKSPACE_BUCKET/qc/post_filtergenotypes \
+  $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc/dfci-ufc.sv.v1.InitialVcfQcMetrics.all_qc_summary_metrics.tsv
 
 # Submit QC visualization workflow
 cromshell --no_turtle -t 120 -mc submit --no-validation \
@@ -545,20 +571,19 @@ cromshell --no_turtle -t 120 -mc submit --no-validation \
 monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostFilterGenotypes.job_ids.list ) 5
 
 # Once workflow is complete, stage output
-gsutil -m rm -rf $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc
+gsutil -m rm -rf $WORKSPACE_BUCKET/qc/post_filtergenotypes/PlotQc
 cromshell -t 120 list-outputs \
   $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostFilterGenotypes.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I \
-  $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc/
+  $WORKSPACE_BUCKET/qc/post_filtergenotypes/PlotQc/
 
-# TODO: UPDATE THIS
-# # Clear Cromwell execution & output buckets for patch jobs
-# gsutil -m ls $( cat cromshell/job_ids/GnarlyJointGenotypingPart1.inputs.$contig.patch.job_ids.list \
-#                 | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell/*/GnarlyJointGenotypingPart1/" \
-#                   '{ print bucket_prefix$1"/**" }' ) \
-# > uris_to_delete.list
-# cleanup_garbage
+# Clear Cromwell execution & output buckets
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostFilterGenotypes.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+                  '{ print bucket_prefix$1"/**" }' ) \
+> uris_to_delete.list
+cleanup_garbage
 
 
 ###############################
@@ -616,14 +641,14 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 
 # Write list of training data tarballs from all contigs
 gsutil -m ls \
-  $WORKSPACE_BUCKET/data/MinGQPart1/chr*/GatherTrioData_PCRMINUS/dfci-ufc.v1.chr*.PCRMINUS.tar.gz \
+  $WORKSPACE_BUCKET/data/MinGQPart1/chr*/GatherTrioData_PCRMINUS/dfci-ufc.sv.v1.chr*.PCRMINUS.tar.gz \
 | sort -V \
 > $staging_dir/MinGQ.training_tarball.uris.list
 
 # Write .json of inputs (run this once across all chromosomes)
 cat << EOF > cromshell/inputs/MinGQPart2.inputs.json
 {
-  "Module07FilterGTsPart2.PCRMINUS_cleaned_trios_famfile": "$WORKSPACE_BUCKET/data/MinGQPart1/chr1/SplitFamfile_PCRMINUS/dfci-ufc.v1.chr1.PCRMINUS.cleaned_trios.fam",
+  "Module07FilterGTsPart2.PCRMINUS_cleaned_trios_famfile": "$WORKSPACE_BUCKET/data/MinGQPart1/chr1/SplitFamfile_PCRMINUS/dfci-ufc.sv.v1.chr1.PCRMINUS.cleaned_trios.fam",
   "Module07FilterGTsPart2.PCRMINUS_trio_tarballs": $( collapse_txt $staging_dir/MinGQ.training_tarball.uris.list ),
   "Module07FilterGTsPart2.gcloud_sdk_docker": "google/cloud-sdk",
   "Module07FilterGTsPart2.optimize_excludeEV": ";;RD,SR;;",
@@ -636,7 +661,7 @@ cat << EOF > cromshell/inputs/MinGQPart2.inputs.json
   "Module07FilterGTsPart2.optimize_metric": "GQ",
   "Module07FilterGTsPart2.optimize_minFreqs": "0;0.001;0.01;0.1;0",
   "Module07FilterGTsPart2.optimize_minSizes": "0;250;1000;5000;25000;0",
-  "Module07FilterGTsPart2.prefix": "dfci-ufc.v1",
+  "Module07FilterGTsPart2.prefix": "dfci-ufc.sv.v1",
   "Module07FilterGTsPart2.roc_max_fdr_PCRMINUS": 0.05,
   "Module07FilterGTsPart2.roc_max_fdr_PCRPLUS": 0.05,
   "Module07FilterGTsPart2.roc_max_metric": 100,
@@ -658,14 +683,14 @@ cromshell --no_turtle -t 120 -mc submit --no-validation \
   code/wdl/gatk-sv/legacy_mingq_wdl/Module07FilterGTsPart2TrainModel.wdl \
   cromshell/inputs/MinGQPart2.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.v1.MinGQPart2.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list
 
-# Monitor QC visualization workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.v1.MinGQPart2.job_ids.list )
+# Monitor minGQ training workflow
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.v1.MinGQPart2.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I $WORKSPACE_BUCKET/data/MinGQPart2/
 
