@@ -67,7 +67,7 @@ task T1_Convert_To_TSV {
   rm ~{vcf}
 
   # Get the header started
-  echo -e "CHROM\tPOS\tID\tREF\tALT\tIMPACT\tSYMBOL\tclinvar_clnsig\tgnomAD_AF_non_cancer_afr\tgnomAD_AF_non_cancer_amr\tgnomAD_AF_non_cancer_eas\tgnomAD_AF_non_cancer_fin\tgnomAD_AF_non_cancer_nfe\tgnomAD_AF_non_cancer_sas\tgnomAD_AF_non_cancer_ami\tgnomAD_AF_non_cancer_asj\tgnomAD_AF_non_cancer_mid\tgnomAD_AF_non_cancer_oth\tSAMPLES" > ~{output_file}
+  echo -e "CHROM\tPOS\tID\tREF\tALT\tIMPACT\tSYMBOL\tclinvar_clnsig\tConsequence\tgnomAD_AF_non_cancer_afr\tgnomAD_AF_non_cancer_amr\tgnomAD_AF_non_cancer_eas\tgnomAD_AF_non_cancer_fin\tgnomAD_AF_non_cancer_nfe\tgnomAD_AF_non_cancer_sas\tgnomAD_AF_non_cancer_ami\tgnomAD_AF_non_cancer_asj\tgnomAD_AF_non_cancer_mid\tgnomAD_AF_non_cancer_oth\tSAMPLES" > ~{output_file}
 
   # If gnomad annotations are not found, this is not a regions enriched w/ genes. So we are not concerned about it here.
   if ! grep -q '^##INFO=<ID=gnomAD_AF_non_cancer_afr' <(bcftools view -h tmp1.vcf.gz); then
@@ -76,9 +76,11 @@ task T1_Convert_To_TSV {
       exit 0
   fi
 
-  bcftools +split-vep tmp1.vcf.gz -i 'GT="alt" && AF <= 0.01' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%IMPACT\t%SYMBOL\t%clinvar_clnsig\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_oth\t[%SAMPLE,]\n' -d > tmp.txt
+  bcftools +split-vep tmp1.vcf.gz -i 'GT="alt" && AF <= 0.01' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%IMPACT\t%SYMBOL\t%clinvar_clnsig\tConsequence\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_oth\t[%SAMPLE,]\n' -d > tmp.txt
   rm tmp1.vcf.gz
-  grep -E 'HIGH|Pathogenic|Likely_pathogenic' tmp.txt > tmp2.txt || touch tmp2.txt
+
+  grep -E 'HIGH|Pathogenic|Likely_pathogenic' tmp.txt | \
+    grep -Eiv 'Likely_benign|Benign|NMD_transcript_variant' > tmp2.txt || touch tmp2.txt
   rm tmp.txt
 
   # Filter the File to only include Autosomal Dominant CPGS
@@ -109,7 +111,6 @@ task T1_Convert_To_TSV {
 
   # Combine logic: keep row if either condition is satisfied
   filtered_df = df[gnomad_ok | clinvar_ok]
-  print("Check X")
   cpg_df = pd.read_csv("~{cpg_list}",sep='\t',index_col=False,header=None, names=['GENE','PHENOTYPE_RELATIONSHIP','Role_in_Cancer'])
 
   # Merge on gene symbol

@@ -392,7 +392,7 @@ def main():
     meta['original_id'] = meta['original_id'].astype(str)
     phenotype_data = pd.read_csv(args.phenotype_data,sep='\t',index_col=False)
     phenotype_data['Sample'] = phenotype_data['Sample'].astype(str)
-    phenotype_data = phenotype_data[~((phenotype_data['cancer'] == "control") & (phenotype_data['family_dx'].notna()))]
+    phenotype_data = phenotype_data[~((phenotype_data['cancer'] == "control") & (phenotype_data['maternal_family_dx'].notna() | phenotype_data['paternal_family_dx'].notna()))]
     pca = pd.read_csv(args.pca,sep='\t',index_col=False)
     pca['#IID'] = pca['#IID'].astype(str)
  
