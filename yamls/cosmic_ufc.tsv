@@ -6,7 +6,7 @@ ATR	other
 AXIN2	colorectal
 BAP1	"melanoma,kidney"
 BARD1	"uterus,breast,ovary"
-BLM	"non-hodgkins,hematologic,squamous_cell"
+BLM	"non-hodgkins,hematologic,squamous_cell,all"
 BMPR1A	"gastrointestinal,colorectal"
 BRCA1	"breast,ovary"
 BRCA2	"breast,ovary,pancreas,hematologic"
@@ -22,7 +22,7 @@ CHEK2	breast
 CTNNA1	gastrointestinal
 CYLD	other
 DDB2	"basal_cell,squamous_cell,melanoma"
-DICER1	other
+DICER1	lung
 EGFR	lung
 ERCC2	"basal_cell,squamous_cell,melanoma"
 ERCC3	"basal_cell,squamous_cell,melanoma"
@@ -103,7 +103,7 @@ TSC2	kidney
 USP9X	colorectal
 VHL	"kidney,neuroendocrine"
 WAS	non-hodgkins
-WRN	"sarcoma,nervous"
+WRN	"sarcoma,nervous,all"
 WT1	kidney
 XPA	"melanoma,basal_cell,squamous_cell"
 XPC	"melanoma,basal_cell,squamous_cell"
