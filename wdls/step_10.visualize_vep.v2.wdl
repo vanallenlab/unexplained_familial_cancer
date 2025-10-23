@@ -372,7 +372,7 @@ task Convert_To_TSV {
 
   echo "### Step 8: Keep HIGH/MODERATE impact"
   if grep -q -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt; then
-    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u >> ~{output_file}
+    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | sort -u >> ~{output_file}
   fi
 
   gzip ~{output_file}

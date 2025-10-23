@@ -210,7 +210,14 @@ task T4_control_for_ancestry {
   prs_df = pd.read_csv("~{raw_prs}", sep='\t', index_col=False)
   sample_data = pd.read_csv("~{sample_data}", sep='\t', index_col=False)
 
-  if "~{appropriate_cancer_type}" == "~{cancer_type}":
+  subsets = {
+    ("brain","nervous"),
+    ("esophagus","gastrointestinal"),
+    ("leukemia","hematologic"),
+    ("pancreas","gastrointestinal")
+  }
+
+  if "~{appropriate_cancer_type}" == "~{cancer_type}" or ("~{appropriate_cancer_type}","~{cancer_type}") in subsets:
     pass
   else:
     sample_data = sample_data[~sample_data['original_dx'].str.contains("~{appropriate_cancer_type}", case = False)]

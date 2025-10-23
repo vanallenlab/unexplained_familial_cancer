@@ -468,7 +468,7 @@ cancer_ontology:
     - name: Testis
       types:
         - primary_malignant_neoplasm_of_testis
-    - name: SCLC # Small Cell Lung Cancer
+    - name: LNET # Lung Neuroendocrine tumors
       types:
         - carcinoid_tumor_of_lung
         - malignant_carcinoid_tumor_of_bronchus

@@ -37,7 +37,7 @@ workflow STEP_9_RUN_VEP {
     String? cohort_prefix
 
     String bcftools_docker
-    String vep_docker = "vanallenlab/g2c-vep:latest"
+    String vep_docker = "vanallenlab/g2c-vep:loftee_etc"
 
     String step_8_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_8_FILTER_TO_TP_VARIANTS/sharded_vcfs"
     String storage_directory = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
@@ -47,7 +47,7 @@ workflow STEP_9_RUN_VEP {
   Int n_gnomad_files = length(select_all(gnomad_vcf_uris))
   Boolean any_remote = n_remote_files + n_gnomad_files > 0 
 
-  Int positive_shards = 2960
+  Int positive_shards = 1
 
   # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
   call gather_vcfs {
@@ -252,7 +252,7 @@ task copy_vcfs_to_storage {
 
 task SliceRemoteFiles {
   input {
-    String vcf
+    File vcf
     File vcf_idx
     Array[String?] gnomad_vcf_uris
     Array[File?] gnomad_vcf_indexes
@@ -267,16 +267,30 @@ task SliceRemoteFiles {
     Float mem_gb = 15.5
     Int n_cpu = 4
 
-    String docker = "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base:2023-07-28-v0.28.1-beta-e70dfbd7"
+    String docker = "vanallenlab/g2c_pipeline:05aa88e"
+    #String docker = "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base:2023-07-28-v0.28.1-beta-e70dfbd7"
   }
 
   Int n_remote_files = length(select_all(vep_remote_files))
   Int n_gnomad_files = length(select_all(gnomad_vcf_uris))
 
   command <<<
-    set -eu -o pipefail
+    #set -euxo pipefail
+    #export GCS_OAUTH_TOKEN=$(gcloud auth application-default print-access-token)
+    #gcloud config get-value account > pet_account.txt
 
-    export GCS_OAUTH_TOKEN=`gcloud auth application-default print-access-token`
+    set -euxo pipefail
+    export CLOUDSDK_PYTHON=/opt/conda/envs/gatk-sv/bin/python3
+    # Debugging helpers
+    which python3
+    which python
+    ls -ltrha
+    gcloud --version
+
+    # Write access token to file to pick up failures
+    gcloud auth application-default print-access-token > gcp_token.txt
+    cat gcp_token.txt
+    export GCS_OAUTH_TOKEN=$( cat gcp_token.txt)
 
     echo -e "\nSLICING QUERY REGIONS FROM VCF, REMOTELY\n"
     mv ~{vcf_idx} ./

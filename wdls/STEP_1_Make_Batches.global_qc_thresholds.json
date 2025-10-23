@@ -1,0 +1,42 @@
+{
+	"high WGD" : {
+		"feature" : "wgd_score",
+		"equality" : ">",
+		"value" : "max([Q3+(9*MAD), 0.5])"
+	},
+	"low WGD" : {
+		"feature" : "wgd_score",
+		"equality" : "<",
+		"value" : "min([Q1-(9*MAD), -0.5])"
+	},
+	"high coverage" : {
+		"feature" : "median_coverage",
+		"equality" : ">",
+		"value" : "45"
+	},
+	"low_coverage" : {
+		"feature" : "median_coverage",
+		"equality" : "<",
+		"value" : "15"
+	},
+        "very high inconsistent_ab_het_rate" : {
+                "feature" : "inconsistent_ab_het_rate",
+                "equality" : ">",
+                "value" : "0.15"
+        },
+        "very high CHARR" : {
+                "feature" : "charr",
+                "equality" : ">",
+                "value" : "0.03"
+        },
+        "very low n_grafpop_snps" : {
+                "feature" : "n_grafpop_snps",
+                "equality" : "<",
+                "value" : "Q1-(40*MAD)"
+        },
+        "very low hq_het_rate" : {
+                "feature" : "hq_het_rate",
+                "equality" : "<",
+                "value" : "Q1-(40*MAD)"
+        }
+}

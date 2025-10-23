@@ -369,6 +369,7 @@ task process_vcf_part1 {
   input {
     File vcf
     File subjects_list
+    File aou_subjects_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cohorts/ufc_subjects.aou.list"
   }
   Int default_disk_gb = ceil(size(vcf,"GB") * 2) + 10
   command <<<
@@ -382,15 +383,23 @@ task process_vcf_part1 {
         bcftools annotate -h extra_header.txt -O z -o tmp1.vcf.gz ~{vcf}
         rm ~{vcf}
 
-        bcftools view -S ~{subjects_list} -O z -o tmp2.vcf.gz tmp1.vcf.gz
+        bcftools view -S ~{aou_subjects_list} -Oz -o tmp2.vcf.gz tmp1.vcf.gz
+        bcftools index -t tmp2.vcf.gz
+        bcftools view -i 'AF < 0.01' tmp2.vcf.gz -Oz -o tmp3.vcf.gz
+        bcftools view -S ~{subjects_list} -O z -o output.001.vcf.gz tmp3.vcf.gz
 
-        bcftools view -h tmp2.vcf.gz -O z -o output.001.vcf.gz
-        bcftools view -h tmp2.vcf.gz -O z -o output.0001.vcf.gz
+        bcftools view -i 'AF < 0.001' tmp2.vcf.gz -Oz -o tmp3.vcf.gz
+        bcftools view -S ~{subjects_list} -O z -o output.0001.vcf.gz tmp3.vcf.gz
+        #bcftools view -h tmp3.vcf.gz -O z -o output.001.vcf.gz
+        #bcftools view -h tmp3.vcf.gz -O z -o output.0001.vcf.gz
         exit 0
     fi
 
     # Step 1: Extract relevant fields using bcftools +split-vep
     # Format: Variant ID + gnomAD subpopulation AFs + Cohort AF + Impact
+    bcftools view ~{vcf} -S ~{aou_subjects_list} -Oz -o tmp.vcf.gz
+    mv tmp.vcf.gz ~{vcf}
+
     bcftools +split-vep ~{vcf} \
       -f '%ID\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_oth\t%AF\t%IMPACT\n' \
       -d 2>/dev/null | uniq > extracted_variants.txt
