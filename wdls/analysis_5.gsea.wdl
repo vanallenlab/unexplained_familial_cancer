@@ -17,6 +17,11 @@ workflow ANALYSIS_5_GSEA {
   }
   
   scatter( cancer_type in cancer_types){
+    call T0_get_path_genes {
+      input:
+        cosmic_tsv = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cosmic_ufc.tsv",
+        cancer_type = cancer_type
+    }
     File sample_data = "gs://" + workspace_bucket + "/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
     File gene_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/all_cpg_genes.list"
     Int negative_shards = 0
@@ -24,7 +29,7 @@ workflow ANALYSIS_5_GSEA {
 
     call T1_get_rows {
       input:
-        gene_list = gene_list,
+        gene_list = T0_get_path_genes.out1,
         variant_tsv = step_10_cpg_file
     }
 
@@ -117,6 +122,23 @@ workflow ANALYSIS_5_GSEA {
   }
 }
 
+task T0_get_path_genes{
+  input {
+    File cosmic_tsv
+    String cancer_type
+  }
+  command <<<
+  set -euxo pipefail
+  grep -E '~{cancer_type}|all' ~{cosmic_tsv} | cut -f1 > gene.list
+  >>>
+  output{
+    File out1 = "gene.list"
+  }
+  runtime {
+    preemptible:3
+    docker: "ubuntu:latest"
+  }
+}
 
 task T1_get_rows {
   input {

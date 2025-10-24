@@ -348,7 +348,8 @@ task Convert_To_TSV {
   echo "### Step 4: Extract VEP annotations + genotype matrix"
   if bcftools view -h aou.vcf.gz | grep -q "gnomAD_AF_non_cancer"; then
     bcftools +split-vep aou.vcf.gz \
-      -f '%ID\t%INFO/AF\t%Consequence\t%IMPACT\t%SYMBOL\t%clinvar_clnsig\t%REVEL_score\t%gnomAD_AF_non_cancer\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_oth\t%gnomAD_AF_non_cancer_raw\t%gnomAD_AF_non_cancer_sas\t[%GT\t]' \
+      -f '%ID\t%INFO/AF\t%Consequence\t%IMPACT\t%SYMBOL\t%clinvar_clnsig\t%am_class\t%PrimateAI_pred\t%REVEL_score\t%gnomAD_AF_non_cancer\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_oth\t%gnomAD_AF_non_cancer_raw\t%gnomAD_AF_non_cancer_sas\t[%GT\t]' \
+      awk '$6 != "Benign" && $6 != "Likely_benign"' | \
       -d > tmp.txt
     rm aou.vcf.gz
 
@@ -372,7 +373,7 @@ task Convert_To_TSV {
 
   echo "### Step 8: Keep HIGH/MODERATE impact"
   if grep -q -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt; then
-    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | sort -u >> ~{output_file}
+    grep -E 'HIGH|MODERATE|Uncertain_significance' tmp.txt | sort -u >> ~{output_file}
   fi
 
   gzip ~{output_file}

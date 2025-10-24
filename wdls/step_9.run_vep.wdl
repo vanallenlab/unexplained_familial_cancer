@@ -434,12 +434,15 @@ task RunVep {
       done < ~{write_lines(select_all(other_vep_files))}
     fi
 
+    # Unzip the LOFTEE directory
+    tar -xzf loftee.tar.gz
+
     # Build gnomad annotation command based on gnomad_infos
     gnomad_option=""
     if [ ~{length(gnomad_infos)} -gt 0 ]; then
       gnomad_option="--custom gnomad.vcf.gz,gnomAD,vcf,exact,0,~{sep=',' gnomad_infos}"
     fi
-
+    clinvar_option="--custom file=clinvar.oct22_2025.chr_prefixed.vcf.gz,short_name=clinvar,fields=CLNSIG%CLNSIGCONF,format=vcf,type=exact"
     if [ ~{num_lines} -gt 0 ]; then
       # --species homo_sapiens \
       vep \
@@ -468,6 +471,7 @@ task RunVep {
         --canonical \
         --domains \
         ~{sep=" " vep_options} \
+        $clinvar_option \
         $gnomad_option
     else
       vep \
@@ -495,6 +499,7 @@ task RunVep {
         --symbol \
         --canonical \
         --domains \
+        $clinvar_option \
         ~{sep=" " vep_options}
     fi
  
@@ -513,6 +518,6 @@ task RunVep {
     cpu: n_cpu
     disks: "local-disk " + select_first([disk_gb, default_disk_gb]) + " HDD"
     bootDiskSizeGb: 25
-    preemptible: 3
+    preemptible: 0
   }
 }
