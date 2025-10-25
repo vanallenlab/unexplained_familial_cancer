@@ -8,7 +8,7 @@
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
-workflow STEP_13_PATHOGENIC_SAMPLES {
+workflow ANALYSIS_0_PATHOGENIC_SAMPLES {
   input {
     String step_9_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/sharded_vcfs" # Directoryto STEP_9 Output VCFs
     File cpg_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/riaz_genes.list"
@@ -16,14 +16,16 @@ workflow STEP_13_PATHOGENIC_SAMPLES {
   }
 
   Int negative_shards = 0
-  call Tasks.gather_vcfs {
+  Int positive_shards = 260
+  call Tasks.gather_positive_vcfs {
     input:
-      dir = step_9_output_dir  
+      dir = step_9_output_dir,
+      positive_shards = positive_shards  
   }
 
   call Tasks.sort_vcf_list {
     input:
-      unsorted_vcf_list =  gather_vcfs.vcf_list
+      unsorted_vcf_list =  gather_positive_vcfs.vcf_list
   }
   
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
@@ -35,9 +37,9 @@ workflow STEP_13_PATHOGENIC_SAMPLES {
     }
   }
 
-  call Tasks.concatenateFiles_noheader as concatenate_DOMINANTCPGs{
+  call Tasks.concatenateFiles_noheader as concatenate_CPGs{
     input:
-      callset_name = "dominant_samples",
+      callset_name = "missed_samples",
       files = T1_Convert_To_TSV.out1
   }
   #call Tasks.concatenateFiles_noheader as concatenate_RECESSIVECPGs{
@@ -57,21 +59,24 @@ task T1_Convert_To_TSV {
     File vcf
     File cpg_list
     File samples_of_interest
-    File tier1_variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/filtered_variants.tier1.txt"
+    File cpg_bed_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/riaz_genes.coordinates.bed"
+    File tier1_variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1.tsv"
   }
   String output_file = basename(vcf, ".vcf.bgz") + ".tsv"
   command <<<
   set -euxo pipefail
   
   # Filter to just Samples of interest
-  bcftools view -S ~{samples_of_interest} -Oz -o tmp1.vcf.gz ~{vcf} 
-  bcftools view --include ID==@~{tier1_variants} tmp1.vcf.gz -G -O z -o tmp2.vcf.gz
+  bcftools view -S ~{samples_of_interest} -Oz -o tmp1.vcf.gz ~{vcf}
+  bcftools index -t tmp1.vcf.gz
+  bcftools view -R ~{cpg_bed_file} tmp1.vcf.gz -Oz -o tmp2.vcf.gz 
+  bcftools view --include ID==@~{tier1_variants} tmp2.vcf.gz -O z -o tmp3.vcf.gz
  
   # Get the header started
   echo -e "CHROM\tPOS\tID\tREF\tALT\tIMPACT\tSYMBOL\tclinvar_clnsig\tBiotype\tConsequence\tSAMPLES" > ~{output_file}
 
 
-  bcftools +split-vep tmp2.vcf.gz  -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%IMPACT\t%SYMBOL\t%clinvar_clnsig\t%BIOTYPE\t%Consequence\t[%SAMPLE,]\n' -d > tmp.txt
+  bcftools +split-vep tmp3.vcf.gz -i 'GT="alt"' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%IMPACT\t%SYMBOL\t%clinvar_CLNSIG\t%BIOTYPE\t%Consequence\t[%SAMPLE,]\n' -d > tmp.txt
   rm tmp1.vcf.gz
 
   # Filter the File to only include Autosomal Dominant CPGS
@@ -79,14 +84,17 @@ task T1_Convert_To_TSV {
 
   sort -u < tmp3.txt >> ~{output_file}
 
-
+  python3 <<CODE
+  import pandas as pd
+  df = pd.read_csv("~{output_file}",sep='\t',index=False)
+  df = df[(df['IMPACT'] == "MODERATE") | (df['IMPACT'] == "HIGH")]
   >>>
   output {
     File out1 = "~{output_file}"
   }
   runtime {
     docker: "vanallenlab/g2c_pipeline"
-    #disks: "local-disk 20 HDD"
+    disks: "local-disk 20 HDD"
     preemptible: 1
   }
 }
