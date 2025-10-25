@@ -54,7 +54,7 @@ workflow STEP_9_TIER_VARIANTS {
 
   call Tasks.concatenateFiles as Tier0_Concat {
     input:
-      files = T1_Filter_Tier1.out1,
+      files = T0_Filter_Tier0.out1,
       output_name = "tier1"
   }
 

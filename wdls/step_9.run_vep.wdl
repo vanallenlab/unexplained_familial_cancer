@@ -304,24 +304,66 @@ task SliceRemoteFiles {
     > query.bed.gz
     n_queries=$( zcat query.bed.gz | wc -l )
 
-    if [ ~{n_remote_files} -gt 0 ]; then
-      echo -e "\nSLICING REMOTE ANNOTATION FILES:\n"
-      mkdir remote_slices
-      mv ~{sep=" " select_all(vep_remote_file_indexes)} ./
+    zcat query.bed.gz \
+      | sed -E 's/^chr//' \
+      | bgzip -c > splice_ai.query.bed.gz
 
-      while read uri; do
-        local_name=$( basename $uri )
-        echo -e "$local_name"
-        if [ $n_queries -gt 0 ]; then
-          tabix -h -R query.bed.gz $uri \
-          | bgzip -c > remote_slices/$local_name
-        else
-          tabix --only-header $uri \
-          | bgzip -c > remote_slices/$local_name
-        fi
-        tabix -s 1 -b 2 -e 2 -f remote_slices/$local_name
-      done < ~{write_lines(select_all(vep_remote_files))}
-    fi
+    #if [ ~{n_remote_files} -gt 0 ]; then
+    #  echo -e "\nSLICING REMOTE ANNOTATION FILES:\n"
+    #  mkdir remote_slices
+    #  mv ~{sep=" " select_all(vep_remote_file_indexes)} ./
+
+    #  while read uri; do
+    #    local_name=$( basename $uri )
+    #    echo -e "$local_name"
+    #    if [ $n_queries -gt 0 ]; then
+    #      tabix -h -R query.bed.gz $uri \
+    #      | bgzip -c > remote_slices/$local_name
+    #    else
+    #      tabix --only-header $uri \
+    #      | bgzip -c > remote_slices/$local_name
+    #    fi
+    #    tabix -s 1 -b 2 -e 2 -f remote_slices/$local_name
+    #  done < ~{write_lines(select_all(vep_remote_files))}
+    #fi
+
+  # New code to Slice VCF
+  if [ ~{n_remote_files} -gt 0 ]; then
+    echo -e "\nSLICING REMOTE ANNOTATION FILES:\n"
+    mkdir remote_slices
+    mv ~{sep=" " select_all(vep_remote_file_indexes)} ./
+
+    while read uri; do
+      local_name=$(basename "$uri")
+      echo -e "$local_name"
+
+      # detect if filename contains "spliceai" (case-insensitive)
+      if echo "$local_name" | grep -qi "spliceai"; then
+        query_bed="splice_ai.query.bed.gz"
+      else
+        query_bed="query.bed.gz"
+      fi
+
+      # slice VCF based on query BED
+      if [ $n_queries -gt 0 ]; then
+        tabix -h -R "$query_bed" "$uri" | bgzip -c > "remote_slices/$local_name"
+      else
+        tabix --only-header "$uri" | bgzip -c > "remote_slices/$local_name"
+      fi
+
+      # if this is a SpliceAI file, prepend "chr" to non-header lines before indexing
+      if echo "$local_name" | grep -qi "spliceai"; then
+        zcat "remote_slices/$local_name" \
+          | awk 'BEGIN{OFS="\t"} /^#/ {print; next} { $1="chr"$1; print }' \
+          | bgzip -c > "remote_slices/${local_name%.gz}.tmp.gz"
+        mv "remote_slices/${local_name%.gz}.tmp.gz" "remote_slices/$local_name"
+      fi
+
+      # index final file
+      tabix -s 1 -b 2 -e 2 -f "remote_slices/$local_name"
+
+    done < ~{write_lines(select_all(vep_remote_files))}
+  fi
 
     if [ ~{n_gnomad_files} -gt 0 ]; then
       echo -e "\nSLICING GNOMAD VCFs:\n"
@@ -435,7 +477,7 @@ task RunVep {
     fi
 
     # Unzip the LOFTEE directory
-    tar -xzf loftee.tar.gz
+    #tar -xzf loftee.tar.gz
 
     # Build gnomad annotation command based on gnomad_infos
     gnomad_option=""
@@ -518,6 +560,6 @@ task RunVep {
     cpu: n_cpu
     disks: "local-disk " + select_first([disk_gb, default_disk_gb]) + " HDD"
     bootDiskSizeGb: 25
-    preemptible: 0
+    preemptible: 3
   }
 }
