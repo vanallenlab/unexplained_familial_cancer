@@ -86,8 +86,11 @@ task T1_Convert_To_TSV {
 
   python3 <<CODE
   import pandas as pd
-  df = pd.read_csv("~{output_file}",sep='\t',index=False)
+  df = pd.read_csv("~{output_file}",sep='\t',index_col=False)
   df = df[(df['IMPACT'] == "MODERATE") | (df['IMPACT'] == "HIGH")]
+  df = df[(df['clinvar_clnsig'] == "Pathogenic") | (df['clinvar_clnsig'] == "Likely_pathogenic") | (df['clinvar_clnsig'] == "Pathogenic/Likely_pathogenic") | (df['clinvar_clnsig'] == ".")]
+  df.to_csv("~{output_file}",sep='\t',index=False)
+  CODE
   >>>
   output {
     File out1 = "~{output_file}"

@@ -6,120 +6,218 @@
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
-workflow STEP_9_TIER_VARIANTS {
+workflow STEP_9B_TIER_VARIANTS {
   input {
     String step_9_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/sharded_vcfs"
     File subjects_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cohorts/ufc_subjects.aou.list"
     String step_9b_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/"
   }
-
-  call Tasks.gather_vcfs {
+  
+  Int positive_shards = 260
+  call Tasks.gather_positive_vcfs {
     input:
-      dir = step_9_output_dir
+      dir = step_9_output_dir,
+      positive_shards = positive_shards
   }
 
   call Tasks.sort_vcf_list {
     input:
-      unsorted_vcf_list = gather_vcfs.vcf_list
+      unsorted_vcf_list = gather_positive_vcfs.vcf_list
   }
 
-  Int negative_shards = 2958
+  Int negative_shards = 0
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     call T0_Initial_Filter{
       input:
         vcf = sort_vcf_list.vcf_arr[i],
         subjects_list = subjects_list
     }
-    call T0_Filter_Tier0{
+    call T0_Filter_Tier0_001 as T0_Filter_Tier0_001{
       input:
         rare_variants = T0_Initial_Filter.out1,
         vcf = sort_vcf_list.vcf_arr[i]
     }
-    call T1_Filter_Tier1{
+    call T0_Filter_Tier0 as T0_Filter_Tier0_0001{
+      input:
+        rare_variants = T0_Initial_Filter.out2,
+        vcf = sort_vcf_list.vcf_arr[i]
+    }
+    call T1_Filter_Tier1 as T1_Filter_Tier1_001{
       input:
         rare_variants = T0_Initial_Filter.out1,
         vcf = sort_vcf_list.vcf_arr[i]
     }
-    call T34_Filter_Tier34 {
+    call T1_Filter_Tier1 as T1_Filter_Tier1_0001{
+      input:
+        rare_variants = T0_Initial_Filter.out2,
+        vcf = sort_vcf_list.vcf_arr[i]
+    }
+    #call T2_Filter_Tier2 as T2_Filter_Tier2_001{
+    #  input:
+    #    rare_variants = T0_Initial_Filter.out1,
+    #    vcf = sort_vcf_list.vcf_arr[i]
+    #}
+    #call T2_Filter_Tier2 as T2_Filter_Tier2_0001{
+    #  input:
+    #    rare_variants = T0_Initial_Filter.out1,
+    #    vcf = sort_vcf_list.vcf_arr[i]
+    #}
+    call T34_Filter_Tier34 as T34_Filter_Tier34_001{
       input:
         vcf = sort_vcf_list.vcf_arr[i],
         rare_variants = T0_Initial_Filter.out1,
     }
-    call T6_Filter_Tier6 {
+    call T34_Filter_Tier34 as T34_Filter_Tier34_0001{
+      input:
+        vcf = sort_vcf_list.vcf_arr[i],
+        rare_variants = T0_Initial_Filter.out2,
+    }
+    call T6_Filter_Tier6 as T6_Filter_Tier6_001{
       input:
         vcf = sort_vcf_list.vcf_arr[i],
         rare_variants = T0_Initial_Filter.out1,
     }
+    call T6_Filter_Tier6 as T6_Filter_Tier6_0001{
+      input:
+        vcf = sort_vcf_list.vcf_arr[i],
+        rare_variants = T0_Initial_Filter.out2,
+    }
   }
 
-  call Tasks.concatenateFiles as Tier0_Concat {
+  call Tasks.concatenateFiles as Tier0_Concat_001 {
     input:
-      files = T0_Filter_Tier0.out1,
-      output_name = "tier1"
+      files = T0_Filter_Tier0_001.out1,
+      output_name = "tier0_001"
+  }
+  call Tasks.concatenateFiles as Tier0_Concat_0001 {
+    input:
+      files = T0_Filter_Tier0_0001.out1,
+      output_name = "tier0_0001"
+  }
+  call Tasks.copy_file_to_storage as copy0_001{
+    input:
+      text_file = Tier0_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy0_0001{
+    input:
+      text_file = Tier0_Concat_0001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.concatenateFiles as Tier1_Concat_001 {
+    input:
+      files = T1_Filter_Tier1_001.out1,
+      output_name = "tier1_001"
+  }
+  call Tasks.concatenateFiles as Tier1_Concat_0001 {
+    input:
+      files = T1_Filter_Tier1_0001.out1,
+      output_name = "tier1_0001"
+  }
+  call Tasks.copy_file_to_storage as copy1_001{
+    input:
+      text_file = Tier1_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy1_0001{
+    input:
+      text_file = Tier1_Concat_0001.out2,
+      output_dir = step_9b_output_dir
+  }
+  #call Tasks.concatenateFiles as Tier2_Concat {
+  #  input:
+  #    files = T2_Filter_Tier2.out1,
+  #    output_name = "tier2"
+  #}
+
+  #call Tasks.copy_file_to_storage as copy2{
+  #  input:
+  #    text_file = Tier2_Concat.out2,
+  #    output_dir = step_9b_output_dir
+  #}
+
+  call Tasks.concatenateFiles as Tier3_Concat_001 {
+    input:
+      files = T34_Filter_Tier34_001.out1,
+      output_name = "tier3_001"
   }
 
-  call Tasks.copy_file_to_storage as copy0{
+  call Tasks.concatenateFiles as Tier3_Concat_0001 {
     input:
-      text_file = Tier0_Concat.out2,
+      files = T34_Filter_Tier34_0001.out1,
+      output_name = "tier3_0001"
+  }
+
+  call Tasks.copy_file_to_storage as copy3_001{
+    input:
+      text_file = Tier3_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy3_0001{
+    input:
+      text_file = Tier3_Concat_0001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.concatenateFiles as Tier4_Concat_001 {
+    input:
+      files = T34_Filter_Tier34_001.out2,
+      output_name = "tier4_001"
+  }
+  call Tasks.concatenateFiles as Tier4_Concat_0001 {
+    input:
+      files = T34_Filter_Tier34_0001.out2,
+      output_name = "tier4_0001"
+  }
+  call Tasks.copy_file_to_storage as copy4_001{
+    input:
+      text_file = Tier4_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy4_0001{
+    input:
+      text_file = Tier4_Concat_0001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.concatenateFiles as Tier5_Concat_001 {
+    input:
+      files = T34_Filter_Tier34_001.out3,
+      output_name = "tier5_001"
+  }
+  call Tasks.concatenateFiles as Tier5_Concat_0001 {
+    input:
+      files = T34_Filter_Tier34_0001.out3,
+      output_name = "tier5_0001"
+  }
+  call Tasks.copy_file_to_storage as copy5_001{
+    input:
+      text_file = Tier5_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy5_0001{
+    input:
+      text_file = Tier5_Concat_0001.out2,
       output_dir = step_9b_output_dir
   }
 
-  call Tasks.concatenateFiles as Tier1_Concat {
+  call Tasks.concatenateFiles as Tier6_Concat_001 {
     input:
-      files = T1_Filter_Tier1.out1,
-      output_name = "tier1"
+      files = T6_Filter_Tier6_001.out1,
+      output_name = "tier6_001"
+  }
+  call Tasks.concatenateFiles as Tier6_Concat_0001 {
+    input:
+      files = T6_Filter_Tier6_0001.out1,
+      output_name = "tier6_0001"
   }
 
-  call Tasks.copy_file_to_storage as copy1{
+  call Tasks.copy_file_to_storage as copy6_001{
     input:
-      text_file = Tier1_Concat.out2,
+      text_file = Tier6_Concat_001.out2,
       output_dir = step_9b_output_dir
   }
-
-  call Tasks.concatenateFiles as Tier3_Concat {
+  call Tasks.copy_file_to_storage as copy6_0001{
     input:
-      files = T34_Filter_Tier34.out1,
-      output_name = "tier3"
-  }
-
-  call Tasks.copy_file_to_storage as copy3{
-    input:
-      text_file = Tier3_Concat.out2,
-      output_dir = step_9b_output_dir
-  }
-
-  call Tasks.concatenateFiles as Tier4_Concat {
-    input:
-      files = T34_Filter_Tier34.out2,
-      output_name = "tier4"
-  }
-
-  call Tasks.copy_file_to_storage as copy4{
-    input:
-      text_file = Tier4_Concat.out2,
-      output_dir = step_9b_output_dir
-  }
-  call Tasks.concatenateFiles as Tier5_Concat {
-    input:
-      files = T34_Filter_Tier34.out3,
-      output_name = "tier5"
-  }
-
-  call Tasks.copy_file_to_storage as copy5{
-    input:
-      text_file = Tier5_Concat.out2,
-      output_dir = step_9b_output_dir
-  }
-
-  call Tasks.concatenateFiles as Tier6_Concat {
-    input:
-      files = T6_Filter_Tier6.out1,
-      output_name = "tier6"
-  }
-
-  call Tasks.copy_file_to_storage as copy6{
-    input:
-      text_file = Tier6_Concat.out2,
+      text_file = Tier6_Concat_0001.out2,
       output_dir = step_9b_output_dir
   }
 }
@@ -140,60 +238,59 @@ task T0_Initial_Filter{
   bcftools index -t tmp.vcf.gz
 
   # Extract relevant fields from VEP-annotated VCF
+  echo -e 'ID\tAFR_AF\tEAS_AF\tAMR_AF\tFIN_AF\tNFE_AF\tSAS_AF\tMID_AF\tAMI_AF\tASJ_AF\tOTH_AF\tAF\tBIOTYPE\n' > extracted_variants.txt
   bcftools +split-vep tmp.vcf.gz \
   -f '%ID\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_oth\t%AF\t%BIOTYPE\n' \
-  -d 2>/dev/null | sort -u > extracted_variants.txt
+  -d 2>/dev/null | sort -u >> extracted_variants.txt
 
-  # Define thresholds
-  awk -F'\t' '
-  BEGIN {
-      OFS="\t";
-      # major populations (<1%)
-      major_idx[1]=2; major_idx[2]=3; major_idx[3]=4; major_idx[4]=5; major_idx[5]=6; major_idx[6]=7;
-      # minor populations (<10%)
-      minor_idx[1]=8; minor_idx[2]=9; minor_idx[3]=10; minor_idx[4]=11;
-      cohort_idx = 12; # cohort AF (<1%)
-      biotype_idx = 13;
-  }
-  {
-      # convert missing AFs (".") to 0
-      for (i=2; i<=12; i++) {
-          if ($i==".") $i=0;
-          $i += 0;
-      }
+  python3 <<CODE
+  import pandas as pd
+  import numpy as np
 
-      # only consider protein-coding
-      if ($biotype_idx != "protein_coding") next;
+  # --- Load file ---
+  df = pd.read_csv("extracted_variants.txt", sep="\t")
 
-      # check major populations
-      keep=1
-      for (i in major_idx) {
-          if ($major_idx[i] >= 0.01) { keep=0; break }
-      }
-      # check minor populations
-      if (keep) {
-          for (i in minor_idx) {
-              if ($minor_idx[i] >= 0.10) { keep=0; break }
-          }
-      }
-      # check cohort
-      if (keep && $cohort_idx >= 0.01) keep=0;
+  # --- Define population groupings ---
+  major_cols = ["AFR_AF", "EAS_AF", "AMR_AF", "FIN_AF", "NFE_AF", "SAS_AF"]
+  minor_cols = ["MID_AF", "AMI_AF", "ASJ_AF", "OTH_AF"]
+  cohort_col = "AF"
+  biotype_col = "BIOTYPE"
 
-      if (keep) print $1
-  }' extracted_variants.txt > filtered_variants.txt
+  # --- Convert missing values "." → 0 ---
+  freq_cols = major_cols + minor_cols + [cohort_col]
+  df[freq_cols] = df[freq_cols].replace(".", 0).apply(pd.to_numeric, errors="coerce").fillna(0)
 
-  # Filter to relevant variants
-  #if [ -s filtered_variants.txt ]; then
-  #  bcftools view --include ID==@filtered_variants.txt ~{vcf} -O z -o $basename
-  #else
-  #  bcftools view -h ~{vcf} -Oz -o $basename
-  #fi
+  # --- Keep only protein_coding ---
+  df = df[df[biotype_col] == "protein_coding"].copy()
+
+  # --- Tier 1 thresholds ---
+  mask_major_t1 = (df[major_cols] < 0.01).all(axis=1)
+  mask_minor_t1 = (df[minor_cols] < 0.10).all(axis=1)
+  mask_cohort_t1 = df[cohort_col] < 0.01
+  mask_keep_t1 = mask_major_t1 & mask_minor_t1 & mask_cohort_t1
+
+  # --- Tier 2 (stricter) thresholds ---
+  mask_major_t2 = (df[major_cols] < 0.001).all(axis=1)
+  mask_minor_t2 = (df[minor_cols] < 0.01).all(axis=1)
+  mask_cohort_t2 = df[cohort_col] < 0.001
+  mask_keep_t2 = mask_major_t2 & mask_minor_t2 & mask_cohort_t2
+
+  # --- Output unique variant IDs ---
+  df.loc[mask_keep_t1, "ID"].drop_duplicates().to_csv(
+      "filtered_variants.001.txt", sep="\t", index=False, header=False
+  )
+  df.loc[mask_keep_t2, "ID"].drop_duplicates().to_csv(
+      "filtered_variants.0001.txt", sep="\t", index=False, header=False
+  )
+
+  CODE
   >>>
   output {
-    File out1 = "filtered_variants.txt"
+    File out1 = "filtered_variants.001.txt"
+    File out2 = "filtered_variants.0001.txt"
   }
   runtime {
-    docker: 'vanallenlab/bcftools'
+    docker: 'vanallenlab/g2c_pipeline'
     preemptible: 3
   }
 }
@@ -248,7 +345,7 @@ task T1_Filter_Tier1 {
   df = pd.read_csv("tmp0.txt",sep='\t',index_col=False)
   df = df[df['BIOTYPE'] == "protein_coding"]
   df = df[~df['CLINVAR'].str.contains('benign',case=False,na=False)]
-  df = df[(df['IMPACT'] == 'HIGH') | (df['CLINVAR'].str.contains("Pathogenic",na=False)) | (df['CLINVAR'].str.contains("Likely_pathogenic",na=False))]
+  df = df[(df['IMPACT'] == 'HIGH') | (df['CLINVAR'] == "Pathogenic") | (df['CLINVAR'] == "Likely_pathogenic") | (df['CLINVAR'] == "Pathogenic/Likely_pathogenic")]
   df[['ID']].drop_duplicates().to_csv("filtered_variants.txt",header=False,index=False)
   CODE
   >>>
@@ -274,52 +371,24 @@ task T2_Filter_Tier2 {
   # Get necessary information
   # Extract necessary VEP + SpliceAI info
   bcftools view --include ID==@~{rare_variants} ~{vcf} -G -O z -o tmp.vcf.gz
-  echo -e 'GENE\tID\tIMPACT\tCLINVAR\tCONSEQUENCE\tBIOTYPE\tSPLICE_AG\tSPLICE_DS\tSPLICE_DL\nSPLICE_GENE\n'
-  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%IMPACT\t%clinvar_CLNSIG\t%Consequence\t%BIOTYPE\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\n' -d > tmp0.txt
+  echo -e 'GENE\tID\tIMPACT\tCLINVAR\tCONSEQUENCE\tBIOTYPE\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\n' > tmp0.txt
+  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%IMPACT\t%clinvar_CLNSIG\t%Consequence\t%BIOTYPE\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\n' -d >> tmp0.txt
 
-  # Filter variants and compute max SpliceAI DS
-  awk -F '\t' 'BEGIN { OFS="\t" }
-  {
-      symbol = $1
-      impact = $3
-      clin = $4
-      consequence = $5
-      biotype = $6
-      splice_ai_gene = $11
+  python3 <<CODE
+  import pandas as pd
+  df = pd.read_csv("tmp0.txt",sep='\t',index_col=False)
 
-      # SpliceAI DS fields
-      ds[1] = ($7=="" ? 0 : $7)
-      ds[2] = ($8=="" ? 0 : $8)
-      ds[3] = ($9=="" ? 0 : $9)
-      ds[4] = ($10=="" ? 0 : $10)
+  # Convert SpliceAI score columns to numeric (coerce invalids to NaN)
+  score_cols = ["SPLICE_AG", "SPLICE_AL", "SPLICE_DG", "SPLICE_DL"]
+  df[score_cols] = df[score_cols].apply(pd.to_numeric, errors="coerce")
 
-      # max DS
-      max_ds = ds[1]
-      for(i=2;i<=4;i++) if(ds[i] > max_ds) max_ds = ds[i]
+  # Filter: max score > 0.5 and matching gene symbol
+  df_filtered = df[(df[score_cols].max(axis=1) >= 0.5)]
 
-      # HIGH-impact variant condition
-      high_impact = (biotype=="protein_coding" && impact=="HIGH" && consequence !~ /NMD_transcript_variant/i && clin !~ /benign/i)
+  # Write filtered results back
+  df_filtered[['ID']].drop_duplicates().to_csv("filtered_variants.txt", sep='\t', index=False,header=False)
+  CODE
 
-      # SpliceAI condition
-      splice_ai = (max_ds > 0.5 && symbol==splice_ai_gene && clin !~ /benign/i)
-
-      # Pathogenic variant condition
-      pathogenic = (clin ~ /pathogenic/i && consequence !~ /LOW|MODIFIER/)
-    
-      if (high_impact || splice_ai || pathogenic) {
-        print $2
-      }
-  }' tmp0.txt | sort -u > filtered_variants.txt
-
-
-  # Filter to relevant variants
-  #if [ -s filtered_variants.txt ]; then
-  #  bcftools view --include ID==@filtered_variants.txt ~{vcf} -O z -o $output_vcf
-  #  bcftools index -t "$output_vcf"
-  #else
-  #  bcftools view -h ~{vcf} -Oz -o $output_vcf
-  #  bcftools index -t "$output_vcf"
-  #fi
   >>>
   output {
     File out1 = "filtered_variants.txt"

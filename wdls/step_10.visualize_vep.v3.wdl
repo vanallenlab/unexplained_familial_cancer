@@ -13,36 +13,40 @@ workflow STEP_10_VISUALIZE_VEP {
     String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/"
   }
 
-  call Tasks.gather_chromosome_level_vcfs {
+  call Tasks.gather_a_chromosome_level_vcfs {
     input:
-      dir = step_9_output_dir
-  }
-
-  call Tasks.concatenateFiles {
-    input:
-      files = gather_chromosome_level_vcfs.out1,
-      output_name = "out"
+      dir = step_9_output_dir,
+      chr_num = 1
   }
   call Tasks.sort_vcf_list {
     input:
-      unsorted_vcf_list = concatenateFiles.out2
+      unsorted_vcf_list = gather_a_chromosome_level_vcfs.out1[0]
   }
+  #call Tasks.concatenateFiles {
+  #  input:
+  #    files = gather_chromosome_level_vcfs.out1,
+  #    output_name = "out"
+  #}
+  #call Tasks.sort_vcf_list {
+  #  input:
+  #    unsorted_vcf_list = concatenateFiles.out2
+  #}
 
-  Int negative_shards = 2958
+  Int negative_shards = 0
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     call Convert_To_TSV {
       input:
         vcf = sort_vcf_list.vcf_arr[i],
         aou_subjects = aou_subjects,
         gene_list = gene_list,
-        tier_variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1.tsv"
+        tier_variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv"
     }
 
     call Filter_Vep_TSV{
         input:
           input_tsv = Convert_To_TSV.out1,
           subjects_list = aou_subjects,
-          tier_val = 1
+          variants_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv"
     }
   }
  
@@ -108,7 +112,7 @@ task Filter_Vep_TSV {
     input {
       File input_tsv
       File subjects_list
-      Int tier_val
+      File variants_file
     }
     command <<<
     set -x
@@ -119,6 +123,14 @@ task Filter_Vep_TSV {
     from collections import defaultdict
     import gc
 
+
+    tier, af = re.search(r'tier(\d+)_(\d+)', os.path.basename("~{variants_file}")).groups()
+    tier = int(tier)
+
+    # --- Read variant IDs from the tier file ---
+    with open("~{variants_file}", 'r') as f:
+        valid_variants = {line.strip() for line in f if line.strip()}
+ 
     dtype_map = {
         "ID": "string",
         "AF": "float32",
@@ -132,6 +144,10 @@ task Filter_Vep_TSV {
 
     # Read in the TSV file
     df = pd.read_csv("~{input_tsv}", sep='\t', index_col=False, dtype=dtype_map)
+    df = df[(df['IMPACT'] == "HIGH") | (df['IMPACT'] == "MODERATE")]
+
+    # --- Keep only variants in the variant list ---
+    df = df[df['ID'].isin(valid_variants)]
 
     # Initialize the summary dictionary
     summary = defaultdict(int)
@@ -140,10 +156,9 @@ task Filter_Vep_TSV {
     for index, row in df.iterrows():
 
         gene = row["SYMBOL"]
-        if row['AF'] <= 0.01:
-          summary[(gene, "Tier~{tier_val}_001", patient)] += value
-        if row['AF'] <= 0.001:
-          summary[(gene, "Tier~{tier_val}_0001", patient)] += value
+        for patient in patients:
+          value = pd.to_numeric(row[patient],errors='coerce')
+          summary[(gene, f"Tier{tier}_{af}", patient)] += value if pd.notnull(value) else 0
 
     # Convert summary to a DataFrame
     summary_df = pd.DataFrame.from_dict(summary, orient='index', columns=["variant_count"])
@@ -153,7 +168,7 @@ task Filter_Vep_TSV {
 
     # Reshape so rows = gene_consequence, columns = patients
     summary_df = summary_df.reset_index()
-    summary_df["gene_impact"] = summary_df["gene"] + "_" + summary_df["impact"]
+    summary_df["gene_impact"] = summary_df["gene"] + "_" + f"Tier{tier}_{af}"
     summary_df = summary_df.pivot(index="gene_impact", columns="patient", values="variant_count").fillna(0)
 
     # Save to TSV
@@ -181,8 +196,6 @@ task Convert_To_TSV {
     File gene_list
     File tier_variants
 
-    # Default AF cutoff for major gnomAD pops + cohort
-    Float default_af = 0.01
   }
 
   String output_file = basename(vcf, ".vcf.bgz") + ".tsv"
@@ -196,11 +209,6 @@ task Convert_To_TSV {
   bcftools +fill-tags aou.tmp.vcf.gz -Oz -o aou.tmp2.vcf.gz -- -t AF
   bcftools view --include ID==@~{tier_variants} aou.tmp2.vcf.gz -G -O z -o aou.tmp3.vcf.gz
   bcftools index -t aou.tmp3.vcf.gz
-
-  echo "### Step 2: Filter to Rare Variants in cohort (< ~{default_af})"
-  bcftools view -i "AF <= ~{default_af}" aou.tmp3.vcf.gz -Oz -o aou.vcf.gz
-  bcftools index -t aou.vcf.gz
-  rm ~{vcf} aou.tmp.vcf.gz aou.tmp2.vcf.gz aou.tmp3.vcf.gz*
 
   echo "### Step 3: Build Header"
   {
