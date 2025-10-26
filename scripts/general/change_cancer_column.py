@@ -30,7 +30,7 @@ cancel_out = {
     "primary_malignant_neuroendocrine_neoplasm_of_ileum": "Gastrointestinal",
     "primary_malignant_neuroendocrine_neoplasm_of_small_intestine": "Gastrointestinal",
     "primary_malignant_neoplasm_of_islets_of_langerhans": "Pancreas",
-    "primary_malignant_neoplasm_of_islets_of_langerhans": "Gastrointestinal"
+    "primary_malignant_neoplasm_of_islets_of_langerhans": "Gastrointestinal",
     "malignant_carcinoid_tumor_of_lung": "Lung",
     "malignant_carcinoid_tumor_of_bronchus": "Lung",
     "malignant_carcinoid_tumor_of_lung": "Neuroendocrine",
