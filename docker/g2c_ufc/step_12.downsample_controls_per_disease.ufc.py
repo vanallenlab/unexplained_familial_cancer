@@ -358,7 +358,7 @@ def main():
     parser.add_argument('--kinship', required = False, help='plink king file represtenting sparse matrix of kinship')
     parser.add_argument('--keep-samples', required = False, help='list of IDs to retain during ' +
                         'ancestry matching [default: keep all samples]')
-    parser.add_argument('--min-agse',required = False, help='minimum age for the study')
+    parser.add_argument('--min-age',required = False, help='minimum age for the study')
     parser.add_argument('--max-age',required = False, help='maximum age for the study')
     parser.add_argument('--min-cancers', type=int, required = False, default = 1, help='minimum amount of cancers a case must have')
     parser.add_argument('--apparent_aneuploidies',required = False, help='allowed ploidies')
