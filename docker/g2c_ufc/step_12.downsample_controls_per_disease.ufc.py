@@ -338,7 +338,7 @@ def parse_complex_logic(logic_str, meta):
 
     # Evaluate the expression in locals containing masks
     result_mask = eval(expr, {}, locals())
-    print("Result mask sum (number of True rows):", result_mask.sum())
+    #print("Result mask sum (number of True rows):", result_mask.sum())
     
     return result_mask
 
@@ -359,7 +359,7 @@ def main():
     parser.add_argument('--kinship', required = False, help='plink king file represtenting sparse matrix of kinship')
     parser.add_argument('--keep-samples', required = False, help='list of IDs to retain during ' +
                         'ancestry matching [default: keep all samples]')
-    parser.add_argument('--min-age',required = False, help='minimum age for the study')
+    parser.add_argument('--min-agse',required = False, help='minimum age for the study')
     parser.add_argument('--max-age',required = False, help='maximum age for the study')
     parser.add_argument('--min-cancers', type=int, required = False, default = 1, help='minimum amount of cancers a case must have')
     parser.add_argument('--apparent_aneuploidies',required = False, help='allowed ploidies')
