@@ -443,17 +443,17 @@ def main():
         meta = meta[mask | control_mask]
 
     # 2) Family cancer filter (simple AND: patient has subtype, family has at least one family_cancer_subtype)
-    elif args.family_cancer_subtype:
-        fam_subtypes = [x.strip() for x in args.family_cancer_subtype.split(",")]
-        fam_mask = meta['family_dx'].str.contains("|".join(fam_subtypes), na=False)
+    # elif args.family_cancer_subtype:
+    #     fam_subtypes = [x.strip() for x in args.family_cancer_subtype.split(",")]
+    #     fam_mask = meta['family_dx'].str.contains("|".join(fam_subtypes), na=False)
 
-        if args.cancer_subtype == "pancancer":
-            # Only family_dx matters
-            meta = meta[fam_mask | control_mask]
-        else:
-            orig_mask = meta['original_dx'].str.contains(args.cancer_subtype, na=False)
-            # Keep rows where patient has cancer_subtype AND family has one of the family_subtypes
-            meta = meta[(orig_mask & fam_mask) | control_mask]
+    #     if args.cancer_subtype == "pancancer":
+    #         # Only family_dx matters
+    #         meta = meta[fam_mask | control_mask]
+    #     else:
+    #         orig_mask = meta['original_dx'].str.contains(args.cancer_subtype, na=False)
+    #         # Keep rows where patient has cancer_subtype AND family has one of the family_subtypes
+    #         meta = meta[(orig_mask & fam_mask) | control_mask]
 
     else:  # No boolean logic → simple subtype filtering
         if args.cancer_subtype != "pancancer":
