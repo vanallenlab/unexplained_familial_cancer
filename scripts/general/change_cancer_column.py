@@ -225,11 +225,11 @@ def map_and_concat(row):
 # --- Main ---
 if __name__ == "__main__":
     df = pd.read_csv("dfci-ufc.aou.phenos.tsv", sep="\t")
-    df2 = pd.read_csv("dfci-ufc.aou.family_cancers.tsv", sep='\t',comment="#")
+    df2 = pd.read_csv("dfci-ufc.aou.family_cancers_merged.tsv", sep='\t',comment="#")
     df["original_dx_grouped"] = df.apply(group_dxs, axis=1)
-    df["Possibly_Syndromic_Cancers"] = df.apply(count_pgc_direct, axis=1)
+    #df["Possibly_Syndromic_Cancers"] = df.apply(count_pgc_direct, axis=1)
     df = df.merge(df2, left_on = "Sample", right_on = "sample_id",how="left")
-    df["all_fam_dx"] = df.apply(map_and_concat, axis=1)
+    #df["all_fam_dx"] = df.apply(map_and_concat, axis=1)
     df = df.fillna("NA")
     df = df.rename(columns={
         'original_dx_grouped': 'original_dx',
