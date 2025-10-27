@@ -32,7 +32,7 @@ workflow STEP_10_VISUALIZE_VEP {
   #    unsorted_vcf_list = concatenateFiles.out2
   #}
 
-  Int negative_shards = 0
+  Int negative_shards = 1100
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     call Convert_To_TSV {
       input:
@@ -122,7 +122,8 @@ task Filter_Vep_TSV {
     import numpy as np
     from collections import defaultdict
     import gc
-
+    import re
+    import os
 
     tier, af = re.search(r'tier(\d+)_(\d+)', os.path.basename("~{variants_file}")).groups()
     tier = int(tier)
@@ -145,6 +146,7 @@ task Filter_Vep_TSV {
     # Read in the TSV file
     df = pd.read_csv("~{input_tsv}", sep='\t', index_col=False, dtype=dtype_map)
     df = df[(df['IMPACT'] == "HIGH") | (df['IMPACT'] == "MODERATE")]
+    df = df.drop_duplicates(subset=["ID","SYMBOL"])
 
     # --- Keep only variants in the variant list ---
     df = df[df['ID'].isin(valid_variants)]
@@ -207,8 +209,8 @@ task Convert_To_TSV {
   echo "### Step 1: Filter to All of Us cohort"
   bcftools view -S ~{aou_subjects} ~{vcf} -Oz -o aou.tmp.vcf.gz
   bcftools +fill-tags aou.tmp.vcf.gz -Oz -o aou.tmp2.vcf.gz -- -t AF
-  bcftools view --include ID==@~{tier_variants} aou.tmp2.vcf.gz -G -O z -o aou.tmp3.vcf.gz
-  bcftools index -t aou.tmp3.vcf.gz
+  bcftools view --include ID==@~{tier_variants} aou.tmp2.vcf.gz -O z -o aou.vcf.gz
+  bcftools index -t aou.vcf.gz
 
   echo "### Step 3: Build Header"
   {
