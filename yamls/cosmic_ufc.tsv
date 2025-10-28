@@ -1,5 +1,5 @@
 ALK	nervous
-APC	"nervous,colorectal,gastrointestinal"
+APC	"nervous,colorectal,pancreas,gastrointestinal"
 APOBEC3B	breast
 ATM	"nervous,hematologic,non-hodgkins"
 ATR	other
@@ -13,13 +13,13 @@ BRCA2	"breast,ovary,pancreas,hematologic"
 BRIP1	"hematologic,breast"
 BUB1B	sarcoma
 CDC73	other
-CDH1	gastrointestinal
-CDH10	gastrointestinal
+CDH1	gastrointestinal,stomach
+CDH10	gastrointestinal,pancreas
 CDK4	melanoma
-CDKN1B	other
-CDKN2A	"gastrointestinal,melanoma"
+CDKN1B	neuroendocrine
+CDKN2A	"gastrointestinal,melanoma,pancreas"
 CHEK2	breast
-CTNNA1	gastrointestinal
+CTNNA1	gastrointestinal,stomach
 CYLD	other
 DDB2	"basal_cell,squamous_cell,melanoma"
 DICER1	lung
@@ -36,7 +36,7 @@ FANCD2	hematologic
 FANCE	hematologic
 FANCF	hematologic
 FANCG	hematologic
-FAT1	gastrointestinal
+FAT1	gastrointestinal,pancreas
 FEN1	breast
 FH	kidney
 FLCN	kidney
@@ -54,7 +54,7 @@ MLH1	"colorectal,uterus,ovary,nervous"
 MPL	hematologic
 MSH2	"colorectal,uterus,ovary"
 MSH6	"colorectal,uterus,ovary"
-MUC6	"colorectal,gastrointestinal"
+MUC6	"colorectal,gastrointestinal,stomach"
 MUTYH	colorectal
 NBN	"non-hodgkins,nervous,sarcoma"
 NF1	nervous
@@ -91,7 +91,7 @@ SMARCB1	sarcoma
 SMARCE1	nervous
 SPOP	prostate
 STAT3	hematologic
-STK11	"ovary,gastrointestinal"
+STK11	"ovary,gastrointestinal,testis,pancreas"
 SUFU	nervous
 TERT	melanoma
 TGFBR2	colorectal

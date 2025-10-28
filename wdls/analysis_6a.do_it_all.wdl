@@ -1,3 +1,8 @@
+# Unexplained Familial Cancer (UFC)
+# Copyright (c) 2023-Present, Noah Fields and the Dana-Farber Cancer Institute
+# Contact: Noah Fields <Noah_Fields@dfci.harvard.edu>
+# Distributed under the terms of the GNU GPL v2.0g
+
 version 1.0
 
 workflow ANALYSIS_6A_DO_IT_ALL {
@@ -10,12 +15,12 @@ workflow ANALYSIS_6A_DO_IT_ALL {
 
     # PRS metrics
     #Float analysis_4_p_cutoff = 0.05
-    File prs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/thyroid.PGS000795.pgs"
+    File prs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/thyroid.PGS000797.pgs"
 
     # Damaging Missense
     #Float analysis_5_p_cutoff = 0.05
     #File step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz""
-    #File cosmic_tsv = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cosmic_ufc.tsv"
+    File cosmic_tsv = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cosmic_ufc.tsv"
     #File analysis5_results 
     #Array[String] tier_of_interest
     #Array[String] analysis_5_afs
@@ -38,13 +43,28 @@ workflow ANALYSIS_6A_DO_IT_ALL {
       saige_results_tsv=analysis_3b_saige_results,
       sample_list = sample_list
   }
-
   call aggregate_tsvs {
     input:
       saige_tsv=T1_normalize_saige.out1,
       prs_file = prs_file,
       metadata = metadata_tsv
   }
+
+  task T2_normalize_silico_missense {
+    input:
+      step_10_cpg_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz", 
+      cosmic_ufc = cosmic_tsv,
+      tier = "REVEL_050",
+      AF = "001",
+      sample_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/breast/breast.list",
+      cancer_type = "breast" 
+  }
+
+  call T5_log_reg {
+    input:
+      input_tsv=aggregate_tsvs.out1
+  }
+
   #call normalize_analysis5 {
   #  input: analysis5_tsv=analysis5_tsv
   #}
@@ -53,9 +73,6 @@ workflow ANALYSIS_6A_DO_IT_ALL {
   #  input: step10_tsv=step10_tsv
   #}
 
-  #call normalize_prs {
-  #  input: prs_tsv=prs_tsv
-  #}
 
   #call normalize_homozygosity {
   #  input: homoz_tsv=homozygosity_tsv,
@@ -221,7 +238,7 @@ task aggregate_tsvs {
   df3['original_id'] = df3['original_id'].astype(str)
 
   # --- Subset metadata to relevant columns ---
-  keep_cols = ['original_id', 'PC1', 'PC2', 'PC3', 'PC4', 'inferred_sex']
+  keep_cols = ['original_id', 'PC1', 'PC2', 'PC3', 'PC4', 'inferred_sex','original_dx']
   df3 = df3[[c for c in keep_cols if c in df3.columns]]
 
   # --- Standardize naming to match for merge ---
@@ -243,6 +260,175 @@ task aggregate_tsvs {
   }
   runtime {
     docker: "vanallenlab/g2c_pipeline"
+    preemptible: 3
+  }
+}
+
+task T5_log_reg {
+  input{
+    File input_tsv
+  }
+  command <<<
+  python3 <<CODE
+  import pandas as pd
+  import statsmodels.api as sm
+  import numpy as np
+
+  def nagelkerke_r2(model):
+      """
+      Compute Nagelkerke pseudo-R² for a fitted statsmodels Logit model.
+      """
+      llf = model.llf        # log-likelihood of fitted model
+      llnull = model.llnull  # log-likelihood of null model
+      n = model.nobs
+
+      # McFadden/Nagelkerke style
+      numerator = 1 - np.exp((2 * (llnull - llf)) / n)
+      denominator = 1 - np.exp((2 * llnull) / n)
+      r2_nagelkerke = numerator / denominator if denominator != 0 else np.nan
+
+      return r2_nagelkerke
+
+  def attributable_fraction(df, outcome_col, predictor_cols=[], covariates=[]):
+      """
+      Compute fraction of variance explained by predictor_col on outcome_col
+      df: DataFrame with all variables
+      outcome_col: binary 0/1 column
+      predictor_col: the variable you want to evaluate
+      covariates: list of covariate column names to include
+      """
+      # Prepare design matrices
+      X_full = df[predictor_cols + covariates]
+      X_full.to_csv("test.tsv",sep='\t',index=False)
+      X_full = sm.add_constant(X_full)
+      X_reduced = df[covariates] if covariates else pd.DataFrame({'const': [1]*len(df)})
+      X_reduced = sm.add_constant(X_reduced, has_constant='add')
+      y = df[outcome_col]
+
+      # Fit logistic models
+      full_model = sm.Logit(y, X_full).fit(disp=0)
+      reduced_model = sm.Logit(y, X_reduced).fit(disp=0)
+      # Compute Nagelkerke R2
+      r2_full = nagelkerke_r2(full_model)
+      r2_reduced = nagelkerke_r2(reduced_model)
+
+      # Fraction of variance explained by predictor
+      fraction_explained = r2_full - r2_reduced
+
+      return {
+          'R2_full': r2_full,
+          'R2_reduced': r2_reduced,
+          'fraction_explained': fraction_explained
+      }
+
+  df = pd.read_csv("~{input_tsv}",sep='\t',index_col=False)
+
+  # Initialize covariates
+  covariates = ['PC1', 'PC2', 'PC3', 'PC4']
+
+  # Check if inferred_sex has more than 1 unique value
+  if df['inferred_sex'].nunique() > 1:
+      # Create sex_binary: 1 = male, 0 = female
+      df['sex_binary'] = df['inferred_sex'].str.lower().map({'male': 1, 'female': 0})
+      covariates.append('sex_binary')
+
+  df['case'] = df['original_dx'].apply(lambda x: 0 if x.lower() == 'control' else 1)
+  predictor_cols = ['PGS','TSTD2']
+  #predictor_cols = [col for col in df.columns if col not in covariates + ['original_id', 'case','inferred_sex','original_dx']]
+  result = attributable_fraction(df, outcome_col='case', predictor_cols=predictor_cols, covariates=covariates)
+
+  # Convert result dict to DataFrame for easier saving
+  results_df = pd.DataFrame([result])
+  results_df['predictors'] = ','.join(predictor_cols)
+
+  # Reorder columns
+  results_df = results_df[['predictors','R2_full','R2_reduced','fraction_explained']]
+
+  # Save to TSV
+  results_df.to_csv("attributable_fraction_results.tsv", sep='\t', index=False)
+
+  CODE
+  >>>
+  output {
+    File out1 = "attributable_fraction_results.tsv"
+  }
+  runtime{
+    docker: "vanallenlab/pydata_stack"
+    preemptible: 3
+  }
+}
+
+task T2_normalize_silico_missense {
+  input {
+    File step_10_cpg_output
+    File cosmic_ufc
+    Int tier # 3 or 4
+    String AF #001 or 0001
+    File sample_list
+  }
+  command <<<
+  python3 <<CODE
+  import pandas as pd
+  # --- Load data ---
+  df = pd.read_csv("~{step_10_cpg_output}", sep="\t",index=False)
+
+  # Assume first column contains the variant criteria (like "ATM_REVEL_050_001")
+  criteria_col = df.columns[0]
+  df = df.set_index(criteria_col)
+
+  # --- Melt into long form and filter where value == 1 ---
+  df_long = (
+      df.stack()
+        .reset_index()
+        .rename(columns={"level_1": "patient", 0: "value"})
+  )
+
+  # Keep only where the variant count == 1
+  df_filtered = df_long[df_long["value"] == 1][["patient", criteria_col]]
+
+  # --- Save output ---
+  df_filtered.to_csv("patient_criteria.tsv", sep="\t", index=False)
+
+  cosmic_df = pd.read_csv("~{cosmic_ufc}",sep='\t',index_col=False,names=['gene','cancer_type'])
+  cosmic_genes = cosmic_df[cosmic_df['cancer_type'].str.contains(f"{cancer_type}|all", na=False)]['gene'].tolist()
+
+
+  # Make sure that we filter patient_criteria.tsv to just rows that have gene_Tier~{tier}_~{AF}
+  tier = "~{tier}"
+  AF = "~{AF}"
+
+  # get samples
+  with open("~{sample_list}") as f:
+    all_samples = [line.strip() for line in f if line.strip()]
+
+  match_strings = {f"{gene}_Tier{tier}_{AF}" for gene in cosmic_genes}
+
+  # --- Step 3: Loop through patient_criteria.tsv ---
+  # Column 0 = patient ID, column 1 = variant/gene info
+  patients_with_hit = set()
+
+  for _, row in patient_df.iterrows():
+      patient_id = row[0]
+      gene_label = str(row[1])
+      if gene_label in match_strings:
+          patients_with_hit.add(patient_id)
+
+  # --- Step 4: Build output DataFrame ---
+  output_df = pd.DataFrame({
+      'original_id': all_samples,
+      'PPV_Missense': [1 if s in patients_with_hit else 0 for s in all_samples]
+  })
+
+  # --- Step 5: Write to TSV ---
+  output_df.to_csv("PPV_Missense_flags.tsv", sep='\t', index=False)
+
+  CODE
+  >>>
+  output {
+    File out1 = "patient_criteria.tsv"
+  }
+  runtime {
+    docker: "vanallenlab/pydata_stack"
     preemptible: 3
   }
 }
