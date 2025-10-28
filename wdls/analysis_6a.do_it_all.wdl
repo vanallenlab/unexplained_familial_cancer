@@ -7,19 +7,18 @@ version 1.0
 
 workflow ANALYSIS_6A_DO_IT_ALL {
   input {
-    String cancer_type = "thyroid"
+    String cancer_type = "breast"
     String workspace_bucket = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
-    File sample_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/thyroid/thyroid.list"
+
     # SAIGE_RESULTS
-    File analysis_3b_saige_results = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/thyroid.patient_report"
+    File analysis_3b_saige_results = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/breast.patient_report"
 
     # PRS metrics
     #Float analysis_4_p_cutoff = 0.05
-    File prs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/thyroid.PGS000797.pgs"
+    File prs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/breast.PGS000783.pgs"
 
     # Damaging Missense
-    #Float analysis_5_p_cutoff = 0.05
-    #File step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz""
+    File step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz"
     File cosmic_tsv = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cosmic_ufc.tsv"
     #File analysis5_results 
     #Array[String] tier_of_interest
@@ -37,27 +36,30 @@ workflow ANALYSIS_6A_DO_IT_ALL {
 
   # Metadata for cancer type
   File metadata_tsv = "gs://" + workspace_bucket + "/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
+  File sample_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".list"
 
   call T1_normalize_saige {
     input: 
       saige_results_tsv=analysis_3b_saige_results,
       sample_list = sample_list
   }
+
+  call T2_normalize_silico_missense {
+    input:
+      step_10_cpg_output = step_10_cpg_file, 
+      cosmic_ufc = cosmic_tsv,
+      tier = "REVEL075",
+      AF = "001",
+      sample_list = sample_list,
+      cancer_type = "breast" 
+  }
+
   call aggregate_tsvs {
     input:
       saige_tsv=T1_normalize_saige.out1,
       prs_file = prs_file,
+      ppv_missense = T2_normalize_silico_missense.out2,
       metadata = metadata_tsv
-  }
-
-  task T2_normalize_silico_missense {
-    input:
-      step_10_cpg_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz", 
-      cosmic_ufc = cosmic_tsv,
-      tier = "REVEL_050",
-      AF = "001",
-      sample_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/breast/breast.list",
-      cancer_type = "breast" 
   }
 
   call T5_log_reg {
@@ -223,6 +225,7 @@ task aggregate_tsvs {
   input {
     File saige_tsv
     File prs_file
+    File ppv_missense
     File metadata
   }
   command <<<
@@ -231,11 +234,12 @@ task aggregate_tsvs {
   df1 = pd.read_csv("~{saige_tsv}",sep='\t',index_col=False) #original_id
   df2 = pd.read_csv("~{prs_file}",sep='\t',index_col=False) #sample
   df3 = pd.read_csv("~{metadata}",sep='\t',index_col=False) #original_id
-
+  df4 = pd.read_csv("~{ppv_missense}",sep='\t',index_col=False) #original_id
   # --- Convert IDs to strings ---
   df1['original_id'] = df1['original_id'].astype(str)
   df2['sample'] = df2['sample'].astype(str)
   df3['original_id'] = df3['original_id'].astype(str)
+  df4['original_id'] = df4['original_id'].astype(str)
 
   # --- Subset metadata to relevant columns ---
   keep_cols = ['original_id', 'PC1', 'PC2', 'PC3', 'PC4', 'inferred_sex','original_dx']
@@ -248,6 +252,7 @@ task aggregate_tsvs {
   merged = (
       df1.merge(df2, on='original_id', how='outer')
          .merge(df3, on='original_id', how='outer')
+         .merge(df4, on='original_id', how='outer')
   )
 
   # --- Save final combined table ---
@@ -333,7 +338,7 @@ task T5_log_reg {
       covariates.append('sex_binary')
 
   df['case'] = df['original_dx'].apply(lambda x: 0 if x.lower() == 'control' else 1)
-  predictor_cols = ['PGS','TSTD2']
+  predictor_cols = ['PGS','PPV_Missense']
   #predictor_cols = [col for col in df.columns if col not in covariates + ['original_id', 'case','inferred_sex','original_dx']]
   result = attributable_fraction(df, outcome_col='case', predictor_cols=predictor_cols, covariates=covariates)
 
@@ -362,15 +367,16 @@ task T2_normalize_silico_missense {
   input {
     File step_10_cpg_output
     File cosmic_ufc
-    Int tier # 3 or 4
+    String tier # 3 or 4
     String AF #001 or 0001
     File sample_list
+    String cancer_type
   }
   command <<<
   python3 <<CODE
   import pandas as pd
   # --- Load data ---
-  df = pd.read_csv("~{step_10_cpg_output}", sep="\t",index=False)
+  df = pd.read_csv("~{step_10_cpg_output}", sep="\t",index_col=False)
 
   # Assume first column contains the variant criteria (like "ATM_REVEL_050_001")
   criteria_col = df.columns[0]
@@ -390,7 +396,7 @@ task T2_normalize_silico_missense {
   df_filtered.to_csv("patient_criteria.tsv", sep="\t", index=False)
 
   cosmic_df = pd.read_csv("~{cosmic_ufc}",sep='\t',index_col=False,names=['gene','cancer_type'])
-  cosmic_genes = cosmic_df[cosmic_df['cancer_type'].str.contains(f"{cancer_type}|all", na=False)]['gene'].tolist()
+  cosmic_genes = cosmic_df[cosmic_df['cancer_type'].str.contains("~{cancer_type}|all", na=False)]['gene'].tolist()
 
 
   # Make sure that we filter patient_criteria.tsv to just rows that have gene_Tier~{tier}_~{AF}
@@ -401,13 +407,14 @@ task T2_normalize_silico_missense {
   with open("~{sample_list}") as f:
     all_samples = [line.strip() for line in f if line.strip()]
 
-  match_strings = {f"{gene}_Tier{tier}_{AF}" for gene in cosmic_genes}
+  #match_strings = {f"{gene}_Tier{tier}_{AF}" for gene in cosmic_genes}
+  match_strings = {f"{gene}_{tier}_{AF}" for gene in cosmic_genes}
 
   # --- Step 3: Loop through patient_criteria.tsv ---
   # Column 0 = patient ID, column 1 = variant/gene info
   patients_with_hit = set()
 
-  for _, row in patient_df.iterrows():
+  for _, row in df_filtered.iterrows():
       patient_id = row[0]
       gene_label = str(row[1])
       if gene_label in match_strings:
@@ -426,6 +433,7 @@ task T2_normalize_silico_missense {
   >>>
   output {
     File out1 = "patient_criteria.tsv"
+    File out2 = "PPV_Missense_flags.tsv"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"
