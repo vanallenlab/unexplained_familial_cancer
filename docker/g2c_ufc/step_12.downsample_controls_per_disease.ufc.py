@@ -285,7 +285,7 @@ def parse_complex_logic(logic_str, meta):
                         dx_dict[entry.lower()] = 1  # assume count = 1
 
                 # Number of cancers (from optional_cancers) that appear in dx_count_str
-                return sum(dx_dict.get(c, 0) > 0 for c in optional_cancers)
+                return sum(dx_dict.get(c, 0) for c in optional_cancers)
 
             def has_enough_family(row):
                 maternal_count = count_matches(row.get("maternal_family_dx_counts", ""))
