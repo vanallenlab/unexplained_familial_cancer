@@ -268,7 +268,7 @@ def parse_complex_logic(logic_str, meta):
                     return 0
 
                 dx_dict = {}
-                for entry in str(dx_count_str).split(','):
+                for entry in str(dx_count_str).split(';'):
                     entry = entry.strip()
                     if not entry:
                         continue
