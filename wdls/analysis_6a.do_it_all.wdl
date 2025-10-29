@@ -15,8 +15,7 @@ workflow ANALYSIS_6A_DO_IT_ALL {
 
     # PRS metrics
     #Float analysis_4_p_cutoff = 0.05
-    File prs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/breast.PGS000783.pgs"
-
+    File? prs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/breast.PGS000783.pgs"
     # Damaging Missense
     File step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz"
     File cosmic_tsv = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cosmic_ufc.tsv"
@@ -37,6 +36,7 @@ workflow ANALYSIS_6A_DO_IT_ALL {
   # Metadata for cancer type
   File metadata_tsv = "gs://" + workspace_bucket + "/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
   File sample_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".list"
+  File ppv_missense = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5/" + cancer_type + ".ppv_missense"
 
   call T1_normalize_saige {
     input: 
@@ -44,21 +44,11 @@ workflow ANALYSIS_6A_DO_IT_ALL {
       sample_list = sample_list
   }
 
-  call T2_normalize_silico_missense {
-    input:
-      step_10_cpg_output = step_10_cpg_file, 
-      cosmic_ufc = cosmic_tsv,
-      tier = "REVEL075",
-      AF = "001",
-      sample_list = sample_list,
-      cancer_type = "breast" 
-  }
-
   call aggregate_tsvs {
     input:
       saige_tsv=T1_normalize_saige.out1,
       prs_file = prs_file,
-      ppv_missense = T2_normalize_silico_missense.out2,
+      ppv_missense = ppv_missense,
       metadata = metadata_tsv
   }
 
@@ -66,36 +56,6 @@ workflow ANALYSIS_6A_DO_IT_ALL {
     input:
       input_tsv=aggregate_tsvs.out1
   }
-
-  #call normalize_analysis5 {
-  #  input: analysis5_tsv=analysis5_tsv
-  #}
-
-  #call normalize_step10 {
-  #  input: step10_tsv=step10_tsv
-  #}
-
-
-  #call normalize_homozygosity {
-  #  input: homoz_tsv=homozygosity_tsv,
-  #         gene_of_interest=gene_of_interest
-  #}
-
-  # call normalize_svs {
-  #   input: sv_tsv=sv_tsv
-  # }
-
-  #call aggregate {
-  #  input:
-  #    saige_normalized=normalize_saige.saige_normalized,
-  #    analysis5_normalized=normalize_analysis5.analysis5_normalized,
-  #    step10_normalized=normalize_step10.step10_normalized,
-  #    prs_normalized=normalize_prs.prs_normalized,
-  #    metadata_normalized=normalize_metadata.metadata_normalized,
-  #    homozygosity_normalized=normalize_homozygosity.homozygosity_normalized,
-  #    gene_of_interest=gene_of_interest,
-  #    cohort_name=cohort_name
-  #}
 
 }
 
@@ -224,7 +184,7 @@ task T2_normalize_missense_burden {
 task aggregate_tsvs {
   input {
     File saige_tsv
-    File prs_file
+    File? prs_file
     File ppv_missense
     File metadata
   }
@@ -232,12 +192,14 @@ task aggregate_tsvs {
   python3 <<CODE
   import pandas as pd
   df1 = pd.read_csv("~{saige_tsv}",sep='\t',index_col=False) #original_id
-  df2 = pd.read_csv("~{prs_file}",sep='\t',index_col=False) #sample
+  if "~{prs_file}":
+    df2 = pd.read_csv("~{prs_file}",sep='\t',index_col=False) #sample
+    df2['sample'] = df2['sample'].astype(str)
   df3 = pd.read_csv("~{metadata}",sep='\t',index_col=False) #original_id
   df4 = pd.read_csv("~{ppv_missense}",sep='\t',index_col=False) #original_id
+
   # --- Convert IDs to strings ---
   df1['original_id'] = df1['original_id'].astype(str)
-  df2['sample'] = df2['sample'].astype(str)
   df3['original_id'] = df3['original_id'].astype(str)
   df4['original_id'] = df4['original_id'].astype(str)
 
@@ -338,6 +300,9 @@ task T5_log_reg {
       covariates.append('sex_binary')
 
   df['case'] = df['original_dx'].apply(lambda x: 0 if x.lower() == 'control' else 1)
+  # Check if PPV_Missense is uniform (all values the same or all NaN)
+  if df["PPV_Missense"].nunique(dropna=True) <= 1:
+      df = df.drop(columns=["PPV_Missense"])
   predictor_cols = ['PGS','PPV_Missense']
   #predictor_cols = [col for col in df.columns if col not in covariates + ['original_id', 'case','inferred_sex','original_dx']]
   result = attributable_fraction(df, outcome_col='case', predictor_cols=predictor_cols, covariates=covariates)

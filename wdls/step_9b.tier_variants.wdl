@@ -54,12 +54,12 @@ workflow STEP_9B_TIER_VARIANTS {
     }
     #call T2_Filter_Tier2 as T2_Filter_Tier2_001{
     #  input:
-    #    rare_variants = T0_Initial_Filter.out1,
+    #    rare_variants = T0_Initial_Filter.splice_out1,
     #    vcf = sort_vcf_list.vcf_arr[i]
     #}
     #call T2_Filter_Tier2 as T2_Filter_Tier2_0001{
     #  input:
-    #    rare_variants = T0_Initial_Filter.out1,
+    #    rare_variants = T0_Initial_Filter.splice_out2,
     #    vcf = sort_vcf_list.vcf_arr[i]
     #}
     call T34_Filter_Tier34 as T34_Filter_Tier34_001{
@@ -124,17 +124,12 @@ workflow STEP_9B_TIER_VARIANTS {
       text_file = Tier1_Concat_0001.out2,
       output_dir = step_9b_output_dir
   }
-  #call Tasks.concatenateFiles as Tier2_Concat {
-  #  input:
-  #    files = T2_Filter_Tier2.out1,
-  #    output_name = "tier2"
-  #}
 
-  #call Tasks.copy_file_to_storage as copy2{
-  #  input:
-  #    text_file = Tier2_Concat.out2,
-  #    output_dir = step_9b_output_dir
-  #}
+  call combine_missense as combine_missense_001{
+    input:
+      tier3 = Tier3_Concat_001.out1,
+      tier4 = Tier4_Concat_001.out1
+  }
 
   call Tasks.concatenateFiles as Tier3_Concat_001 {
     input:
@@ -220,8 +215,48 @@ workflow STEP_9B_TIER_VARIANTS {
       text_file = Tier6_Concat_0001.out2,
       output_dir = step_9b_output_dir
   }
+
+  call combine_missense as combine_missense_001{
+    input:
+      tier3 = Tier3_Concat_001.out1,
+      tier4 = Tier4_Concat_001.out1
+  }
+
+  call combine_missense as combine_missense_0001{
+    input:
+      tier3 = Tier3_Concat_0001.out1,
+      tier4 = Tier4_Concat_0001.out1
+  }
+
+  call Tasks.copy_file_to_storage as copy7_001{
+    input:
+      text_file = combine_missense_001.out1,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy7_0001{
+    input:
+      text_file = combine_missense_0001.out1,
+      output_dir = step_9b_output_dir
+  }
 }
 
+task combine_missense{
+  input{
+    File tier3
+    File tier4
+  }
+  command <<<
+  set -euxo pipefail
+  cat ~{tier3} ~{tier4} | sort -u > tier3and4.tsv
+  >>>
+  output {
+    File out1 = "tier3and4.tsv"
+  }
+  runtime {
+    docker: "ubuntu:latest"
+    preemptible:3
+  }
+}
 task T0_Initial_Filter{
   input{
     File vcf
@@ -260,9 +295,6 @@ task T0_Initial_Filter{
   freq_cols = major_cols + minor_cols + [cohort_col]
   df[freq_cols] = df[freq_cols].replace(".", 0).apply(pd.to_numeric, errors="coerce").fillna(0)
 
-  # --- Keep only protein_coding ---
-  df = df[df[biotype_col] == "protein_coding"].copy()
-
   # --- Tier 1 thresholds ---
   mask_major_t1 = (df[major_cols] < 0.01).all(axis=1)
   mask_minor_t1 = (df[minor_cols] < 0.10).all(axis=1)
@@ -275,19 +307,37 @@ task T0_Initial_Filter{
   mask_cohort_t2 = df[cohort_col] < 0.001
   mask_keep_t2 = mask_major_t2 & mask_minor_t2 & mask_cohort_t2
 
-  # --- Output unique variant IDs ---
-  df.loc[mask_keep_t1, "ID"].drop_duplicates().to_csv(
-      "filtered_variants.001.txt", sep="\t", index=False, header=False
+  # --- Define biotype mask ---
+  mask_protein = df[biotype_col] == "protein_coding"
+
+  # --- Tier 1 outputs ---
+  # With protein_coding restriction
+  df.loc[mask_keep_t1 & mask_protein, "ID"].drop_duplicates().to_csv(
+      "filtered_variants.protein_coding.001.txt", sep="\t", index=False, header=False
   )
+
+  # With protein_coding restriction
+  df.loc[mask_keep_t2 & mask_protein, "ID"].drop_duplicates().to_csv(
+      "filtered_variants.protein_coding.0001.txt", sep="\t", index=False, header=False
+  )
+
+  # Without protein_coding restriction
+  df.loc[mask_keep_t1, "ID"].drop_duplicates().to_csv(
+      "filtered_variants.all_biotypes.001.txt", sep="\t", index=False, header=False
+  )
+
+  # Without protein_coding restriction
   df.loc[mask_keep_t2, "ID"].drop_duplicates().to_csv(
-      "filtered_variants.0001.txt", sep="\t", index=False, header=False
+      "filtered_variants.all_biotypes.0001.txt", sep="\t", index=False, header=False
   )
 
   CODE
   >>>
   output {
-    File out1 = "filtered_variants.001.txt"
-    File out2 = "filtered_variants.0001.txt"
+    File out1 = "filtered_variants.protein_coding.001.txt"
+    File out2 = "filtered_variants.protein_coding.0001.txt"
+    File splice_out1 = "filtered_variants.all_biotypes.001.txt"
+    File splice_out2 = "filtered_variants.all_biotypes.0001.txt"
   }
   runtime {
     docker: 'vanallenlab/g2c_pipeline'
@@ -372,7 +422,7 @@ task T2_Filter_Tier2 {
   # Extract necessary VEP + SpliceAI info
   bcftools view --include ID==@~{rare_variants} ~{vcf} -G -O z -o tmp.vcf.gz
   echo -e 'GENE\tID\tIMPACT\tCLINVAR\tCONSEQUENCE\tBIOTYPE\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\n' > tmp0.txt
-  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%IMPACT\t%clinvar_CLNSIG\t%Consequence\t%BIOTYPE\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\n' -d >> tmp0.txt
+  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\n' -d >> tmp0.txt
 
   python3 <<CODE
   import pandas as pd
@@ -386,7 +436,7 @@ task T2_Filter_Tier2 {
   df_filtered = df[(df[score_cols].max(axis=1) >= 0.5)]
 
   # Write filtered results back
-  df_filtered[['ID']].drop_duplicates().to_csv("filtered_variants.txt", sep='\t', index=False,header=False)
+  df_filtered[['ID']].drop_duplicates().to_csv("splice_variants.txt", sep='\t', index=False,header=False)
   CODE
 
   >>>
