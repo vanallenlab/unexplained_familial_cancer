@@ -261,7 +261,7 @@ def parse_complex_logic(logic_str, meta):
         if axis == "2family":
             required_count = 2
             optional_cancers = [c.strip().lower() for c in cancer.split('-')]
-            print(optional_cancers)
+            #print(optional_cancers)
 
             def count_matches(dx_count_str):
                 """Return number of optional cancers present in this family_dx_count string."""
@@ -320,7 +320,8 @@ def parse_complex_logic(logic_str, meta):
     logic_str = re.sub(r'\bNOR\b', ' not ', logic_str, flags=re.IGNORECASE)
     
     # Tokenize by spaces and operators, keeping parentheses
-    tokens = re.findall(r'\(|\)|\w+:\w+|AND|OR|NOT', logic_str, flags=re.IGNORECASE)
+    tokens = re.findall(r'\(|\)|[\w-]+:\w+|AND|OR|NOT', logic_str, flags=re.IGNORECASE)
+    #tokens = re.findall(r'\(|\)|\w+:\w+|AND|OR|NOT', logic_str, flags=re.IGNORECASE)
     print("Tokens:", tokens)
 
     parsed_tokens = []
