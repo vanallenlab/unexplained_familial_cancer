@@ -694,12 +694,12 @@ cromshell -t 120 list-outputs \
 | awk '{ print $2 }' \
 | gsutil -m cp -I $WORKSPACE_BUCKET/data/MinGQPart2/
 
-# # Clear Cromwell execution & output buckets
-# gsutil -m ls $( cat cromshell/job_ids/dfci-g2c.v1.InferTwins.job_ids.list \
-#                 | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/InferTwins/" \
-#                   '{ print bucket_prefix$1"/**" }' ) \
-# > uris_to_delete.list
-# cleanup_garbage
+# Clear Cromwell execution & output buckets
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/Module07FilterGTsPart2/" \
+                  '{ print bucket_prefix$1"/**" }' ) \
+> uris_to_delete.list
+cleanup_garbage
 
 
 #####################
@@ -714,14 +714,14 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 cat << EOF > $staging_dir/MinGQPart3.inputs.template.json
 {
   "Module07FilterGTsPart3.CombineVcfs.generate_index": true,
-  "Module07FilterGTsPart3.PCRMINUS_lookup_table": "${this.minGQ_PCRMINUS_lookup_table_postGQR_lenient}",
-  "Module07FilterGTsPart3.PCRMINUS_vcf_idx_lists": "${this.minGQ_PCRMINUS_vcf_idx_shards_postGQR_lenient}",
-  "Module07FilterGTsPart3.PCRMINUS_vcf_lists": "${this.minGQ_PCRMINUS_vcf_shards_postGQR_lenient}",
+  "Module07FilterGTsPart3.PCRMINUS_lookup_table": "$WORKSPACE_BUCKET/data/MinGQPart2/dfci-ufc.sv.v1.PCRMINUS.minGQ.filter_lookup_table.txt",
+  "Module07FilterGTsPart3.PCRMINUS_vcf_idx_lists": \$CONTIG_VCF_IDXS,
+  "Module07FilterGTsPart3.PCRMINUS_vcf_lists": \$CONTIG_VCFS,
   "Module07FilterGTsPart3.allow_overlaps_merge": true,
   "Module07FilterGTsPart3.filter_GT_options": ["--fail-missing-scores", "--filter-homalt", "--annotate-ncr", "--dropEmpties"],
-  "Module07FilterGTsPart3.max_noCallRate": 0.05,
+  "Module07FilterGTsPart3.max_noCallRate": \$CONTIG_NCR,
   "Module07FilterGTsPart3.naive_merge": false,
-  "Module07FilterGTsPart3.prefix": "dfci-ufc.v1",
+  "Module07FilterGTsPart3.prefix": "dfci-ufc.sv.v1",
   "Module07FilterGTsPart3.runtime_attr_CombineVcfs": {"mem_gb" : 7.5, "boot_disk_gb" : 20},
   "Module07FilterGTsPart3.sort_after_merge": false,
   "Module07FilterGTsPart3.sv_base_mini_docker": "vanallenlab/sv-base-mini:gnomad_rf_4760ac",
@@ -730,36 +730,200 @@ cat << EOF > $staging_dir/MinGQPart3.inputs.template.json
 }
 EOF
 
+# Build chromosome-specific override json of VCFs and VCF indexes
+for k in $( seq 1 22 ) X Y; do
+  echo "chr$k"
+done > contig_lists/hg38.primary.contigs.list
+echo "{ " > $staging_dir/MinGQPart3.contig_variable_overrides.json
+while read contig; do
+  if [ $contig == "chrX" ]; then
+    ncr=0.4376095 # This is equivalent to all males plus 10% of females
+  elif [ $contig == "chrY" ]; then
+    ncr=0.6614273 # This is equivalent to all females plus 10% of males
+  else
+    ncr=0.1
+  fi
+  echo "\"$contig\" : { \"CONTIG_NCR\" : $ncr },"
+done < contig_lists/hg38.primary.contigs.list \
+| paste -s -d\  | sed 's/,$//g' \
+>> $staging_dir/MinGQPart3.contig_variable_overrides.json
+echo " }" >> $staging_dir/MinGQPart3.contig_variable_overrides.json
+add_contig_vcfs_to_chromshard_overrides_json \
+  $staging_dir/MinGQPart3.contig_variable_overrides.json \
+  $WORKSPACE_BUCKET/data/MinGQPart1 \
+  Module07FilterGTsPart1.PCRMINUS_vcfs \
+  Module07FilterGTsPart1.PCRMINUS_vcf_idxs \
+  contig_lists/hg38.primary.contigs.list
+
 # Apply trained minGQ model to each chromosome
 code/scripts/manage_chromshards.py \
   --wdl code/wdl/gatk-sv/legacy_mingq_wdl/Module07FilterGTsPart3ApplyModel.wdl \
   --input-json-template $staging_dir/MinGQPart3.inputs.template.json \
+  --contig-variable-overrides $staging_dir/MinGQPart3.contig_variable_overrides.json \
   --staging-bucket $WORKSPACE_BUCKET/data/MinGQPart3 \
   --dependencies-zip mingq.dependencies.zip \
   --name MinGQPart3 \
   --status-tsv cromshell/progress/MinGQPart3.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
   --outer-gate 30 \
-  --max-attempts 2
+  --max-attempts 3
 
 
 ##################################
 # COLLECT QC METRICS AFTER MINGQ #
 ##################################
 
-# TODO: IMPLEMENT THIS
+# Reaffirm staging directory
+staging_dir=staging/post_mingq
+if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
+
+# Write template input .json for QC metric collection
+cat << EOF > $staging_dir/CollectVcfQcMetrics.postMinGQ.inputs.template.json
+{
+  "CollectVcfQcMetrics.all_samples_fam_file": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/refs/dfci-g2c.all_samples.ped",
+  "CollectVcfQcMetrics.bcftools_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
+  "CollectVcfQcMetrics.benchmarking_shards": 100,
+  "CollectVcfQcMetrics.benchmark_interval_beds": ["gs://dfci-g2c-refs/giab/\$CONTIG/giab.hg38.broad_callable.easy.\$CONTIG.bed.gz",
+                                                  "gs://dfci-g2c-refs/giab/\$CONTIG/giab.hg38.broad_callable.hard.\$CONTIG.bed.gz"],
+  "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
+  "CollectVcfQcMetrics.common_af_cutoff": 0.01,
+  "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
+  "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
+  "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
+  "CollectVcfQcMetrics.n_for_sample_level_analyses": 4568,
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_mingq.\$CONTIG",
+  "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
+  "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
+  "CollectVcfQcMetrics.sample_benchmark_dataset_names": ["external_srwgs", "external_lrwgs"],
+  "CollectVcfQcMetrics.sample_benchmark_id_maps": [["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
+                                                    "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"],
+                                                   ["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
+                                                    "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"]],
+  "CollectVcfQcMetrics.sample_benchmark_vcfs": [["gs://dfci-g2c-refs/hgsv/dense_vcfs/srwgs/sv/1KGP.srWGS.sv.cleaned.\$CONTIG.vcf.gz",
+                                                 "$MAIN_WORKSPACE_BUCKET/refs/aou/dense_vcfs/srwgs/sv/AoU.srWGS.sv.cleaned.\$CONTIG.vcf.gz"],
+                                                ["gs://dfci-g2c-refs/hgsv/dense_vcfs/lrwgs/sv/1KGP.lrWGS.sv.cleaned.\$CONTIG.vcf.gz",
+                                                 "$MAIN_WORKSPACE_BUCKET/refs/aou/dense_vcfs/lrwgs/sv/AoU.lrWGS.sv.cleaned.\$CONTIG.vcf.gz"]],
+  "CollectVcfQcMetrics.sample_benchmark_vcf_idxs": [["gs://dfci-g2c-refs/hgsv/dense_vcfs/srwgs/sv/1KGP.srWGS.sv.cleaned.\$CONTIG.vcf.gz.tbi",
+                                                     "$MAIN_WORKSPACE_BUCKET/refs/aou/dense_vcfs/srwgs/sv/AoU.srWGS.sv.cleaned.\$CONTIG.vcf.gz.tbi"],
+                                                    ["gs://dfci-g2c-refs/hgsv/dense_vcfs/lrwgs/sv/1KGP.lrWGS.sv.cleaned.\$CONTIG.vcf.gz.tbi",
+                                                     "$MAIN_WORKSPACE_BUCKET/refs/aou/dense_vcfs/lrwgs/sv/AoU.lrWGS.sv.cleaned.\$CONTIG.vcf.gz.tbi"]],
+  "CollectVcfQcMetrics.shard_vcf": false,
+  "CollectVcfQcMetrics.site_benchmark_dataset_names": ["gnomad_v4_gatksv"],
+  "CollectVcfQcMetrics.snv_site_benchmark_beds": [],
+  "CollectVcfQcMetrics.indel_site_benchmark_beds": [],
+  "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
+  "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
+  "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
+  "CollectVcfQcMetrics.vcfs": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz.tbi"]
+}
+EOF
+
+# Submit, monitor, stage, and cleanup QC metadata workflow
+code/scripts/manage_chromshards.py \
+  --wdl code/wdl/pancan_germline_wgs/vcf-qc/CollectVcfQcMetrics.wdl \
+  --input-json-template $staging_dir/CollectVcfQcMetrics.postMinGQ.inputs.template.json \
+  --dependencies-zip qc.dependencies.zip \
+  --staging-bucket $WORKSPACE_BUCKET/qc/post_mingq \
+  --name CollectQcPostMinGQ \
+  --status-tsv cromshell/progress/dfci-ufc.sv.v1.CollectVcfQcMetrics.post_mingq.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --outer-gate 30 \
+  --submission-gate 0.1 \
+  --max-attempts 3
 
 
 ###############################
 # PLOT QC METRICS AFTER MINGQ #
 ###############################
 
-# TODO: IMPLEMENT THIS
+# Reaffirm staging directory
+staging_dir=staging/post_mingq
+if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
+
+# Reset inputs
+reset_qc_plot_dir \
+  $staging_dir \
+  QcPostMinGQ \
+  $WORKSPACE_BUCKET/qc/post_mingq \
+  $WORKSPACE_BUCKET/qc/post_filtergenotypes/PlotQc/dfci-ufc.sv.v1.QcPostFilterGenotypes.all_qc_summary_metrics.tsv
+
+# Submit QC visualization workflow
+cromshell --no_turtle -t 120 -mc submit --no-validation \
+  --options-json code/refs/json/aou.cromwell_options.default.json \
+  --dependencies-zip qc.dependencies.zip \
+  code/wdl/pancan_germline_wgs/vcf-qc/PlotVcfQcMetrics.wdl \
+  cromshell/inputs/PlotQcPostMinGQ.inputs.json \
+| jq .id | tr -d '"' \
+>> cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list
+
+# Monitor QC visualization workflow
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list ) 5
+
+# Once workflow is complete, stage output
+gsutil -m rm -rf $WORKSPACE_BUCKET/qc/post_mingq/PlotQc
+cromshell -t 120 list-outputs \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list ) \
+| awk '{ print $2 }' \
+| gsutil -m cp -I \
+  $WORKSPACE_BUCKET/qc/post_mingq/PlotQc/
+
+# Clear Cromwell execution & output buckets
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+                  '{ print bucket_prefix$1"/**" }' ) \
+> uris_to_delete.list
+cleanup_garbage
 
 
-#############
-# OTHER TBD #
-#############
+##########################
+# POSTHOC CLEANUP PART 1 #
+##########################
 
-# TODO: implement this
+# Reaffirm staging directory
+staging_dir=staging/posthoc_part1
+if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
+
+# Stage MANE GTF
+wget \
+  -P $staging_dir/ \
+  https://ftp.ncbi.nlm.nih.gov/refseq/MANE/MANE_human/release_1.4/MANE.GRCh38.v1.4.ensembl_genomic.gtf.gz
+gsutil -m cp \
+  $staging_dir/MANE.GRCh38.v1.4.ensembl_genomic.gtf.gz \
+  $WORKSPACE_BUCKET/refs/
+
+# Write flat list of files needed for posthoc cleanup part 1
+cat << EOF > $staging_dir/script_files.txt
+$WORKSPACE_BUCKET/refs/MANE.GRCh38.v1.4.ensembl_genomic.gtf.gz
+$WORKSPACE_BUCKET/refs/hg38.primary_loci_with_alts.bed.gz
+$WORKSPACE_BUCKET/refs/hg38.primary_loci_with_fix_patches.bed.gz
+EOF
+
+# Write template .json for posthoc cleanup part 1
+cat << EOF > $staging_dir/PosthocCleanupPart1.inputs.template.json
+{
+  "ApplyScriptSingleVcf.ApplyScript.contig": "\$CONTIG",
+  "ApplyScriptSingleVcf.bcftools_docker": "vanallenlab/g2c_pipeline:05aa88e",
+  "ApplyScriptSingleVcf.exec_prefix": "python ",
+  "ApplyScriptSingleVcf.script": "$WORKSPACE_BUCKET/code/scripts/vcf_cleanup.part_1.before_outlier_exclusion.py",
+  "ApplyScriptSingleVcf.script_files": $( collapse_txt $staging_dir/script_files.txt ),
+  "ApplyScriptSingleVcf.script_options": "--gtf MANE.GRCh38.v1.4.ensembl_genomic.gtf.gz --alt-loci-bed hg38.primary_loci_with_alts.bed.gz --ref-patch-loci-bed hg38.primary_loci_with_fix_patches.bed.gz",
+  "ApplyScriptSingleVcf.vcf": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz",
+  "ApplyScriptSingleVcf.vcf_idx": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz.tbi"
+}
+EOF
+
+# Apply posthoc cleanup step 1 to each chromosome
+code/scripts/manage_chromshards.py \
+  --wdl code/wdl/pancan_germline_wgs/ApplyScriptSingleVcf.wdl \
+  --input-json-template $staging_dir/PosthocCleanupPart1.inputs.template.json \
+  --staging-bucket $WORKSPACE_BUCKET/data/PosthocCleanupPart1 \
+  --dependencies-zip g2c.dependencies.zip \
+  --name PosthocCleanupPart1 \
+  --status-tsv cromshell/progress/PosthocCleanupPart1.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --outer-gate 30 \
+  --submission-gate 0 \
+  --max-attempts 2
 
