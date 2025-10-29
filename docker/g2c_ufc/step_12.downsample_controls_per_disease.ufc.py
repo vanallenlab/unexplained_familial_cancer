@@ -321,6 +321,7 @@ def parse_complex_logic(logic_str, meta):
     
     # Tokenize by spaces and operators, keeping parentheses
     tokens = re.findall(r'\(|\)|[\w-]+:\w+|AND|OR|NOT', logic_str, flags=re.IGNORECASE)
+    print("is this updating?")
     #tokens = re.findall(r'\(|\)|\w+:\w+|AND|OR|NOT', logic_str, flags=re.IGNORECASE)
     print("Tokens:", tokens)
 
