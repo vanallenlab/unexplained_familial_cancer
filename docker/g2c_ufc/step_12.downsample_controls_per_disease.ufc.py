@@ -272,23 +272,25 @@ def parse_complex_logic(logic_str, meta):
                     if ':' in entry:
                         cancer_type, count = entry.split(':', 1)
                         dx_dict[cancer_type.strip().lower()] = int(count.strip())
+                # Number of cancers (from optional_cancers) that appear in this dx_count_str
                 return sum(c in dx_dict for c in optional_cancers)
 
-            maternal_count = count_matches(meta.get("maternal_family_dx_count", ""))
-            paternal_count = count_matches(meta.get("paternal_family_dx_count", ""))
+            # Apply row-wise
+            def has_enough_family(row):
+                maternal_count = count_matches(row.get("maternal_family_dx_count", ""))
+                paternal_count = count_matches(row.get("paternal_family_dx_count", ""))
+                return (maternal_count >= required_count) or (paternal_count >= required_count)
+
+            return meta.apply(has_enough_family, axis=1)
+
 
             # Each side must independently meet the threshold
             return (maternal_count >= required_count) or (paternal_count >= required_count)
         elif axis == "2patient":
             optional_cancers = cancer.split('-')
             # Count how many of the optional_cancers are in meta['original_dx']
-            count = df['original_dx'].str.lower().apply(lambda x: sum(c in x for c in optional_cancers))
+            count = meta['original_dx'].str.lower().apply(lambda x: sum(c in x for c in optional_cancers))
             return count >= 2
-        elif axis == "3patient":
-            optional_cancers = cancer.split('-')
-            # Count how many of the optional_cancers are in meta['original_dx']
-            count = df['original_dx'].str.lower().apply(lambda x: sum(c in x for c in optional_cancers))
-            return count >= 3
         elif axis == "patient":
             return meta['original_dx'].str.contains(cancer, na=False)
         elif axis == "family":
