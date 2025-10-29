@@ -261,6 +261,7 @@ def parse_complex_logic(logic_str, meta):
         if axis == "2family":
             required_count = 2
             optional_cancers = [c.strip().lower() for c in cancer.split('-')]
+            print(optional_cancers)
 
             def count_matches(dx_count_str):
                 """Return number of optional cancers present in this family_dx_count string."""
@@ -284,6 +285,7 @@ def parse_complex_logic(logic_str, meta):
                     else:
                         dx_dict[entry.lower()] = 1  # assume count = 1
 
+                print(dx_dict)
                 # Number of cancers (from optional_cancers) that appear in dx_count_str
                 return sum(dx_dict.get(c, 0) for c in optional_cancers)
 
