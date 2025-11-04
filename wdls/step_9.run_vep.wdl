@@ -37,7 +37,7 @@ workflow STEP_9_RUN_VEP {
     String? cohort_prefix
 
     String bcftools_docker
-    String vep_docker = "vanallenlab/g2c-vep:loftee_etc"
+    String vep_docker
 
     String step_8_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_8_FILTER_TO_TP_VARIANTS/sharded_vcfs"
     String storage_directory = "fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228"
@@ -47,7 +47,7 @@ workflow STEP_9_RUN_VEP {
   Int n_gnomad_files = length(select_all(gnomad_vcf_uris))
   Boolean any_remote = n_remote_files + n_gnomad_files > 0 
 
-  Int positive_shards = 1
+  Int positive_shards = 260
 
   # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
   call gather_vcfs {
@@ -477,7 +477,7 @@ task RunVep {
     fi
 
     # Unzip the LOFTEE directory
-    #tar -xzf loftee.tar.gz
+    tar -xzf loftee.tar.gz
 
     # Build gnomad annotation command based on gnomad_infos
     gnomad_option=""

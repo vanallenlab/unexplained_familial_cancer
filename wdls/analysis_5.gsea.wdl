@@ -265,7 +265,7 @@ task T2_gsea {
   #merged = merged.rename(columns={
   #  'num_pathogenic_variants_bin': 'num_pathogenic_variants',
   #})
-  covariates.append('num_pathogenic_variants_bin')
+  covariates.append('num_pathogenic_variants')
 
   # Add 'sex_binary' to covariates only if it varies
   if merged['sex_binary'].nunique() > 1:

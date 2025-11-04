@@ -60,7 +60,7 @@ task T1_Convert_To_TSV {
     File cpg_list
     File samples_of_interest
     File cpg_bed_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/riaz_genes.coordinates.bed"
-    File tier1_variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1.tsv"
+    File rare_variants_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1.tsv"
   }
   String output_file = basename(vcf, ".vcf.bgz") + ".tsv"
   command <<<
@@ -70,7 +70,7 @@ task T1_Convert_To_TSV {
   bcftools view -S ~{samples_of_interest} -Oz -o tmp1.vcf.gz ~{vcf}
   bcftools index -t tmp1.vcf.gz
   bcftools view -R ~{cpg_bed_file} tmp1.vcf.gz -Oz -o tmp2.vcf.gz 
-  bcftools view --include ID==@~{tier1_variants} tmp2.vcf.gz -O z -o tmp3.vcf.gz
+  bcftools view --include ID==@~{rare_variants_001} tmp2.vcf.gz -O z -o tmp3.vcf.gz
  
   # Get the header started
   echo -e "CHROM\tPOS\tID\tREF\tALT\tIMPACT\tSYMBOL\tclinvar_clnsig\tBiotype\tConsequence\tSAMPLES" > ~{output_file}
@@ -79,7 +79,7 @@ task T1_Convert_To_TSV {
   bcftools +split-vep tmp3.vcf.gz -i 'GT="alt"' -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%IMPACT\t%SYMBOL\t%clinvar_CLNSIG\t%BIOTYPE\t%Consequence\t[%SAMPLE,]\n' -d > tmp.txt
   rm tmp1.vcf.gz
 
-  # Filter the File to only include Autosomal Dominant CPGS
+  # Filter the File to only include CPGS
   awk 'NR==FNR {cpg[$1]; next} $7 in cpg' <(cut -f1 ~{cpg_list}) tmp.txt > tmp3.txt || touch tmp3.txt
 
   sort -u < tmp3.txt >> ~{output_file}
@@ -87,8 +87,20 @@ task T1_Convert_To_TSV {
   python3 <<CODE
   import pandas as pd
   df = pd.read_csv("~{output_file}",sep='\t',index_col=False)
-  df = df[(df['IMPACT'] == "MODERATE") | (df['IMPACT'] == "HIGH")]
-  df = df[(df['clinvar_clnsig'] == "Pathogenic") | (df['clinvar_clnsig'] == "Likely_pathogenic") | (df['clinvar_clnsig'] == "Pathogenic/Likely_pathogenic") | (df['clinvar_clnsig'] == ".")]
+  df = df[
+      (
+          (df["IMPACT"] == "MODERATE") &
+          (df["clinvar_clnsig"].isin(["Pathogenic", "Likely_pathogenic", "Pathogenic/Likely_pathogenic"]))
+      )
+      |
+      (
+          (df["IMPACT"] == "HIGH") &
+          (df["clinvar_clnsig"].isin(["Pathogenic", "Likely_pathogenic", "Pathogenic/Likely_pathogenic", "."]))
+      )
+  ]
+
+  #df = df[(df['IMPACT'] == "MODERATE") | (df['IMPACT'] == "HIGH")]
+  #df = df[(df['clinvar_clnsig'] == "Pathogenic") | (df['clinvar_clnsig'] == "Likely_pathogenic") | (df['clinvar_clnsig'] == "Pathogenic/Likely_pathogenic") | (df['clinvar_clnsig'] == ".")]
   df.to_csv("~{output_file}",sep='\t',index=False)
   CODE
   >>>

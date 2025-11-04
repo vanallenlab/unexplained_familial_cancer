@@ -81,15 +81,15 @@ task T1_analyze_inheritance {
 
   # Sporadic: original_dx contains breast, family_dx does not
   mask_sporadic = (
-      merged['original_dx'].fillna("").str.lower().str.contains(ufc_cancer) &
-      ~merged['family_dx'].fillna("").str.lower().str.contains(aou_cancer)
+      merged['original_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(ufc_cancer) &
+      ~merged['family_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(aou_cancer)
   )
   merged.loc[mask_sporadic, 'group'] = f"Isolated {ufc_cancer.capitalize()}"
 
   # Familial: original_dx contains breast, family_dx contains breast
   mask_familial = (
-      merged['original_dx'].fillna("").str.lower().str.contains(ufc_cancer) &
-      merged['family_dx'].fillna("").str.lower().str.contains(aou_cancer)
+      merged['original_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(ufc_cancer) &
+      merged['family_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(aou_cancer)
   )
   merged.loc[mask_familial, 'group'] = f"Familial {ufc_cancer.capitalize()}"
 
