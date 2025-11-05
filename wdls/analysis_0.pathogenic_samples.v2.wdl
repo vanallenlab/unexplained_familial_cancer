@@ -16,7 +16,7 @@ workflow ANALYSIS_0_PATHOGENIC_SAMPLES {
   }
 
   Int negative_shards = 0
-  Int positive_shards = 260
+  Int positive_shards = 2960
   call Tasks.gather_positive_vcfs {
     input:
       dir = step_9_output_dir,
@@ -60,7 +60,7 @@ task T1_Convert_To_TSV {
     File cpg_list
     File samples_of_interest
     File cpg_bed_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/riaz_genes.coordinates.bed"
-    File rare_variants_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1.tsv"
+    File rare_variants_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/rare_001.tsv"
   }
   String output_file = basename(vcf, ".vcf.bgz") + ".tsv"
   command <<<
@@ -69,7 +69,8 @@ task T1_Convert_To_TSV {
   # Filter to just Samples of interest
   bcftools view -S ~{samples_of_interest} -Oz -o tmp1.vcf.gz ~{vcf}
   bcftools index -t tmp1.vcf.gz
-  bcftools view -R ~{cpg_bed_file} tmp1.vcf.gz -Oz -o tmp2.vcf.gz 
+  bcftools view -R ~{cpg_bed_file} tmp1.vcf.gz -Oz -o tmp2.vcf.gz
+
   bcftools view --include ID==@~{rare_variants_001} tmp2.vcf.gz -O z -o tmp3.vcf.gz
  
   # Get the header started
@@ -110,6 +111,7 @@ task T1_Convert_To_TSV {
   runtime {
     docker: "vanallenlab/g2c_pipeline"
     disks: "local-disk 20 HDD"
+    memory: "8GB"
     preemptible: 1
   }
 }

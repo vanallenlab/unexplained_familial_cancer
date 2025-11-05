@@ -10,50 +10,59 @@ workflow STEP_10_VISUALIZE_VEP {
     String step_9_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/sharded_vcfs" # Directory to STEP_9 Output VCFs
     File aou_subjects
     File gene_list
-    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/"
+    #Array[File] tier_files = ["gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_001.tsv"]
+    Array[File] tier_files = ["gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_0001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_0001.tsv"]
+    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/"
   }
 
-  call Tasks.gather_a_chromosome_level_vcfs {
+  call Tasks.gather_chromosome_level_vcfs {
     input:
-      dir = step_9_output_dir,
-      chr_num = 1
+      dir = step_9_output_dir
+  }
+  #call Tasks.sort_vcf_list {
+  #  input:
+  #    unsorted_vcf_list = gather_a_chromosome_level_vcfs.out1[0]
+  #}
+  call Tasks.concatenateFiles {
+    input:
+      files = gather_chromosome_level_vcfs.out1,
+      output_name = "out"
   }
   call Tasks.sort_vcf_list {
     input:
-      unsorted_vcf_list = gather_a_chromosome_level_vcfs.out1[0]
+      unsorted_vcf_list = concatenateFiles.out2
   }
-  #call Tasks.concatenateFiles {
-  #  input:
-  #    files = gather_chromosome_level_vcfs.out1,
-  #    output_name = "out"
-  #}
-  #call Tasks.sort_vcf_list {
-  #  input:
-  #    unsorted_vcf_list = concatenateFiles.out2
-  #}
 
-  Int negative_shards = 1100
-  scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
-    call Convert_To_TSV {
-      input:
-        vcf = sort_vcf_list.vcf_arr[i],
-        aou_subjects = aou_subjects,
-        gene_list = gene_list,
-        tier_variants = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv"
-    }
-
-    call Filter_Vep_TSV{
+  Int negative_shards = 2890
+  scatter (tier_file in tier_files){
+    scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
+      call Convert_To_TSV {
         input:
-          input_tsv = Convert_To_TSV.out1,
-          subjects_list = aou_subjects,
-          variants_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv"
+          vcf = sort_vcf_list.vcf_arr[i],
+          aou_subjects = aou_subjects,
+          gene_list = gene_list,
+          tier_variants = tier_file
+      }
+
+      call Filter_Vep_TSV{
+          input:
+            input_tsv = Convert_To_TSV.out1,
+            subjects_list = aou_subjects,
+            variants_file = tier_file
+      }
+    }
+  
+    call merge_variant_counts {
+      input:
+        tsv_files = Filter_Vep_TSV.out1
     }
   }
- 
-  call merge_variant_counts {
+
+  call Tasks.concatenateFiles_noheader {
     input:
-      tsv_files = Filter_Vep_TSV.out1
-  } 
+      files = merge_variant_counts.out1,
+      callset_name = "ufc_cpg"
+  }
 
   #call Tasks.copy_file_to_storage{
   #  input:
@@ -95,10 +104,10 @@ task merge_variant_counts {
   combined_df.to_csv("ufc.cpg.variant_counts.tsv", sep="\t")
 
   CODE
-  gzip ufc.cpg.variant_counts.tsv
+  #gzip ufc.cpg.variant_counts.tsv
   >>>
   output {
-    File out1 = "ufc.cpg.variant_counts.tsv.gz"
+    File out1 = "ufc.cpg.variant_counts.tsv"
   }
 
   runtime {
@@ -128,14 +137,18 @@ task Filter_Vep_TSV {
     tier, af = re.search(r'tier(\d+)_(\d+)', os.path.basename("~{variants_file}")).groups()
     tier = int(tier)
 
-    # --- Read variant IDs from the tier file ---
+    # --- Read (gene, variant) pairs from the tier file ---
+    valid_pairs = set()
     with open("~{variants_file}", 'r') as f:
-        valid_variants = {line.strip() for line in f if line.strip()}
+        for line in f:
+            if line.strip():
+                gene, var_id = line.strip().split()[:2]
+                valid_pairs.add((gene, var_id))
  
     dtype_map = {
         "ID": "string",
         "AF": "float32",
-        "IMPACT": "category",
+        "IMPACT": "string",
         "SYMBOL": "string",
     }
 
@@ -145,11 +158,12 @@ task Filter_Vep_TSV {
 
     # Read in the TSV file
     df = pd.read_csv("~{input_tsv}", sep='\t', index_col=False, dtype=dtype_map)
-    df = df[(df['IMPACT'] == "HIGH") | (df['IMPACT'] == "MODERATE")]
+    #df = df[(df['IMPACT'] == "MODERATE")]
+    df = df[~df['CLINVAR'].isin(['Pathogenic','Likely_pathogenic','Pathogenic/Likely_pathogenic'])]
     df = df.drop_duplicates(subset=["ID","SYMBOL"])
 
     # --- Keep only variants in the variant list ---
-    df = df[df['ID'].isin(valid_variants)]
+    df = df[df.apply(lambda r: (r['SYMBOL'], r['ID']) in valid_pairs, axis=1)]
 
     # Initialize the summary dictionary
     summary = defaultdict(int)
@@ -206,10 +220,12 @@ task Convert_To_TSV {
   command <<<
   set -euxo pipefail
 
+  awk 'NR==FNR {genes[$1]; next} $1 in genes' ~{gene_list} ~{tier_variants} | cut -f2 > filtered_tier_variants.txt
+
   echo "### Step 1: Filter to All of Us cohort"
   bcftools view -S ~{aou_subjects} ~{vcf} -Oz -o aou.tmp.vcf.gz
   bcftools +fill-tags aou.tmp.vcf.gz -Oz -o aou.tmp2.vcf.gz -- -t AF
-  bcftools view --include ID==@~{tier_variants} aou.tmp2.vcf.gz -O z -o aou.vcf.gz
+  bcftools view --include ID==@filtered_tier_variants.txt aou.tmp2.vcf.gz -O z -o aou.vcf.gz
   bcftools index -t aou.vcf.gz
 
   echo "### Step 3: Build Header"
@@ -218,6 +234,7 @@ task Convert_To_TSV {
     echo -e "AF"
     echo -e "SYMBOL"
     echo -e "IMPACT"
+    echo -e "CLINVAR"
     bcftools query -l aou.vcf.gz
   } > vertical_header.txt
 
@@ -226,7 +243,7 @@ task Convert_To_TSV {
   echo "### Step 4: Extract VEP annotations + genotype matrix"
   if bcftools view -h aou.vcf.gz | grep -q "gnomAD_AF_non_cancer"; then
     bcftools +split-vep aou.vcf.gz \
-      -f '%ID\t%INFO/AF\t%SYMBOL\t%IMPACT\t[%GT\t]' \
+      -f '%ID\t%INFO/AF\t%SYMBOL\t%IMPACT\t%clinvar_CLNSIG\t[%GT\t]' \
       -d > tmp.txt
     rm aou.vcf.gz
 

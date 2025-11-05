@@ -53,26 +53,26 @@ workflow STEP_9B_TIER_VARIANTS {
     #    rare_variants = T0_Initial_Filter.out2,
     #    vcf = sort_vcf_list.vcf_arr[i]
     #}
-    #call T2_Filter_Tier2 as T2_Filter_Tier2_001{
-    #  input:
-    #    rare_variants = T0_Initial_Filter.splice_out1,
-    #    vcf = sort_vcf_list.vcf_arr[i]
-    #}
-    #call T2_Filter_Tier2 as T2_Filter_Tier2_0001{
-    #  input:
-    #    rare_variants = T0_Initial_Filter.splice_out2,
-    #    vcf = sort_vcf_list.vcf_arr[i]
-    #}
-    call T34_Filter_Tier34 as T34_Filter_Tier34_001{
+    call T2_Filter_Tier2 as T2_Filter_Tier2_001{
       input:
-        vcf = sort_vcf_list.vcf_arr[i],
-        rare_variants = T0_Initial_Filter.out1,
+        rare_variants = T0_Initial_Filter.splice_out1,
+        vcf = sort_vcf_list.vcf_arr[i]
     }
-    call T34_Filter_Tier34 as T34_Filter_Tier34_0001{
+    call T2_Filter_Tier2 as T2_Filter_Tier2_0001{
       input:
-        vcf = sort_vcf_list.vcf_arr[i],
-        rare_variants = T0_Initial_Filter.out2,
+        rare_variants = T0_Initial_Filter.splice_out2,
+        vcf = sort_vcf_list.vcf_arr[i]
     }
+    #call T34_Filter_Tier34 as T34_Filter_Tier34_001{
+    #  input:
+    #    vcf = sort_vcf_list.vcf_arr[i],
+    #    rare_variants = T0_Initial_Filter.out1,
+    #}
+    #call T34_Filter_Tier34 as T34_Filter_Tier34_0001{
+    #  input:
+    #    vcf = sort_vcf_list.vcf_arr[i],
+    #    rare_variants = T0_Initial_Filter.out2,
+    #}
     #call T6_Filter_Tier6 as T6_Filter_Tier6_001{
     #  input:
     #    vcf = sort_vcf_list.vcf_arr[i],
@@ -86,27 +86,27 @@ workflow STEP_9B_TIER_VARIANTS {
 
   }
 
-  call Tasks.concatenateFiles as Concat_Rare_001 {
-    input:
-      files = T0_Initial_Filter.out1,
-      output_name = "rare_001"
-  }
-  call Tasks.concatenateFiles as Concat_Rare_0001 {
-    input:
-      files = T0_Initial_Filter.out2,
-      output_name = "rare_0001"
-  }
+  #call Tasks.concatenateFiles as Concat_Rare_001 {
+  #  input:
+  #    files = T0_Initial_Filter.out1,
+  #    output_name = "rare_001"
+  #}
+  #call Tasks.concatenateFiles as Concat_Rare_0001 {
+  #  input:
+  #    files = T0_Initial_Filter.out2,
+  #    output_name = "rare_0001"
+  #}
 
-  call Tasks.copy_file_to_storage as copy_rare_001{
-    input:
-      text_file = Concat_Rare_001.out2,
-      output_dir = step_9b_output_dir
-  }
-  call Tasks.copy_file_to_storage as copy_rare_0001{
-    input:
-      text_file = Concat_Rare_0001.out2,
-      output_dir = step_9b_output_dir
-  }
+  #call Tasks.copy_file_to_storage as copy_rare_001{
+  #  input:
+  #    text_file = Concat_Rare_001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
+  #call Tasks.copy_file_to_storage as copy_rare_0001{
+  #  input:
+  #    text_file = Concat_Rare_0001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
 
   #call Tasks.concatenateFiles as Tier0_Concat_001 {
   #  input:
@@ -149,69 +149,69 @@ workflow STEP_9B_TIER_VARIANTS {
   #    output_dir = step_9b_output_dir
   #}
 
-  #call Tasks.concatenateFiles as Tier2_Concat_001 {
+  call Tasks.concatenateFiles as Tier2_Concat_001 {
+    input:
+      files = T2_Filter_Tier2_001.out1,
+      output_name = "tier2_001"
+  }
+  call Tasks.concatenateFiles as Tier2_Concat_0001 {
+    input:
+      files = T2_Filter_Tier2_0001.out1,
+      output_name = "tier2_0001"
+  }
+  call Tasks.copy_file_to_storage as copy2_001{
+    input:
+      text_file = Tier2_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy2_0001{
+    input:
+      text_file = Tier2_Concat_0001.out2,
+      output_dir = step_9b_output_dir
+  }
+
+  #call Tasks.concatenateFiles as Tier3_Concat_001 {
   #  input:
-  #    files = T2_Filter_Tier2_001.out1,
-  #    output_name = "tier2_001"
+  #    files = T34_Filter_Tier34_001.out1,
+  #    output_name = "tier3_001"
   #}
-  #call Tasks.concatenateFiles as Tier2_Concat_0001 {
+
+  #call Tasks.concatenateFiles as Tier3_Concat_0001 {
   #  input:
-  #    files = T2_Filter_Tier2_0001.out1,
-  #    output_name = "tier2_0001"
+  #    files = T34_Filter_Tier34_0001.out1,
+  #    output_name = "tier3_0001"
   #}
-  #call Tasks.copy_file_to_storage as copy2_001{
+
+  #call Tasks.copy_file_to_storage as copy3_001{
   #  input:
-  #    text_file = Tier2_Concat_001.out2,
+  #    text_file = Tier3_Concat_001.out2,
   #    output_dir = step_9b_output_dir
   #}
-  #call Tasks.copy_file_to_storage as copy2_0001{
+  #call Tasks.copy_file_to_storage as copy3_0001{
   #  input:
-  #    text_file = Tier2_Concat_0001.out2,
+  #    text_file = Tier3_Concat_0001.out2,
   #    output_dir = step_9b_output_dir
   #}
-
-  call Tasks.concatenateFiles as Tier3_Concat_001 {
-    input:
-      files = T34_Filter_Tier34_001.out1,
-      output_name = "tier3_001"
-  }
-
-  call Tasks.concatenateFiles as Tier3_Concat_0001 {
-    input:
-      files = T34_Filter_Tier34_0001.out1,
-      output_name = "tier3_0001"
-  }
-
-  call Tasks.copy_file_to_storage as copy3_001{
-    input:
-      text_file = Tier3_Concat_001.out2,
-      output_dir = step_9b_output_dir
-  }
-  call Tasks.copy_file_to_storage as copy3_0001{
-    input:
-      text_file = Tier3_Concat_0001.out2,
-      output_dir = step_9b_output_dir
-  }
-  call Tasks.concatenateFiles as Tier4_Concat_001 {
-    input:
-      files = T34_Filter_Tier34_001.out2,
-      output_name = "tier4_001"
-  }
-  call Tasks.concatenateFiles as Tier4_Concat_0001 {
-    input:
-      files = T34_Filter_Tier34_0001.out2,
-      output_name = "tier4_0001"
-  }
-  call Tasks.copy_file_to_storage as copy4_001{
-    input:
-      text_file = Tier4_Concat_001.out2,
-      output_dir = step_9b_output_dir
-  }
-  call Tasks.copy_file_to_storage as copy4_0001{
-    input:
-      text_file = Tier4_Concat_0001.out2,
-      output_dir = step_9b_output_dir
-  }
+  #call Tasks.concatenateFiles as Tier4_Concat_001 {
+  #  input:
+  #    files = T34_Filter_Tier34_001.out2,
+  #    output_name = "tier4_001"
+  #}
+  #call Tasks.concatenateFiles as Tier4_Concat_0001 {
+  #  input:
+  #    files = T34_Filter_Tier34_0001.out2,
+  #    output_name = "tier4_0001"
+  #}
+  #call Tasks.copy_file_to_storage as copy4_001{
+  #  input:
+  #    text_file = Tier4_Concat_001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
+  #call Tasks.copy_file_to_storage as copy4_0001{
+  #  input:
+  #    text_file = Tier4_Concat_0001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
   #call Tasks.concatenateFiles as Tier5_Concat_001 {
   #  input:
   #    files = T34_Filter_Tier34_001.out3,
@@ -549,7 +549,7 @@ task T2_Filter_Tier2 {
   # Get necessary information
   # Extract necessary VEP + SpliceAI info
   bcftools view --include ID==@~{rare_variants} ~{vcf} -G -O z -o tmp.vcf.gz
-  echo -e 'GENE\tID\tIMPACT\tCLINVAR\tCONSEQUENCE\tBIOTYPE\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\tLOFTEE\n' > tmp0.txt
+  echo -e 'GENE\tID\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\tLOFTEE\n' > tmp0.txt
   bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\t%LoF\n' -d >> tmp0.txt
 
   python3 <<CODE
@@ -562,6 +562,7 @@ task T2_Filter_Tier2 {
 
   # Filter: max score > 0.5 and matching gene symbol
   df_filtered = df[(df[score_cols].max(axis=1) >= 0.5) | (df['LOFTEE'] == "LC")]
+  df_filtered = df_filtered[df_filtered['SPLICE_GENE'] != "."]
 
   # Write filtered results back
   df_filtered[['SPLICE_GENE','ID']].drop_duplicates().to_csv("splice_variants.txt", sep='\t', index=False,header=False)
