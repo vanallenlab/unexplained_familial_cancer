@@ -1,0 +1,39 @@
+anti_cancer_ontology:
+  description: An ontology of cancer types to avoid overlapping
+  systems:
+    - name: Pancreas
+      types:
+        - primary_malignant_neoplasm_of_islets_of_langerhans
+    - name: Prostate
+      types:
+        - primary_malignant_neoplasm_of_urethra
+    - name: Lung
+      types:
+        - malignant_carcinoid_tumor_of_lung
+        - malignant_carcinoid_tumor_of_bronchus
+        - carcinoid_tumor_of_lung
+        - malignant_mesothelioma_of_pleura
+        - primary_malignant_neoplasm_of_pleura
+    - name: Colorectal
+      types:
+        - malignant_carcinoid_tumor_of_colon
+        - carcinoid_tumor_of_large_intestine
+    - name: Kidney
+      types:
+        - primary_malignant_neoplasm_of_renal_pelvis
+    - name: Non-Hodgkin
+      types:
+        - burkitts_lymphoma_clinical
+        - large_cell_anaplastic_lymphoma
+        - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
+    - name: Eye
+      types:
+        - malignant_melanoma_of_right_choroid
+    - name: Nervous
+      types:
+        - malignant_melanoma_of_right_choroid
+    - name: Neuroendocrine
+      types:
+        - carcinoid_tumor_of_lung
+        - malignant_carcinoid_tumor_of_lung
+        - malignant_carcinoid_tumor_of_bronchus

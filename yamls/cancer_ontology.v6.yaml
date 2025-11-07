@@ -1,0 +1,726 @@
+cancer_ontology:
+  description: An ontology of cancer types categorized by organ systems.
+  systems:
+    - name: Bone and Soft Tissue
+      sub_systems:
+        - name: Bone
+          types:
+            - malignant_neoplasm_of_skeletal_system
+            - primary_malignant_neoplasm_of_bone
+            - primary_malignant_neoplasm_of_bone_of_skull
+            - primary_malignant_neoplasm_of_long_bone_of_lower_limb
+            - primary_malignant_neoplasm_of_mandible
+            - primary_malignant_neoplasm_of_ribs_and/or_sternum_and/or_clavicle
+            - primary_malignant_neoplasm_of_upper_limb_bones_and_scapula
+            - primary_malignant_neoplasm_of_vertebral_column
+        - name: Soft Tissue
+          types:
+            - fibrohistiocytic_tumor
+            - gastrointestinal_stromal_tumor
+            - malignant_neoplasm_of_connective_and_soft_tissue_of_abdomen
+            - malignant_neoplasm_of_connective_and_soft_tissue_of_hip_and_lower_limb
+            - malignant_neoplasm_of_connective_and_soft_tissue_of_pelvis
+            - malignant_neoplasm_of_connective_and_soft_tissue_of_thorax
+            - malignant_neoplasm_of_connective_and_soft_tissue_of_upper_limb_and_shoulder
+            - malignant_neoplasm_of_soft_tissue
+            - malignant_tumor_of_soft_tissue_of_head,_face_and_neck
+            - malignant_tumor_of_soft_tissue_of_shoulder
+            - neoplasm_of_soft_tissue
+            - overlapping_malignant_neoplasm_of_soft_tissues
+            - overlapping_malignant_neoplasm_of_retroperitoneum_and_peritoneum
+            - primary_malignant_neoplasm_of_soft_tissues
+            - primary_malignant_neoplasm_of_soft_tissues_of_abdomen
+            - primary_malignant_neoplasm_of_soft_tissues_of_lower_limb
+            - primary_malignant_neoplasm_of_soft_tissues_of_pelvis
+            - primary_malignant_neoplasm_of_soft_tissues_of_upper_limb
+
+    - name: Breast
+      sub_systems: 
+        - name: Male Breast
+          types:
+            - malignant_neoplasm_of_male_breast
+            - malignant_neoplasm_of_nipple_and_areola_of_male_breast
+            - overlapping_malignant_neoplasm_of_male_breast
+            - primary_malignant_neoplasm_of_male_breast
+        - name: Right Breast
+          types:
+            - infiltrating_duct_carcinoma_of_right_female_breast
+            - primary_malignant_neoplasm_of_axillary_tail_of_right_female_breast
+        - name: Left Breast
+          types:
+            - infiltrating_duct_carcinoma_of_left_female_breast
+            - primary_malignant_neoplasm_of_axillary_tail_of_left_female_breast
+      types:
+        - carcinoma_of_breast
+        - carcinoma_of_breast__upper,_outer_quadrant
+        - carcinoma_of_central_portion_of_breast
+        - her2positive_carcinoma_of_breast
+        - infiltrating_ductal_carcinoma_of_upper_outer_quadrant_of_right_female_breast
+        - infiltrating_duct_carcinoma_of_breast
+        - infiltrating_duct_carcinoma_of_female_breast
+        - inflammatory_carcinoma_of_breast
+        - malignant_neoplasm_of_axillary_tail_of_female_breast
+        - malignant_neoplasm_of_central_part_of_female_breast
+        - malignant_neoplasm_of_female_breast
+        - malignant_neoplasm_of_lowerinner_quadrant_of_female_breast
+        - malignant_neoplasm_of_lowerouter_quadrant_of_female_breast
+        - malignant_neoplasm_of_nipple_and_areola_of_female_breast
+        - malignant_neoplasm_of_upperinner_quadrant_of_female_breast
+        - malignant_neoplasm_of_upperouter_quadrant_of_female_breast
+        - malignant_tumor_of_breast
+        - neoplasm_of_areola_of_female_breast
+        - neoplasm_of_breast
+        - neoplasm_of_nipple_of_female_breast
+        - neoplasm_of_skin_of_breast
+        - overlapping_malignant_neoplasm_of_female_breast
+        - primary_malignant_neoplasm_of_axillary_tail_of_breast
+        - primary_malignant_neoplasm_of_breast
+        - primary_malignant_neoplasm_of_breast_lower_inner_quadrant
+        - primary_malignant_neoplasm_of_breast_upper_outer_quadrant
+        - primary_malignant_neoplasm_of_central_portion_of_female_breast
+        - primary_malignant_neoplasm_of_female_breast
+        - primary_malignant_neoplasm_of_lower_inner_quadrant_of_female_breast
+        - primary_malignant_neoplasm_of_lower_outer_quadrant_of_female_breast
+        - primary_malignant_neoplasm_of_skin_of_breast
+        - primary_malignant_neoplasm_of_upper_inner_quadrant_of_female_breast
+        - primary_malignant_neoplasm_of_upper_outer_quadrant_of_female_breast
+
+    - name: Colorectal
+      types:
+        - malignant_neoplasm_of_colon_and/or_rectum
+        - malignant_tumor_of_ascending_colon
+        - malignant_tumor_of_cecum
+        - malignant_tumor_of_colon
+        - malignant_tumor_of_large_intestine
+        - malignant_tumor_of_rectosigmoid_junction
+        - malignant_tumor_of_rectum
+        - malignant_tumor_of_sigmoid_colon
+        - primary_malignant_neoplasm_of_ascending_colon
+        - primary_malignant_neoplasm_of_cecum
+        - primary_malignant_neoplasm_of_colon
+        - primary_malignant_neoplasm_of_descending_colon
+        - primary_malignant_neoplasm_of_large_intestine
+        - primary_malignant_neoplasm_of_rectosigmoid_junction
+        - primary_malignant_neoplasm_of_rectum
+        - primary_malignant_neoplasm_of_sigmoid_colon
+        - primary_malignant_neoplasm_of_transverse_colon
+
+    - name: Gastrointestinal
+      sub_systems:
+        - name: Stomach
+          types:
+            - malignant_neoplasm,_overlapping_lesion_of_stomach
+            - overlapping_malignant_neoplasm_of_stomach
+            - primary_malignant_neoplasm_of_cardia_of_stomach
+            - primary_malignant_neoplasm_of_fundus_of_stomach
+            - primary_malignant_neoplasm_of_stomach
+        - name: Small Intestines
+          types:
+            - malignant_tumor_of_ileum
+            - malignant_tumor_of_intestine
+            - malignant_tumor_of_jejunum
+            - primary_malignant_neoplasm_of_duodenum
+            - primary_malignant_neoplasm_of_ileum
+            - primary_malignant_neoplasm_of_intestinal_tract
+            - primary_malignant_neoplasm_of_jejunum
+            - primary_malignant_neoplasm_of_small_intestine
+        - name: Esophagus
+          types:
+            - adenocarcinoma_of_esophagus
+            - malignant_tumor_of_esophagus
+            - malignant_tumor_of_lower_third_of_esophagus
+            - primary_malignant_neoplasm_of_esophagus
+            - primary_malignant_neoplasm_of_lower_third_of_esophagus
+        - name: Biliary
+          types:
+            - cholangiocarcinoma_of_biliary_tract
+            - intrahepatic_bile_duct_carcinoma
+            - malignant_neoplasm_of_intrahepatic_gall_duct
+            - primary_malignant_neoplasm_of_extrahepatic_bile_duct
+            - primary_malignant_neoplasm_of_intrahepatic_bile_duct
+        - name: Pancreas
+          types:
+            - malignant_tumor_of_body_of_pancreas
+            - malignant_tumor_of_pancreas
+            - malignant_tumor_of_pancreatic_duct
+            - primary_malignant_neoplasm_of_head_of_pancreas
+            - primary_malignant_neoplasm_of_pancreas
+            - primary_malignant_neoplasm_of_pancreatic_duct
+            - primary_malignant_neoplasm_of_tail_of_pancreas
+        - name: Appendix
+          types:
+            - adenocarcinoma_of_appendix
+            - malignant_tumor_of_appendix
+            - neoplasm_of_appendix
+            - primary_malignant_neoplasm_of_appendix
+      types:
+        - mucinous_adenocarcinoma_of_gastrointestinal_tract
+        - neoplasm_of_digestive_system
+        - neoplasm_of_digestive_tract
+        - primary_malignant_neoplasm_of_gastrointestinal_tract
+
+    - name: Urinary
+      sub_systems:
+        - name: Bladder
+          types:
+            - carcinoma_of_bladder
+            - malignant_neoplasm_of_anterior_wall_of_urinary_bladder
+            - malignant_neoplasm_of_lateral_wall_of_urinary_bladder
+            - malignant_neoplasm,_overlapping_lesion_of_bladder
+            - malignant_tumor_of_trigone_of_urinary_bladder
+            - malignant_tumor_of_urinary_bladder
+            - malignant_tumor_of_vault_of_bladder
+            - neoplasm_of_bladder
+            - primary_malignant_neoplasm_of_ureter
+            - primary_malignant_neoplasm_of_bladder
+            - primary_malignant_neoplasm_of_renal_pelvis
+            - primary_malignant_neoplasm_of_dome_of_urinary_bladder
+            - primary_malignant_neoplasm_of_lateral_wall_of_urinary_bladder
+            - primary_malignant_neoplasm_of_posterior_wall_of_urinary_bladder
+            - primary_malignant_neoplasm_of_trigone_of_urinary_bladder
+            - primary_malignant_neoplasm_of_ureteric_orifice_of_urinary_bladder
+            - primary_malignant_neoplasm_of_urinary_bladder_neck
+            
+        - name: Kidney
+          types:
+            - clear_cell_carcinoma_of_kidney
+            - malignant_tumor_of_kidney
+            - neoplasm_of_left_kidney
+            - primary_malignant_neoplasm_of_kidney
+            - renal_cell_carcinoma
+      types:
+        - neoplasm_of_urinary_system
+        - primary_malignant_neoplasm_of_urinary_system
+        - primary_malignant_neoplasm_of_urethra
+        
+    - name: Gynecologic
+      sub_systems:
+        - name: Bilateral_Ovary
+          types:
+            - primary_malignant_neoplasm_of_both_ovaries
+        - name: Ovary
+          types:
+            - clear_cell_adenocarcinoma_of_ovary
+            - malignant_immature_teratoma_of_ovary
+            - malignant_tumor_of_ovary
+            - neoplasm_of_ovary
+            - primary_low_grade_serous_adenocarcinoma_of_ovary
+            - primary_malignant_neoplasm_of_both_ovaries
+            - primary_malignant_neoplasm_of_fallopian_tube
+            - primary_malignant_neoplasm_of_ovary
+            - serous_cystadenoma_borderline_malignancy_of_ovary
+        - name: Uterus
+          types:
+            - malignant_neoplasm_of_body_of_uterus
+            - malignant_neoplasm_of_corpus_uteri,_excluding_isthmus
+            - malignant_neoplasm_of_uterus
+            - malignant_neoplasm,_overlapping_lesion_of_body_of_uterus
+            - primary_malignant_neoplasm_of_body_of_uterus
+            - primary_malignant_neoplasm_of_isthmus_of_uterus
+            - primary_malignant_neoplasm_of_uterus
+            - endometrial_intraepithelial_neoplasia
+            - malignant_neoplasm_of_endometrium_of_corpus_uteri
+            - neoplasm_of_endometrium
+            - primary_malignant_neoplasm_of_endometrium
+      types:
+        - primary_malignant_neoplasm_of_parametrium
+        - primary_malignant_neoplasm_of_uterine_adnexa
+
+    - name: Hematologic
+      sub_systems:
+        - name: Leukemia
+          types:
+            - acute_lymphoid_leukemia
+            - acute_lymphoid_leukemia_in_remission
+            - acute_leukemia
+            - acute_leukemia_in_remission
+            - acute_megakaryoblastic_leukemia
+            - acute_monocytic_leukemia
+            - acute_myeloid_leukemia,_disease
+            - acute_myeloid_leukemia_in_remission
+            - acute_promyelocytic_leukemia,_fab_m3
+            - acute_promyelocytic_leukemia,_fab_m3,_in_remission
+            - atypical_chronic_myeloid_leukemia
+            - chronic_leukemia
+            - chronic_myeloid_leukemia
+            - chronic_myeloid_leukemia_in_remission
+            - chronic_myelomonocytic_leukemia
+            - megakaryocytic_leukemia
+            - monocytic_leukemia
+            - myeloid_leukemia
+            - myeloid_leukemia_in_remission
+            - plasma_cell_leukemia
+            - bcell_chronic_lymphocytic_leukemia
+            - chronic_lymphoid_leukemia,_disease
+            - chronic_lymphoid_leukemia_in_remission
+        - name: Myelomastocytic
+          types:
+            - iga_myeloma
+            - igg_myeloma
+            - malignant_mast_cell_tumor_clinical
+            - multiple_myeloma
+            - multiple_myeloma_in_remission
+            - mast_cell_malignancy
+            - mast_cell_malignancy_of_spleen
+            - mast_cell_neoplasm
+            - plasma_cell_neoplasm
+            - relapse_multiple_myeloma
+        
+
+    - name: Lymphoma
+      sub_systems:
+        - name: Non-Hodgkin
+          types:
+            - diffuse_nonhodgkins_lymphoma,_small_cell_clinical
+            - bcell_lymphoma_clinical
+            - diffuse_follicle_center_lymphoma
+            - diffuse_large_bcell_lymphoma_nodal/systemic_with_skin_involvement
+            - follicular_low_grade_bcell_lymphoma
+            - follicular_nonhodgkins_lymphoma
+            - follicular_nonhodgkins_lymphoma_diffuse_follicle_center_subtype_grade_1
+            - follicular_nonhodgkins_lymphoma,_large_cell_clinical
+            - follicular_nonhodgkins_lymphoma,_mixed_small_cleaved_cell_and_large_cell_clinical
+            - follicular_nonhodgkins_lymphoma,_small_cleaved_cell_clinical
+            - mantle_cell_lymphoma
+            - marginal_zone_lymphoma
+            - nonhodgkins_lymphoma_clinical
+            - nonhodgkins_lymphoma_of_extranodal_site
+            - primary_central_nervous_system_lymphoma
+            - primary_cutaneous_cd30+_large_tcell_lymphoma
+            - primary_cutaneous_tcell_lymphoma
+            - primary_mediastinal_thymic_large_bcell_lymphoma
+      types:       
+        - blastic_plasmacytoid_dendritic_cell_neoplasm
+        - classical_hodgkin_lymphoma
+        - cutaneous/peripheral_tcell_lymphoma
+        - hodgkin_lymphoma,_nodular_lymphocyte_predominance_clinical
+        - lymphocyterich_classical_hodgkin_lymphoma
+        - malignant_lymphoma
+        - malignant_lymphoma_of_extranodal_and/or_solid_organ_site
+        - malignant_lymphoma_of_intraabdominal_lymph_nodes
+        - malignant_lymphoma_of_intrathoracic_lymph_nodes
+        - malignant_lymphoma_of_lymph_nodes_of_axilla_and/or_upper_limb
+        - malignant_lymphoma_of_lymph_nodes_of_head,_face_and/or_neck
+        - malignant_lymphoma_of_lymph_nodes_of_inguinal_region_and/or_lower_limb
+        - malignant_lymphoma_of_lymph_nodes_of_multiple_sites
+        - malignant_lymphoma_of_spleen
+        - malignant_tumor_of_lymphoid_hemopoietic_and_related_tissue
+        - nodular_lymphoma
+        - nodular_lymphoma_of_extranodal_and/or_solid_organ_site
+        - nodular_lymphoma_of_intraabdominal_lymph_nodes
+        - nodular_lymphoma_of_intrapelvic_lymph_nodes
+        - nodular_lymphoma_of_lymph_nodes_of_head,_face_and_neck
+        - nodular_lymphoma_of_lymph_nodes_of_multiple_sites
+
+    - name: Nervous
+      sub_systems:
+        - name: Eye
+          types:
+            - malignant_neoplasm_of_eye
+            - malignant_tumor_of_choroid
+            - malignant_tumor_of_ciliary_body
+            - primary_malignant_neoplasm_of_choroid
+            - primary_malignant_neoplasm_of_ciliary_body_primary
+            - primary_malignant_neoplasm_of_cornea_primary
+            - primary_malignant_neoplasm_of_eye
+            - primary_malignant_neoplasm_of_orbit
+            - primary_malignant_neoplasm_of_retina_primary
+        - name: Meninges
+          types:
+            - neoplasm_of_meninges
+            - primary_malignant_neoplasm_of_cerebral_meninges
+            - primary_malignant_neoplasm_of_meninges
+            - primary_malignant_neoplasm_of_spinal_meninges
+        - name: Brain
+          types:
+            - malignant_neoplasm_of_cerebrum_excluding_lobes_and_ventricles
+            - malignant_neoplasm,_overlapping_lesion_of_brain
+            - neoplasm_of_brain
+            - primary_malignant_neoplasm_of_brain
+            - primary_malignant_neoplasm_of_cerebellum
+            - primary_malignant_neoplasm_of_frontal_lobe
+            - primary_malignant_neoplasm_of_parietal_lobe
+            - primary_malignant_neoplasm_of_temporal_lobe
+            - primary_malignant_neoplasm_of_cerebral_ventricle
+            - primary_malignant_neoplasm_of_cerebrum
+      types:      
+        - malignant_neoplasm_of_peripheral_nerves_of_head,_face_and_neck
+        - primary_malignant_neoplasm_of_central_nervous_system
+        - primary_malignant_neoplasm_of_cranial_nerve
+
+    - name: Prostate
+      types:
+        - adenocarcinoma_of_prostate
+        - malignant_tumor_of_prostate
+        - metastasis_from_malignant_tumor_of_prostate
+        - prostatic_intraepithelial_neoplasia
+        - primary_malignant_neoplasm_of_prostate
+        - recurrent_malignant_neoplasm_of_prostate
+
+    - name: Skin
+      sub_systems:
+        - name: Basal Cell Carcinoma
+          types:
+            - basal_cell_carcinoma_of_anterior_chest
+            - basal_cell_carcinoma_of_back
+            - basal_cell_carcinoma_of_chest_wall
+            - basal_cell_carcinoma_of_chin
+            - basal_cell_carcinoma_of_ear
+            - basal_cell_carcinoma_of_eyelid
+            - basal_cell_carcinoma_of_face
+            - basal_cell_carcinoma_of_forehead
+            - basal_cell_carcinoma_of_lower_back
+            - basal_cell_carcinoma_of_lower_extremity
+            - basal_cell_carcinoma_of_lower_eyelid
+            - basal_cell_carcinoma_of_neck
+            - basal_cell_carcinoma_of_nose
+            - basal_cell_carcinoma_of_scalp
+            - basal_cell_carcinoma_of_skin
+            - basal_cell_carcinoma_of_skin_of_lip
+            - basal_cell_carcinoma_of_temple
+            - basal_cell_carcinoma_of_truncal_skin
+            - basal_cell_carcinoma_of_upper_back
+            - basal_cell_carcinoma_of_upper_extremity
+            - basal_cell_carcinoma_of_upper_eyelid
+            - basal_cell_carcinoma__primary
+            - primary_basal_cell_carcinoma_of_left_eyelid
+            - primary_basal_cell_carcinoma_of_right_eyelid
+            - superficial_basal_cell_carcinoma
+        - name: Melanoma
+          types:
+            - malignant_melanoma
+            - malignant_melanoma_of_back
+            - malignant_melanoma_of_ear_and/or_external_auditory_canal
+            - malignant_melanoma_of_head_and_neck
+            - malignant_melanoma_of_hip
+            - malignant_melanoma_of_lip
+            - malignant_melanoma_of_right_choroid #non-cutaneous
+            - malignant_melanoma_of_lower_limb
+            - malignant_melanoma_of_scalp_and/or_neck
+            - malignant_melanoma_of_skin
+            - malignant_melanoma_of_skin_of_breast
+            - malignant_melanoma_of_skin_of_eyelid
+            - malignant_melanoma_of_skin_of_face
+            - malignant_melanoma_of_skin_of_lip
+            - malignant_melanoma_of_skin_of_lower_limb
+            - malignant_melanoma_of_skin_of_nose
+            - malignant_melanoma_of_skin_of_shoulder
+            - malignant_melanoma_of_skin_of_trunk
+            - malignant_melanoma_of_skin_of_upper_limb
+            - malignant_melanoma_of_thigh
+            - malignant_melanoma_of_trunk
+            - malignant_melanoma_of_vulva #non-cutaneous
+            - overlapping_malignant_melanoma_of_skin
+        - name: Squamous Cell Carcinoma
+          types:
+            - intraepidermal_squamous_carcinoma_of_arm
+            - intraepidermal_squamous_carcinoma_of_ear
+            - intraepidermal_squamous_carcinoma_of_scalp
+            - intraepidermal_squamous_carcinoma_of_trunk
+            - metastatic_squamous_cell_carcinoma
+            - squamous_cell_carcinoma
+            - squamous_cell_carcinoma_of_hand
+            - squamous_cell_carcinoma_of_shoulder
+            - squamous_cell_carcinoma_of_skin
+            - squamous_cell_carcinoma_of_skin_of_ear
+            - squamous_cell_carcinoma_of_skin_of_face
+            - squamous_cell_carcinoma_of_skin_of_lower_extremity
+            - squamous_cell_carcinoma_of_upper_extremity
+            - squamous_cell_carcinoma_of_skin_of_lower_lip
+            - squamous_cell_carcinoma_of_skin_of_upper_lip
+            - squamous_cell_carcinoma_of_eyelid
+            - squamous_cell_carcinoma_of_head_and_neck
+            - squamous_cell_carcinoma_of_nose
+            - squamous_cell_carcinoma_of_scalp
+            - squamous_cell_carcinoma_of_skin_of_neck
+      types: # General skin types that don't fit specific sub-categories
+        - malignant_neoplasm_of_skin
+        - malignant_neoplasm_of_skin_of_forearm
+        - malignant_neoplasm_of_skin_of_lower_limb
+        - malignant_neoplasm_of_skin_of_trunk
+        - primary_malignant_neoplasm_of_skin_of_lip
+        - microcystic_adnexal_carcinoma
+        - neoplasm_of_skin
+        - neoplasm_of_skin_of_lower_leg
+        - overlapping_malignant_neoplasm_of_skin
+        - primary_malignant_neoplasm_of_skin
+        - primary_malignant_neoplasm_of_skin_of_lower_limb
+        - primary_malignant_neoplasm_of_skin_of_trunk
+        - primary_malignant_neoplasm_of_skin_of_upper_limb
+        - malignant_neoplasm_of_scalp
+        - malignant_neoplasm_of_scalp_and/or_skin_of_neck
+        - malignant_neoplasm_of_skin_of_ear_and_external_auditory_canal
+        - malignant_neoplasm_of_skin_of_face
+        - malignant_neoplasm_of_skin_of_nose_external
+        - carcinoma_of_skin_of_head/neck
+        - neoplasm_of_skin_of_cheek
+        - neoplasm_of_skin_of_scalp
+        - primary_malignant_neoplasm_of_skin_head_and_neck
+        - primary_malignant_neoplasm_of_skin_of_ear
+        - primary_malignant_neoplasm_of_skin_of_eyelid
+        - primary_malignant_neoplasm_of_skin_of_face
+        - malignant_tumor_of_eyelid
+        - sebaceous_adenocarcinoma_of_eyelid
+        - primary_malignant_neoplasm_of_vermilion_border_of_lip
+
+    - name: Testis
+      types:
+        - primary_malignant_neoplasm_of_testis
+    - name: LNET # Lung Neuroendocrine tumors
+      types:
+        - carcinoid_tumor_of_lung
+        - malignant_carcinoid_tumor_of_bronchus
+        - malignant_carcinoid_tumor_of_lung
+    - name: Uveal Melanoma
+      types:
+        - malignant_melanoma_of_right_choroid
+
+    - name: Neuroendocrine
+      sub_systems:
+        - name: Pituitary
+          types:
+            - neoplasm_of_pituitary_gland
+            - primary_malignant_neoplasm_of_pituitary_gland
+        - name: GNET # Gastrointestinal Neuroendocrine
+          types:
+            - neuroendocrine_neoplasm_of_gastrointestinal_tract
+            - carcinoid_tumor_of_stomach
+            - carcinoid_tumor_of_intestine
+            - carcinoid_tumor_of_large_intestine
+            - carcinoid_tumor_of_small_intestine
+            - carcinoid_tumor_of_ileum
+            - malignant_carcinoid_tumor_of_colon
+            - malignant_carcinoid_tumor_of_ileum
+            - malignant_carcinoid_tumor_of_small_intestine
+            - malignant_neuroendocrine_tumor_of_duodenum
+            - malignant_neuroendocrine_tumor_of_ileum
+            - malignant_neuroendocrine_tumor_of_small_intestine
+            - primary_malignant_neuroendocrine_neoplasm_of_duodenum
+            - primary_malignant_neuroendocrine_neoplasm_of_ileum
+            - primary_malignant_neuroendocrine_neoplasm_of_small_intestine
+        - name: PNET # Pancreatic Neuroendocrine
+          types:
+            - primary_malignant_neoplasm_of_islets_of_langerhans
+        - name: Pheochromocytoma
+          types:
+            - primary_malignant_neoplasm_of_adrenal_gland
+            - primary_malignant_neoplasm_of_adrenal_medulla
+        - name: ANET # Appendix Neuroendocrine
+          types:
+            - carcinoid_tumor_of_appendix
+            - neuroendocrine_carcinoma_of_appendix
+      types:
+        - carcinoid_tumor
+        - malignant_carcinoid_tumor
+        - metastatic_carcinoid_tumor
+        - neuroendocrine_carcinoma
+        - neuroendocrine_tumor
+        - malignant_neuroendocrine_tumor
+        - malignant_poorly_differentiated_neuroendocrine_carcinoma
+        - medullary_thyroid_carcinoma # medullary thyroid is a neuroendocrine tumor
+    - name: Thymus
+      types:
+        - primary_malignant_neoplasm_of_thymus
+    - name: Endocrine
+      sub_systems:
+        - name: Thyroid
+          types:
+            - follicular_thyroid_carcinoma
+            - malignant_tumor_of_thyroid_gland
+            - papillary_thyroid_carcinoma
+            - primary_malignant_neoplasm_of_thyroid_gland
+        - name: Parathyroid
+          types:
+            - primary_malignant_neoplasm_of_parathyroid_gland
+      types:
+        - primary_malignant_neoplasm_of_endocrine_gland
+
+    - name: Liver # Most cases coocur w/ Biliary
+      types:
+        - liver_cell_carcinoma
+        - malignant_neoplasm_of_liver
+        - neoplasm_of_liver
+        - primary_malignant_neoplasm_of_liver
+        
+    - name: HN # Non Viral
+      sub_systems:
+        - name: Oral Cavity
+          types:
+            - squamous_cell_carcinoma_of_tongue
+            - overlapping_malignant_neoplasm_of_tongue
+            - carcinomainsitu_of_oral_mucosa
+            - malignant_neoplasm,_overlapping_lesion_of_tongue
+            - malignant_tumor_of_tongue
+            - primary_malignant_neoplasm_of_border_of_tongue
+            - primary_malignant_neoplasm_of_buccal_mucosa
+            - primary_malignant_neoplasm_of_floor_of_mouth
+            - primary_malignant_neoplasm_of_hard_palate
+            - primary_malignant_neoplasm_of_lower_gum
+            - primary_malignant_neoplasm_of_oral_cavity
+            - primary_malignant_neoplasm_of_tongue
+        - name: Hypopharyngeal
+          types:
+            - malignant_tumor_of_aryepiglottic_fold__laryngeal_aspect
+            - malignant_tumor_of_supraglottis
+            - primary_malignant_neoplasm_of_hypopharyngeal_aspect_of_aryepiglottic_fold
+            - primary_malignant_neoplasm_of_larynx
+            - primary_malignant_neoplasm_of_subglottis
+            - primary_malignant_neoplasm_of_supraglottis
+      types:
+        - primary_malignant_neoplasm_of_nasal_cavity
+        - malignant_tumor_of_nasal_cavity
+        - malignant_tumor_of_maxillary_sinus
+        - tumor_of_salivary_gland
+        - malignant_neoplasm_of_nasal_cavities,_middle_ear_and_accessory_sinuses
+        - malignant_tumor_of_ear,_nose_and_throat
+        - neoplasm_of_accessory_sinus
+        - primary_malignant_neoplasm_of_ethmoidal_sinus
+        - primary_malignant_neoplasm_of_maxillary_sinus
+        - primary_malignant_neoplasm_of_parotid_gland
+        - malignant_tumor_of_parotid_gland
+
+    - name: Viral
+      sub_systems:
+        - name: Anus #HPV
+          types:
+            - malignant_tumor_of_anus
+            - malignant_tumor_of_anal_canal
+            - primary_malignant_neoplasm_of_anal_canal
+            - primary_malignant_neoplasm_of_anus
+            - overlapping_malignant_neoplasm_of_rectum,_anus_and_anal_canal
+            - squamous_cell_carcinoma_of_anal_margin
+            - malignant_neoplasm_of_rectum,_rectosigmoid_junction_and_anus
+            - malignant_neoplasm,_overlapping_lesion_of_rectum,_anus_and_anal_canal
+        - name: Cervix
+          types:
+            - cervical_intraepithelial_neoplasia_grade_1
+            - cervical_intraepithelial_neoplasia_grade_2
+            - malignant_neoplasm,_overlapping_lesion_of_cervix_uteri
+            - malignant_tumor_of_cervix
+            - primary_malignant_neoplasm_of_endocervix
+            - primary_malignant_neoplasm_of_uterine_cervix
+        - name: CIN #HPV
+          types:
+            - cervical_intraepithelial_neoplasia_grade_1
+            - cervical_intraepithelial_neoplasia_grade_2
+        - name: Oropharynx #HPV
+          types:
+            - carcinoma_of_base_of_tongue
+            - malignant_tumor_of_base_of_tongue
+            - malignant_tumor_of_oropharynx
+            - malignant_tumor_of_tonsil
+            - primary_malignant_neoplasm_of_base_of_tongue
+            - primary_malignant_neoplasm_of_lateral_wall_of_oropharynx
+            - primary_malignant_neoplasm_of_oropharynx
+            - primary_malignant_neoplasm_of_tonsil
+            - primary_malignant_neoplasm_of_tonsillar_fossa
+            - primary_malignant_neoplasm_of_tonsillar_pillar
+            - primary_squamous_cell_carcinoma_of_palatine_tonsil
+            - primary_malignant_neoplasm_of_pharynx
+            - malignant_tumor_of_pharynx
+        - name: Vagina #HPV
+          types:
+            - malignant_neoplasm_of_labia_majora
+            - malignant_neoplasm_of_labia_minora
+            - malignant_neoplasm,_overlapping_lesion_of_vulva
+            - malignant_tumor_of_vulva
+            - overlapping_malignant_neoplasm_of_vulva
+            - primary_malignant_neoplasm_of_labia_majora
+            - primary_malignant_neoplasm_of_labia_minora
+            - primary_malignant_neoplasm_of_vagina
+            - primary_malignant_neoplasm_of_vulva
+            - squamous_cell_carcinoma_of_vulva
+            - vaginal_intraepithelial_neoplasia_grade_1
+            - vulval_intraepithelial_neoplasia_grade_1
+            - vulval_intraepithelial_neoplasia_grade_2
+        - name: EBV #Burkitts Lymphoma and Nasopharynx
+          types:
+            - burkitts_lymphoma_clinical
+            - malignant_tumor_of_nasopharynx
+            - primary_malignant_neoplasm_of_nasopharynx
+      types:
+        - carcinoma_of_penis
+
+    - name: Lung
+      types:
+        - adenocarcinoma_of_right_lung
+        - malignant_neoplasm_of_lower_lobe_of_lung
+        - malignant_neoplasm_of_middle_lobe,_bronchus_or_lung
+        - malignant_neoplasm_of_middle_lobe_of_lung
+        - malignant_neoplasm_of_right_upper_lobe_of_lung
+        - malignant_neoplasm_of_upper_lobe,_bronchus_or_lung
+        - malignant_neoplasm,_overlapping_lesion_of_bronchus_and_lung
+        - malignant_tumor_of_lung
+        - overlapping_malignant_neoplasm_of_bronchus_and_lung
+        - primary_adenocarcinoma_of_lung
+        - primary_malignant_neoplasm_of_bronchus_of_left_upper_lobe
+        - primary_malignant_neoplasm_of_left_upper_lobe_of_lung
+        - primary_malignant_neoplasm_of_lower_lobe,_bronchus_or_lung
+        - primary_malignant_neoplasm_of_middle_lobe,_bronchus_or_lung
+        - primary_malignant_neoplasm_of_upper_lobe,_bronchus_or_lung
+        - neoplasm_of_respiratory_tract
+        - primary_malignant_neoplasm_of_bronchus
+        - primary_malignant_neoplasm_of_respiratory_tract
+        - primary_malignant_neoplasm_of_main_bronchus
+        - tumor_of_respiratory_system
+        - malignant_neoplasm_of_lower_respiratory_tract
+
+    - name: Pleura
+      types:
+        - mesothelioma_malignant,_clinical_disorder
+        - malignant_mesothelioma_of_pleura
+        - primary_malignant_neoplasm_of_pleura
+
+    - name: Environmental Lymphoma
+      types:
+        - large_cell_anaplastic_lymphoma
+        - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
+        
+    - name: Unspecific
+      types:
+        - malignant_neoplasm_of_canthus
+        - malignant_neoplasm_of_lower_eyelid
+        - primary_malignant_neoplasm_of_posterior_mediastinum
+        - malignant_neoplasm_of_gastrointestinal_tract
+        - disseminated_malignancy_of_unknown_primary
+        - malignant_adenomatous_neoplasm
+        - malignant_neoplasm_of_abdomen
+        - malignant_neoplastic_disease
+        - malignant_tumor_of_pelvis
+        - primary_malignant_neoplasm_of_the_peritoneum
+        - primary_malignant_neoplasm_of_intraabdominal_organs
+        - malignant_neoplasm_of_upper_limb
+        - malignant_tumor_of_unknown_origin
+        - multiple_endocrine_neoplasia,_type_1
+        - neoplasm_by_body_site
+        - neoplastic_disease
+        - posttransplant_neoplasia
+        - primary_malignant_neoplasm
+        - primary_malignant_neoplasm_of_abdomen
+        - primary_malignant_neoplasm_of_illdefined_site
+        - primary_malignant_neoplasm_of_trunk
+        - primary_malignant_neoplasm_of_unspecified_site_clinical
+        - malignant_immunoproliferative_disease_clinical
+        - malignant_neoplasm_of_genital_structure
+        - neoplasm_affecting_hematopoietic_structure
+        - primary_malignant_neoplasm_of_upper_limb
+        - recurrent_malignant_neoplastic_disease
+        - neoplasm_of_intraabdominal_lymph_nodes
+        - neoplasm_of_intrapelvic_lymph_node
+        - neoplasm_of_intrathoracic_lymph_nodes
+        - neoplasm_of_lymph_node
+        - leukemia
+        - neoplasm_of_lymph_node_of_lower_limb
+        - neoplasm_of_lymph_nodes_of_upper_limb
+        - lymphoid_leukemia
+        - lymphoid_leukemia_in_remission
+        - malignant_tumor_of_face
+        - malignant_tumor_of_head_and_neck
+        - malignant_tumor_of_neck
+        - primary_malignant_neoplasm_of_head
+        - malignant_tumor_of_lip
+        - malignant_neoplasm_of_thorax
+        - malignant_tumor_of_female_genital_organ
+        - primary_malignant_neoplasm_of_female_genital_organ
+        - estrogen_receptor_negative_neoplasm
+        - estrogen_receptor_positive_tumor

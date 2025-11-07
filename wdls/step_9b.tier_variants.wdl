@@ -9,6 +9,7 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 workflow STEP_9B_TIER_VARIANTS {
   input {
     String step_9_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/sharded_vcfs"
+    File genes_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/gencode.v47.autosomal.protein_coding.genes.list"
     File subjects_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cohorts/ufc_subjects.aou.list"
     String step_9b_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/"
   }
@@ -267,6 +268,39 @@ workflow STEP_9B_TIER_VARIANTS {
   #    output_dir = step_9b_output_dir
   #}
 
+  # gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv
+  #call make_group_file as make_group_file_001 {
+  #  input:
+  #    tier1 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv",
+  #    tier2 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier2_001.tsv",
+  #    tier3 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_001.tsv",
+  #    tier4 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_001.tsv",
+  #    tier5 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier5_001.tsv",
+  #    tier6 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier6_001.tsv",
+  #    af = "001",
+  #    genes_list = genes_list
+  #}
+  #call make_group_file as make_group_file_0001 {
+  #  input:
+  #    tier1 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_0001.tsv",
+  #    tier2 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier2_0001.tsv",
+  #    tier3 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_0001.tsv",
+  #    tier4 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_0001.tsv",
+  #    tier5 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier5_0001.tsv",
+  #    tier6 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier6_0001.tsv",
+  #    af = "0001",
+  #    genes_list = genes_list
+  #}
+  #call Tasks.copy_file_to_storage as copy7_001{
+  #  input:
+  #    text_file = make_group_file_001.out1,
+  #    output_dir = step_9b_output_dir
+  #}
+  #call Tasks.copy_file_to_storage as copy7_0001{
+  #  input:
+  #    text_file = make_group_file_0001.out1,
+  #    output_dir = step_9b_output_dir
+  #}
   #call make_group_file as make_group_file_001 {
   #  input:
   #    tier1 = Tier1_Concat_001.out2,
@@ -298,6 +332,7 @@ task make_group_file {
     File tier5
     File tier6
     String af
+    File genes_list
   }
   command <<<
   set -euxo pipefail
@@ -311,7 +346,9 @@ task make_group_file {
 
   # Dictionary: gene -> {variant: tier_label}
   gene_to_variants = defaultdict(dict)
-  print("chek1")
+
+  with open("~{genes_list}", "r") as f:
+      all_genes = {line.strip() for line in f if line.strip()}
 
   # Process each tier file (highest first)
   for rank, tier_file in enumerate(tiers, start=1):
@@ -326,11 +363,12 @@ task make_group_file {
           # Only assign if not already labeled by a higher-priority tier
           if var not in gene_to_variants[gene]:
               gene_to_variants[gene][var] = tier_label
-  print("check2")
 
   # --- Write output ---
   with open("ufc_~{af}.groupfile", "w") as out:
       for gene, variants in sorted(gene_to_variants.items()):
+          if gene not in all_genes:
+            continue
           vars_sorted = sorted(variants.keys())
           annos = [variants[v] for v in vars_sorted]
           out.write(f"{gene}\tvar\t{' '.join(vars_sorted)}\n")
@@ -489,7 +527,7 @@ task T0_Filter_Tier0 {
   import pandas as pd
 
   df = pd.read_csv("tmp0.txt",sep='\t',index_col=False)
-  df = df[df['CLINVAR'] == 'Uncertain_significance']
+  df = df[(df['CLINVAR'] == 'Uncertain_significance')]
   df[["GENE",'ID']].drop_duplicates().to_csv("filtered_variants.tier0.txt",header=False,index=False,sep='\t')
   CODE
   >>>
@@ -523,7 +561,6 @@ task T1_Filter_Tier1 {
   df = df[df['BIOTYPE'] == "protein_coding"]
   df = df[~df['CLINVAR'].str.contains('benign',case=False,na=False)]
   df = df[((df['IMPACT'] == 'HIGH') & (df['LOFTEE'] == "HC"))]
-  #df = df[((df['IMPACT'] == 'HIGH') & (df['LOFTEE'] == "HC")) | (df['CLINVAR'] == "Pathogenic") | (df['CLINVAR'] == "Likely_pathogenic") | (df['CLINVAR'] == "Pathogenic/Likely_pathogenic")]
   df[['GENE','ID']].drop_duplicates().to_csv("filtered_variants.txt",header=False,index=False,sep='\t')
   CODE
   >>>
@@ -549,8 +586,8 @@ task T2_Filter_Tier2 {
   # Get necessary information
   # Extract necessary VEP + SpliceAI info
   bcftools view --include ID==@~{rare_variants} ~{vcf} -G -O z -o tmp.vcf.gz
-  echo -e 'GENE\tID\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\tLOFTEE\n' > tmp0.txt
-  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\t%LoF\n' -d >> tmp0.txt
+  echo -e 'GENE\tID\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\tLOFTEE\tCLINVAR\n' > tmp0.txt
+  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\t%LoF\t%clinvar_CLNSIG\n' -d >> tmp0.txt
 
   python3 <<CODE
   import pandas as pd
@@ -561,7 +598,8 @@ task T2_Filter_Tier2 {
   df[score_cols] = df[score_cols].apply(pd.to_numeric, errors="coerce")
 
   # Filter: max score > 0.5 and matching gene symbol
-  df_filtered = df[(df[score_cols].max(axis=1) >= 0.5) | (df['LOFTEE'] == "LC")]
+  df = df[~df['CLINVAR'].str.contains('benign',case=False,na=False)]
+  df_filtered = df[(df[score_cols].max(axis=1) >= 0.5) | (df['LOFTEE'] == "LC") | ((df[score_cols].max(axis=1) >= 0.2) & (df['CLINVAR'].isin(['Pathogenic','Likely_pathogenic','Pathogenic/Likely_pathogenic'])))]
   df_filtered = df_filtered[df_filtered['SPLICE_GENE'] != "."]
 
   # Write filtered results back

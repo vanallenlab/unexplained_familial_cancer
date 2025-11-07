@@ -8,7 +8,11 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow SAIGE_GENE {
   input {
-    String step_9_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/sharded_vcfs"
+    File rare_variants_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/rare_001.tsv"
+    File rare_variants_0001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/rare_0001.tsv"
+    File group_file_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/ufc_001.groupfile"
+    File group_file_0001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/ufc_0001.groupfile"
+    String step_8_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_8_FILTER_TO_TP_VARIANTS/sharded_vcfs"
     File subjects_list
     String cancer_type
     File ld_pruned_vcf = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_11_GENETIC_RELATEDNESS/ufc_1000G_snps.ld_pruned.vcf.gz"
@@ -16,15 +20,15 @@ workflow SAIGE_GENE {
     File sample_data
     File aou_phenotypes = "gs://fc-secure-d21aa6b0-1d19-42dc-93e3-42de3578da45/dfci-g2c-inputs/phenotypes/dfci-g2c.aou.phenos.tsv.gz"
     File non_aou_phenotypes = "gs://dfci-g2c-inputs/phenotypes/dfci-g2c.non_aou.phenos.tsv.gz"
-    File prs_scores = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/breast.PGS003380.pgs"
-    String analysis_3_saige_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results_with_prs/"
+    String analysis_3_saige_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/"
     String single_sex_analysis
+    File? pgs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/breast.PGS000783.pgs"
   }
-
+  File ppv_missense_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5_GSEA/" + cancer_type + ".num_ppv_missense.tsv"
   # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
   call gather_vcfs {
     input:
-      dir = step_9_output_dir
+      dir = step_8_output_dir
   }
 
   call sort_vcf_list {
@@ -32,101 +36,45 @@ workflow SAIGE_GENE {
       unsorted_vcf_list = gather_vcfs.vcf_list
   }
 
-  Int negative_shards = 0
+  Int negative_shards = 2900
   
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     # Filter VCF to Low Frequency Variants, variants found w/in cohort, and removed INFO
-    call process_vcf_part1 {
+    call process_vcf as process_vcf_001{
       input:
         vcf = sort_vcf_list.vcf_arr[i],
-        subjects_list = subjects_list,
+        sample_list = subjects_list,
+        rare_variants = rare_variants_001
     }
-
-    # Get the important variants to keep around 
-    call make_group_file_part1 as make_group_file_part1_001 {
+    call process_vcf as process_vcf_0001{
       input:
-        vcf = process_vcf_part1.out1,
-        autosomal_gene_file = autosomal_gene_file
-    }
-
-    # Get the important variants to keep around
-    call make_group_file_part1 as make_group_file_part1_0001 {
-      input:
-        vcf = process_vcf_part1.out2,
-        autosomal_gene_file = autosomal_gene_file
-    }
-    
-    # Clean the vcf to only variants of interest
-    call process_vcf_part2 as process_vcf_part2_001 {
-      input:
-        vcf = process_vcf_part1.out1,
-        important_variants = make_group_file_part1_001.important_variants
-    }
-
-    # Clean the vcf to only variants of interest
-    call process_vcf_part2 as process_vcf_part2_0001 {
-      input:
-        vcf = process_vcf_part1.out2,
-        important_variants = make_group_file_part1_0001.important_variants
+        vcf = sort_vcf_list.vcf_arr[i],
+        sample_list = subjects_list,
+        rare_variants = rare_variants_0001
     }
   }
-  #Array[File] groupfiles = make_group_file_part2.group_file
   
-  call concatenateFiles as concatenateFiles_001{
-    input:
-      files = make_group_file_part1_001.vep_output,
-      callset_name = "groupfile.part1.txt"
-  }
-  call concatenateFiles as concatenateFiles_0001 {
-    input:
-      files = make_group_file_part1_0001.vep_output,
-      callset_name = "groupfile.part1.txt"
-  }
-
-  call make_group_file_part2 as make_group_file_part2_001 {
-    input:
-      split_vep_output = concatenateFiles_001.out,
-      cancer_type = cancer_type,
-      freq = "001"
-  }
- 
-  call make_group_file_part2 as make_group_file_part2_0001 {
-    input:
-      split_vep_output = concatenateFiles_0001.out,
-      cancer_type = cancer_type,
-      freq = "0001"
-  }
-
-  call Tasks.copy_file_to_storage as copy0{
-    input:
-      text_file = make_group_file_part2_001.group_file,
-      output_dir = analysis_3_saige_dir
-  }
-  call Tasks.copy_file_to_storage as copy1{
-    input:
-      text_file = make_group_file_part2_0001.group_file,
-      output_dir = analysis_3_saige_dir
-  } 
   call get_covariates {
     input:
       sample_data = sample_data,
       aou_phenotypes = aou_phenotypes,
       non_aou_phenotypes = non_aou_phenotypes,
       subjects_list = subjects_list,
-      prs_scores = prs_scores
+      pgs_file = pgs_file,
+      ppv_missense_file = ppv_missense_file
   }
 
   call ConcatVcfs as ConcatVcfs_001 {
     input:
-      vcfs = process_vcf_part2_001.output_vcf, 
-      vcf_idxs = process_vcf_part2_001.output_vcf_idx,
+      vcfs = process_vcf_001.output_vcf, 
+      vcf_idxs = process_vcf_001.output_vcf_idx,
       callset_name = cancer_type
   } 
 
   call ConcatVcfs as ConcatVcfs_0001 {
     input:
-      vcfs = process_vcf_part2_0001.output_vcf,
-      vcf_idxs = process_vcf_part2_0001.output_vcf_idx,
+      vcfs = process_vcf_0001.output_vcf,
+      vcf_idxs = process_vcf_0001.output_vcf_idx,
       callset_name = cancer_type
   }
 
@@ -161,7 +109,7 @@ workflow SAIGE_GENE {
       vcf_idx = ConcatVcfs_001.merged_vcf_idx,
       sampleFile = subjects_list,
       rda = saige_gene_step1.rda, 
-      group_file = make_group_file_part2_001.group_file,
+      group_file = group_file_001,
       varianceRatio = saige_gene_step1.varianceRatio,
       sparseGRMFile = saige_gene_step0.sparseGRMFile,
       sparseGRMSampleIDFile = saige_gene_step0.sparseGRMSampleIDFile
@@ -174,7 +122,7 @@ workflow SAIGE_GENE {
       vcf_idx = ConcatVcfs_001.merged_vcf_idx,
       sampleFile = subjects_list,
       rda = saige_gene_step1.rda,
-      group_file = make_group_file_part2_001.group_file,
+      group_file = group_file_001,
       varianceRatio = saige_gene_step1.varianceRatio,
       sparseGRMFile = saige_gene_step0.sparseGRMFile,
       sparseGRMSampleIDFile = saige_gene_step0.sparseGRMSampleIDFile
@@ -187,7 +135,7 @@ workflow SAIGE_GENE {
       vcf_idx = ConcatVcfs_0001.merged_vcf_idx,
       sampleFile = subjects_list,
       rda = saige_gene_step1.rda,
-      group_file = make_group_file_part2_0001.group_file,
+      group_file = group_file_0001,
       varianceRatio = saige_gene_step1.varianceRatio,
       sparseGRMFile = saige_gene_step0.sparseGRMFile,
       sparseGRMSampleIDFile = saige_gene_step0.sparseGRMSampleIDFile
@@ -200,7 +148,7 @@ workflow SAIGE_GENE {
       vcf_idx = ConcatVcfs_0001.merged_vcf_idx,
       sampleFile = subjects_list,
       rda = saige_gene_step1.rda,
-      group_file = make_group_file_part2_0001.group_file,
+      group_file = group_file_0001,
       varianceRatio = saige_gene_step1.varianceRatio,
       sparseGRMFile = saige_gene_step0.sparseGRMFile,
       sparseGRMSampleIDFile = saige_gene_step0.sparseGRMSampleIDFile
@@ -248,114 +196,6 @@ task copy_to_storage {
   runtime {
     docker: "vanallenlab/g2c_pipeline"
     preepmtible: 3
-  }
-}
-
-task filter_SV_VCF {
-  input {
-    File sv_vcf
-    File subjects_list
-  }
-  command <<<
-  set -euxo pipefail
-
-  # Subset to samples in subjects_list
-  bcftools view -S ~{subjects_list} ~{sv_vcf} -Oz -o tmp1.vcf.gz
-  bcftools index -t tmp1.vcf.gz
-
-  # Filter by AF <= 0.01 and AC > 0
-  bcftools view -i 'AF <= 0.01 && AC > 0' tmp1.vcf.gz -Oz -o tmp2.vcf.gz
-  bcftools index -t tmp2.vcf.gz
-
-  # Extract header
-  bcftools view -h tmp2.vcf.gz > header.vcf
-
-  # Extract body and rewrite ALT with END
-  bcftools view -H tmp2.vcf.gz \
-    | awk 'BEGIN{OFS="\t"} {
-        alt=$5;
-        end=".";
-        if ($8 ~ /END=[0-9]+/) {
-            end=$8; sub(/.*END=/,"",end); sub(/;.*/,"",end);
-        }
-        if (alt ~ /^<[^>]+>$/ && end != ".") {
-            gsub(/[<>]/, "", alt);
-            $5 = "<" alt "_" end ">";
-        }
-        print;
-    }' > body.vcf
-
-  # Combine header + modified body
-  cat header.vcf body.vcf | bgzip -c > filtered.vcf.gz
-
-  # Index the final file
-  bcftools index -t filtered.vcf.gz
-
-  #### MAKE THE GROUP FILE for HIGH IMPACT (pLOF) ####
-  bcftools query -f '%PREDICTED_LOF\t%CHROM:%POS:%REF:%ALT\tSV_HIGH\n' filtered.vcf.gz > tmp0.txt
-  awk -F'\t' '
-  # Only process lines where the first column (%PREDICTED_LOF) is not empty
-  ($1 != "") {
-      # Split the first column on commas into an array "arr"
-      n = split($1, arr, ",");
-      
-      # For each value in the array, print a new line
-      # Keep column 2 (%CHROM:%POS:%REF:%ALT) and column 3 (SV_HIGH) unchanged
-      for (i = 1; i <= n; i++) {
-          print arr[i] "\t" $2 "\t" $3
-      }
-  }' tmp0.txt > groupfile_step1.txt
-
-  bcftools query -f '%PREDICTED_PARTIAL_EXON_DUP\t%CHROM:%POS:%REF:%ALT\tSV_HIGH\n' filtered.vcf.gz > tmp0.txt
-  awk -F'\t' '
-  # Only process lines where the first column (%PREDICTED_PARTIAL_EXON_DUP) is not empty
-  ($1 != "") {
-      # Split the first column on commas into an array "arr"
-      n = split($1, arr, ",");
-      
-      # For each value in the array, print a new line
-      # Keep column 2 (%CHROM:%POS:%REF:%ALT) and column 3 (SV_HIGH) unchanged
-      for (i = 1; i <= n; i++) {
-          print arr[i] "\t" $2 "\t" $3
-      }
-  }' tmp0.txt >> groupfile_step1.txt
-
-  bcftools query -f '%PREDICTED_INTRAGENIC_EXON_DUP\t%CHROM:%POS:%REF:%ALT\tSV_HIGH\n' filtered.vcf.gz > tmp0.txt
-  awk -F'\t' '
-  # Only process lines where the first column (%PREDICTED_INTRAGENIC_EXON_DUP) is not empty
-  ($1 != "") {
-      # Split the first column on commas into an array "arr"
-      n = split($1, arr, ",");
-      
-      # For each value in the array, print a new line
-      # Keep column 2 (%CHROM:%POS:%REF:%ALT) and column 3 (SV_HIGH) unchanged
-      for (i = 1; i <= n; i++) {
-          print arr[i] "\t" $2 "\t" $3
-      }
-  }' tmp0.txt >> groupfile_step1.txt
-
-  #### MAKE THE GROUP FILE for MODERATE IMPACT ####
-  bcftools query -f '%PREDICTED_COPY_GAIN\t%CHROM:%POS:%REF:%ALT\tSV_MODERATE\n' filtered.vcf.gz > tmp0.txt
-  awk -F'\t' '
-  # Only process lines where the first column (%PREDICTED_COPY_GAIN) is not empty
-  ($1 != "") {
-      # Split the first column on commas into an array "arr"
-      n = split($1, arr, ",");
-      
-      # For each value in the array, print a new line
-      # Keep column 2 (%CHROM:%POS:%REF:%ALT) and column 3 (SV_MODERATE) unchanged
-      for (i = 1; i <= n; i++) {
-          print arr[i] "\t" $2 "\t" $3
-      }
-  }' tmp0.txt >> groupfile_step1.txt
-
-  >>>
-  runtime {
-    docker: "vanallenlab/g2c_pipeline"
-    preemptible: 3
-  }
-  output {
-    File out1 = "groupfile_step1.txt"
   }
 }
 
@@ -479,6 +319,7 @@ task process_vcf_part1 {
   input {
     File vcf
     File subjects_list
+    File aou_subjects_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cohorts/ufc_subjects.aou.list"
   }
   Int default_disk_gb = ceil(size(vcf,"GB") * 2) + 10
   command <<<
@@ -492,15 +333,23 @@ task process_vcf_part1 {
         bcftools annotate -h extra_header.txt -O z -o tmp1.vcf.gz ~{vcf}
         rm ~{vcf}
 
-        bcftools view -S ~{subjects_list} -O z -o tmp2.vcf.gz tmp1.vcf.gz
+        bcftools view -S ~{aou_subjects_list} -Oz -o tmp2.vcf.gz tmp1.vcf.gz
+        bcftools index -t tmp2.vcf.gz
+        bcftools view -i 'AF < 0.01' tmp2.vcf.gz -Oz -o tmp3.vcf.gz
+        bcftools view -S ~{subjects_list} -O z -o output.001.vcf.gz tmp3.vcf.gz
 
-        bcftools view -h tmp2.vcf.gz -O z -o output.001.vcf.gz
-        bcftools view -h tmp2.vcf.gz -O z -o output.0001.vcf.gz
+        bcftools view -i 'AF < 0.001' tmp2.vcf.gz -Oz -o tmp3.vcf.gz
+        bcftools view -S ~{subjects_list} -O z -o output.0001.vcf.gz tmp3.vcf.gz
+        #bcftools view -h tmp3.vcf.gz -O z -o output.001.vcf.gz
+        #bcftools view -h tmp3.vcf.gz -O z -o output.0001.vcf.gz
         exit 0
     fi
 
     # Step 1: Extract relevant fields using bcftools +split-vep
     # Format: Variant ID + gnomAD subpopulation AFs + Cohort AF + Impact
+    bcftools view ~{vcf} -S ~{aou_subjects_list} -Oz -o tmp.vcf.gz
+    mv tmp.vcf.gz ~{vcf}
+
     bcftools +split-vep ~{vcf} \
       -f '%ID\t%gnomAD_AF_non_cancer_afr\t%gnomAD_AF_non_cancer_eas\t%gnomAD_AF_non_cancer_amr\t%gnomAD_AF_non_cancer_fin\t%gnomAD_AF_non_cancer_nfe\t%gnomAD_AF_non_cancer_sas\t%gnomAD_AF_non_cancer_mid\t%gnomAD_AF_non_cancer_ami\t%gnomAD_AF_non_cancer_asj\t%gnomAD_AF_non_cancer_oth\t%AF\t%IMPACT\n' \
       -d 2>/dev/null | uniq > extracted_variants.txt
@@ -587,25 +436,23 @@ task process_vcf_part1 {
   }
 }
 
-task process_vcf_part2 {
+task process_vcf {
   input {
     File vcf
-    File important_variants
+    File sample_list
+    File rare_variants
   }
   Int default_disk_gb = ceil(size(vcf,"GB") * 2) + 10
   command <<<
-    set -euxo pipefail
-    bcftools annotate -x INFO -O z -o tmp1.vcf.gz ~{vcf}
-    
-    if [ $(wc -l < ~{important_variants}) -eq 0 ]; then
-      bcftools view -h tmp1.vcf.gz -O z -o  output.vcf.gz
-      bcftools index --csi output.vcf.gz
-      exit 0
-    fi
-
-    bcftools view --include ID==@~{important_variants} tmp1.vcf.gz -O z -o output.vcf.gz
-
-    bcftools index --csi output.vcf.gz
+  set -euxo pipefail
+  bcftools annotate -x INFO -O z -o tmp1.vcf.gz ~{vcf}
+  echo '##FILTER=<ID=ExcessHet,Description="Excess heterozygosity filter">' > extra_header.txt
+  bcftools annotate -h extra_header.txt -O z -o tmp2.vcf.gz tmp1.vcf.gz
+  bcftools view -S ~{sample_list} tmp2.vcf.gz -Oz -o tmp3.vcf.gz
+  bcftools annotate -h extra_header.txt -O z -o tmp3.vcf.gz tmp2.vcf.gz
+  bcftools index -t tmp3.vcf.gz
+  bcftools view --include ID==@~{rare_variants} tmp2.vcf.gz -O z -o output.vcf.gz
+  bcftools index --csi output.vcf.gz
   >>>
   output {
     File output_vcf = "output.vcf.gz"
@@ -614,6 +461,7 @@ task process_vcf_part2 {
   runtime {
     docker: "vanallenlab/bcftools"
     disks: "local-disk ~{default_disk_gb} HDD"
+    memory: "8GB"
     preemptible: 3
   }
 }
@@ -628,27 +476,45 @@ task make_group_file_part1 {
 
   # Get the VEP HIGH and MODERATE IMPACT Variants
   echo "Checkpoint 1"
-  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%IMPACT\n' -d > tmp0.txt
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%IMPACT\t%clinvar_CLNSIG\n' -d > tmp0.txt
   grep -v '^\.' tmp0.txt > tmp1.txt || touch tmp1.txt
-  grep -E 'HIGH|MODERATE' tmp1.txt > tmp2.txt || touch tmp2.txt
+  grep -E 'HIGH|MODERATE' tmp1.txt | grep -Ev 'Benign|Likely_bengin|Benign/Likely_benign' | cut -f1-3 > tmp2.txt || touch tmp2.txt
   grep -v '^$' tmp2.txt > tmp3.txt || touch tmp3.txt
   sort -u --compress-program=gzip < tmp3.txt > vep_impact.txt || touch vep_impact.txt
 
   # Get the ClinVar Important Variants
   #head vep_impact.txt
   #echo "Checkpoint 2"
-  #bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%clinvar_clnsig\t%IMPACT\n' -d > tmp1.txt
+  #bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%clinvar_clnsig\n' -d > tmp1.txt
   #grep -E 'Pathogenic|Likely_pathogenic|Pathogenic/Likely_pathogenic' tmp1.txt > tmp2.txt || touch tmp2.txt
-  #rm tmp1.txt 
   ## Remove instances that are MODERATE or LOW because these variants are pathogenic in other genes most likely
   #grep -Ev 'MODIFIER|LOW' tmp2.txt | cut -f1-3 > tmp3.txt || touch tmp3.txt
   #rm tmp2.txt
-  #sort -u tmp3.txt > vep_clinvar.txt || touch vep_clinvar.txt
-  #rm tmp3.txt
+  #sort -u tmp2.txt > vep_plp_clinvar.txt || touch vep_plp_clinvar.txt
+
+  # Get known Benign or Likely_Benign variants to exclude later on
+  #grep -E 'Benign|Likely_bengin|Benign/Likely_benign' tmp1.txt > tmp2.txt || touch tmp2.txt
+  #sort -u tmp2.txt > vep_blb_clinvar.txt || touch vep_blb_clinvar.txt
+  #rm tmp1.txt tmp2.txt
+
+
+  # Keep variants if they are Alpha Missense Likely_pathogenic
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%am_class\t%Consequence\t%clinvar_CLNSIG\n' -d | \
+    grep 'likely_pathogenic' | grep 'missense_variant' | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | \
+    cut -f1-3 | uniq > am_scores.tsv || touch am_scores.tsv
+
+  # Keep variants if they are PrimateAI Deleterious (D)
+  bcftools +split-vep ~{vcf} \
+    -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%PrimateAI_score\t%PrimateAI_pred\t%clinvar_CLNSIG\t%Consequence\n' -d | \
+    awk -F'\t' '$4 == "D"' | grep 'missense_variant' | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | \
+    cut -f1,2,4 | uniq > primateAI_scores.tsv || touch primateAI_scores.tsv
 
   # Keep variants if they are greater than 0.5 and are classified as missense variants
-  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%REVEL_score\t%Consequence\n' -d | \
-  grep "missense_variant" > tmp.txt || touch tmp.txt
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%REVEL_score\t%Consequence\t%clinvar_CLNSIG\n' -d | \
+    grep "missense_variant" | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' > tmp.txt || touch tmp.txt
   cut -f1-3 < tmp.txt | uniq > revel_scores.tsv
 
   # CODE to parse VEP REVEL Scores
@@ -681,7 +547,7 @@ task make_group_file_part1 {
   sort -u --compress-program=gzip < tmp4.txt > synonymous.txt || touch synonymous.txt  
 
   echo "Checkpoint 3"
-  cat vep_impact.txt vep_revel_score.txt synonymous.txt > vep_output.tmp.txt
+  cat vep_impact.txt vep_revel_score.txt am_scores.tsv primateAI_scores.tsv synonymous.txt > vep_output.tmp.txt
   awk 'NR==FNR {genes[$1]; next} $1 in genes' ~{autosomal_gene_file} vep_output.tmp.txt > vep_output.txt
 
   echo "Make Important Variant ID List"
@@ -718,43 +584,84 @@ task make_group_file_part2 {
   df = df[df['Gene'] != '.']
   #df = df[~df['Consequence'].str.contains('&',na=False)]
   # Drop Instances of Nonsense Mediated Decay Variants
-  df = df.loc[~df['Consequence'].str.contains('nmd_transcript_variant', na=False)]
-  df.loc[df['Consequence'].str.contains('synonymous_variant', na=False), 'Consequence'] = 'synonymous_variant'
+  #df = df.loc[~df['Consequence'].str.contains('NMD_transcript_variant', case=False, na=False)]
+  #df.loc[df['Consequence'].str.contains('synonymous_variant', na=False), 'Consequence'] = 'synonymous_variant'
  
   df = df[~df['Gene'].str.contains('-', na=False)]
-  df['Consequence'] = df['Consequence'].replace('Pathogenic/Likely_pathogenic', 'PLP')
+  #df['Consequence'] = df['Consequence'].replace('Pathogenic/Likely_pathogenic', 'PLP')
   # Removing Pathogenic Clinvar Terms, but if that same variant is annotated otherwise it remains in analysis
-  df = df[~df['Consequence'].isin(['Pathogenic', 'Likely_pathogenic', 'PLP'])]
+  #df = df[~df['Consequence'].isin(['Pathogenic', 'Likely_pathogenic', 'PLP'])]
  
   # Print the number of unique values in 'Gene' and 'Variant'
-  print(f"Unique values in 'Gene': {df['Gene'].nunique()}")
-  print(f"Unique values in 'Variant': {df['Variant'].nunique()}")
+  #print(f"Unique values in 'Gene': {df['Gene'].nunique()}")
+  #print(f"Unique values in 'Variant': {df['Variant'].nunique()}")
 
   # Define the hierarchy for 'Consequence'
+  # consequence_hierarchy = {
+  #     'Pathogenic': 1,
+  #     'PLP': 2,
+  #     'Likely_pathogenic': 3,
+  #     'HIGH': 4,
+  #     'REVEL075': 5,
+  #     'REVEL050': 6,
+  #     'MODERATE': 7,
+  #     "synonymous_variant": 8,
+  #     'LOW': 9
+  # }
   consequence_hierarchy = {
-      'Pathogenic': 1,
-      'PLP': 2,
-      'Likely_pathogenic': 3,
-      'HIGH': 4,
-      'REVEL075': 5,
-      'REVEL050': 6,
-      'MODERATE': 7,
-      "synonymous_variant": 8,
-      'LOW': 9
+      'HIGH': 1,
+      'TIER1': 2,
+      'TIER2': 3,
+      'MODERATE': 4,
+      "synonymous_variant": 5,
   }
+  # Example mapping function for one group of consequences
+  def assign_consequence_v1(group):
+      consequences = set(group['Consequence'])
+      
+      # Rule 1: HIGH present
+      if any('HIGH' in c for c in consequences):
+          return 1
+      
+      # Rule 2: at least two of [REVEL075, likely_pathogenic, D]
+      severe_hits = [c for c in consequences if any(x in c for x in ['REVEL075', 'likely_pathogenic', 'D'])]
+      if len(severe_hits) >= 2:
+          return 2
+      
+      # Rule 3: at least one of [REVEL050, REVEL075, likely_pathogenic, D]
+      if any(any(x in c for x in ['REVEL050', 'REVEL075', 'likely_pathogenic', 'D']) for c in consequences):
+          return 3
+      
+      # Rule 4: MODERATE present
+      if any('MODERATE' in c for c in consequences):
+          return 4
+      
+      # Rule 5: synonymous_variant present
+      if any('synonymous_variant' in c for c in consequences):
+          return 5
+      
+      # Default if none matched
+      return None
+  
+  # Apply groupby and map back to full df
+  df['Consequence_Rank'] = (
+      df.groupby(['Gene', 'Variant'], group_keys=False)
+        .apply(assign_consequence_v1)
+        .reindex(df.index)
+  )
 
   # Add a rank column based on the hierarchy
-  df['Consequence_Rank'] = df['Consequence'].map(consequence_hierarchy)
+  #df['Consequence_Rank'] = df['Consequence'].map(consequence_hierarchy)
 
   # Sort by Gene, Variant, and Consequence_Rank
-  df_sorted = df.sort_values(by=['Gene', 'Variant', 'Consequence_Rank'])
+  #df_sorted = df.sort_values(by=['Gene', 'Variant', 'Consequence_Rank'])
 
   # Drop duplicates, keeping the first (highest-ranked Consequence)
-  df_filtered = df_sorted.drop_duplicates(subset=['Gene', 'Variant'], keep='first')
+  #df_filtered = df_sorted.drop_duplicates(subset=['Gene', 'Variant'], keep='first')
 
   # Drop the rank column (optional)
-  df_filtered = df_filtered.drop(columns=['Consequence_Rank'])
-  df = df_filtered
+  #df_filtered = df_filtered.drop(columns=['Consequence_Rank'])
+  #df = df_filtered
 
   # Extract and format data
   grouped = df.groupby('Gene')
@@ -763,7 +670,7 @@ task make_group_file_part2 {
   output = []
   for gene, group in grouped:
       variants = " ".join(group['Variant'].tolist())
-      annotations = " ".join(group['Consequence'].tolist())
+      annotations = " ".join(group['Consequence_Rank'].tolist())
       output.append(f"{gene} var {variants}")
       output.append(f"{gene} anno {annotations}")
 
@@ -810,7 +717,9 @@ task get_covariates {
     File aou_phenotypes
     File non_aou_phenotypes
     File subjects_list
-    File prs_scores
+
+    File? pgs_file
+    File ppv_missense_file
   }
   command <<<
   set -eu -o pipefail
@@ -822,7 +731,15 @@ task get_covariates {
   sample_data = pd.read_csv("~{sample_data}",sep='\t')
   aou_phenotypes = pd.read_csv("~{aou_phenotypes}",sep='\t')
   non_aou_phenotypes = pd.read_csv("~{non_aou_phenotypes}",sep='\t')
-  prs_scores = pd.read_csv("~{prs_scores}",sep='\t')
+  
+  if "~{pgs_file}" != "":
+    prs_df = pd.read_csv("~{pgs_file}",sep='\t',index_col=False)
+    prs_df['original_id'] = prs_df['sample'].astype(str).str.strip()
+    sample_data['original_id'] = sample_data['original_id'].astype(str).str.strip()
+    sample_data = pd.merge(sample_data, prs_df, on='original_id')
+
+  ppv_missense_df = pd.read_csv("~{ppv_missense_file}",sep='\t',index_col=False)
+  ppv_missense_df['original_id'] = ppv_missense_df['original_id'].astype(str).str.strip()
 
   # Normalize sample_data PCS
   covariates = [f"PC{i}" for i in range(1, 5)] 
@@ -833,7 +750,7 @@ task get_covariates {
 
   # Identify common columns (excluding the key column for merging)
   common_columns = sample_data.columns.intersection(phenotypes.columns).difference(["Sample", "original_id"])
-  
+
   # Drop common columns from `phenotypes`
   phenotypes = phenotypes.drop(columns=common_columns)
 
@@ -843,48 +760,12 @@ task get_covariates {
 
   # Merge the DataFrames
   merged_df = pd.merge(sample_data, phenotypes, left_on="original_id", right_on="Sample")
-  merged_df["original_id"] = merged_df["original_id"].astype(str)
-  prs_scores["sample"] = prs_scores["sample"].astype(str)
-  merged_df = pd.merge(merged_df, prs_scores, left_on="original_id", right_on="sample")
-
+  merged_df = pd.merge(merged_df,ppv_missense_df,on='original_id')
+   
   # Add in cancer as a binary trait
   merged_df['cancer_status'] = merged_df['cancer'].apply(lambda x: 1 if x not in ['unknown', 'control'] else 0)
 
-  # List of columns to check for missing values
-  columns_to_check = ['age', 'height', 'weight', 'bmi', 'smoking_history', 'birth_year']
 
-  # Create a report on missing values for each column
-  missing_report = merged_df[columns_to_check].isnull().sum()
-
-  # Print the detailed report
-  for col, missing in missing_report.items():
-      print(f"{col}: {missing} missing values")
-
-  # Group by 'cohort' and 'sex' and calculate the median for each group
-  grouped_median = merged_df.groupby(['cohort', 'sex_karyotype'])[columns_to_check].median()
-
-  # Function to impute values for a specific column
-  def impute_by_group(df, column, grouped_median):
-      for idx, row in df.iterrows():
-          if pd.isnull(row[column]):
-              cohort = row['cohort']
-              sex = row['sex_karyotype']
-              df.at[idx, column] = grouped_median.loc[(cohort, sex), column]
-      return df
-
-  # Impute missing values for each column (excluding 'smoking_history')
-  for column in ['age', 'height', 'weight', 'bmi', 'birth_year']:
-      merged_df = impute_by_group(merged_df, column, grouped_median)
-
-  # For 'smoking_history', simply impute to 0
-  merged_df['smoking_history'].fillna(0, inplace=True)
-
-  # Replace NaN values based on the data type of each column
-  for column in merged_df.columns:
-      if merged_df[column].dtype == 'object':  # Check if column is of string type
-          merged_df[column].fillna('NA', inplace=True)  # Replace NaN with 'NA' in string columns
-      else:  # Numeric columns
-          merged_df[column].fillna(-1, inplace=True)  # Replace NaN with -1 in numeric columns
 
   # Read the ~{subjects_list} file into a Python set for efficient lookup
   with open("~{subjects_list}", "r") as file:
@@ -1001,17 +882,37 @@ task saige_gene_step1 {
 
   # Add covariates and sex-related arguments if this is NOT a single-sex analysis
   # Examples of when this should be True are Breast, Prostate, Ovarian, etc
-  if [ "~{single_sex_analysis}" = "False" ]; then
-    CMD="$CMD \
-      --covarColList=PC1,PC2,PC3,PC4,age,sex,PGS \
-      --sexCol=sex_karyotype \
-      --FemaleCode=XO,XX,XXX \
-      --MaleCode=XY,XYY,XXY"
-  else
-    CMD="$CMD \
-      --covarColList=PC1,PC2,PC3,PC4,age,PGS"
+  #if [ "~{single_sex_analysis}" = "False" ]; then
+  #  CMD="$CMD \
+  #    --covarColList=PC1,PC2,PC3,PC4,sex,PGS,num_ppv_missense \
+  #    --sexCol=sex_karyotype \
+  #    --FemaleCode=XO,XX,XXX \
+  #    --MaleCode=XY,XYY,XXY"
+  #else
+  #  CMD="$CMD \
+  #    --covarColList=PC1,PC2,PC3,PC4,PGS,num_ppv_missense"
+  #fi
+
+  # Start with the base covariates
+  COVARS="PC1,PC2,PC3,PC4,num_ppv_missense"
+
+  # Add PGS if the column exists in the sample file
+  header=$(head -1 ~{sample_data})
+  if [[ "$header" =~ PGS ]]; then
+      COVARS="$COVARS,PGS"
   fi
 
+  # Add sex-related covariates if this is not a single-sex analysis
+  if [ "~{single_sex_analysis}" = "False" ]; then
+      COVARS="sex,$COVARS"
+      CMD="$CMD \
+        --covarColList=$COVARS \
+        --sexCol=sex_karyotype \
+        --FemaleCode=XO,XX,XXX \
+        --MaleCode=XY,XYY,XXY"
+  else
+      CMD="$CMD --covarColList=$COVARS"
+  fi
   # Run the final command
   eval $CMD
 
@@ -1057,7 +958,7 @@ task saige_gene_step2 {
     --sparseGRMFile=~{sparseGRMFile} \
     --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
     --groupFile=~{group_file} \
-    --annotation_in_groupTest=HIGH,HIGH:REVEL075,HIGH:REVEL075:REVEL050,HIGH:REVEL075:REVEL050:MODERATE,synonymous_variant \
+    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T5,T6 \
     --maxMAF_in_groupTest=0.05 \
     2>&1 | tee saige.~{cancer_type}.log ; then
   
@@ -1074,7 +975,7 @@ task saige_gene_step2 {
   runtime{
     docker:"wzhou88/saige:1.3.0"
     disks: "local-disk 64 HDD"
-    preemptible: 3
+    preemptible: 1
     memory: "8 GB" 
   }
 }
@@ -1110,7 +1011,7 @@ task saige_gene_step2_beta {
     --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
     --groupFile=~{group_file} \
     --is_no_weight_in_groupTest=TRUE \
-    --annotation_in_groupTest=HIGH,HIGH:REVEL075,HIGH:REVEL075:REVEL050,HIGH:REVEL075:REVEL050:MODERATE,synonymous_variant\
+    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T5,T6\
     --maxMAF_in_groupTest=0.05 \
     2>&1 | tee saige.~{cancer_type}.log ; then
 

@@ -8,24 +8,25 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_5B_MISSENSE_COVARIATE {
   input {
-    File step_10_cpg_output
-    File analysis_5_output
-    File cosmic_ufc
-    File sample_list
-    Array[String] cancer_types = ["breast"]
+    File step_10_cpg_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/STEP_10_VISUALIZE_VEP/77bd97e7-cc41-422e-948a-ee33a709c73b/call-merge_variant_counts/shard-4/ufc.cpg.variant_counts.tsv"
+    #File analysis_5_output
+    File cosmic_tsv = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cosmic_ufc.tsv"
+    #File sample_list
+    #Array[String] cancer_types = ["breast"]
+    Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","prostate","sarcoma","squamous_cell","thyroid","uterus","cervix"]
   }
   
   call T1_filter_step_5 {
     input:
-      analysis_5_output = analysis_5_output
+      analysis_5_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/ANALYSIS_5_GSEA/4b4224e2-7b5c-407f-a0e4-38c57ae3059d/call-concatenateFiles_noheader/all_cpg_001.tsv"
   }
   scatter (cancer_type in cancer_types) {
     File sample_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".list"
-    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/ANALYSIS_5/" + cancer_type + ".ppv_missense"
+    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5_GSEA/"
     call T2_normalize_silico_missense {
       input:
         step_10_cpg_output = step_10_cpg_output,
-        cosmic_ufc = cosmic_ufc,
+        cosmic_ufc = cosmic_tsv,
         cancer_type = cancer_type,
         sample_list = sample_list,
         t1_output = T1_filter_step_5.out1
@@ -57,7 +58,7 @@ task T1_filter_step_5 {
   CODE
   >>>
   output {
-    out1 = "analysis_5_filtered.tsv"
+    File out1 = "analysis_5_filtered.tsv"
   }
   runtime {
     docker:"vanallenlab/pydata_stack"
@@ -77,64 +78,43 @@ task T2_normalize_silico_missense {
   command <<<
   python3 <<CODE
   import pandas as pd
-  # --- Load data ---
-  df = pd.read_csv("~{step_10_cpg_output}", sep="\t",index_col=False)
-  analysis5_df = pd.read_csv("~{t1_output}", sep="\t",index_col=False)
-  analysis5_df = analysis5_df[analysis5_df['cancer'] == "~{cancer_type}"]
 
+  # --- Load input files ---
+  df = pd.read_csv("~{step_10_cpg_output}", sep="\t",index_col=False)         # step 10 output, wide format
+  analysis_df = pd.read_csv("~{t1_output}", sep="\t",index_col=False)
+  analysis_df = analysis_df[analysis_df['cancer'].str.contains("~{cancer_type}", na=False)]
 
-  # --- Melt into long form and filter where value == 1 ---
-  df_long = (
-      df.stack()
-        .reset_index()
-        .rename(columns={"level_1": "patient", 0: "value"})
+  # Pull tier + AF label used in the column identifiers
+  tier = analysis_df['Pathogenic_Threshold'].iloc[0]   # e.g., "Tier3"
+
+  # Load COSMIC lookup list
+  cosmic_df = pd.read_csv("~{cosmic_ufc}", sep="\t", index_col=False,names=['gene', 'cancer_type'])
+  cosmic_genes = cosmic_df[
+      cosmic_df['cancer_type'].str.contains("~{cancer_type}|all", na=False)]['gene'].tolist()
+  print("check1")
+  # Construct the strings we need to look for in the "gene_impact" column
+  match_strings = {f"{gene}_{tier}" for gene in cosmic_genes}
+
+  # Filter df down to rows (genes) that match our PPV missense criteria
+  df_filtered = df[df['gene_impact'].isin(match_strings)]
+
+  # Sum variant counts per patient (each patient = a column, so sum rows)
+  patient_counts = df_filtered.iloc[:, 1:].sum(axis=0)
+  print("chek2")
+  # Turn into final output format
+  output_df = (
+      patient_counts
+      .reset_index()
+      .rename(columns={"index": "original_id", 0: "num_ppv_missense"})
   )
 
-  # Keep only where the variant count == 1
-  df_filtered = df_long[df_long["value"] == 1][["patient", criteria_col]]
-
   # --- Save output ---
-  df_filtered.to_csv("patient_criteria.tsv", sep="\t", index=False)
-
-  cosmic_df = pd.read_csv("~{cosmic_ufc}",sep='\t',index_col=False,names=['gene','cancer_type'])
-  cosmic_genes = cosmic_df[cosmic_df['cancer_type'].str.contains("~{cancer_type}|all", na=False)]['gene'].tolist()
-
-
-  # Make sure that we filter patient_criteria.tsv to just rows that have gene_Tier~{tier}_~{AF}
-  tier = analysis5_df['Pathogenic_Threshold'][0]
-  AF = analysis5_df['AF'][0]
-
-  # get samples
-  with open("~{sample_list}") as f:
-    all_samples = [line.strip() for line in f if line.strip()]
-
-  #match_strings = {f"{gene}_Tier{tier}_{AF}" for gene in cosmic_genes}
-  match_strings = {f"{gene}_{tier}_{AF}" for gene in cosmic_genes}
-
-  # --- Step 3: Loop through patient_criteria.tsv ---
-  # Column 0 = patient ID, column 1 = variant/gene info
-  patients_with_hit = set()
-
-  for _, row in df_filtered.iterrows():
-      patient_id = row[0]
-      gene_label = str(row[1])
-      if gene_label in match_strings:
-          patients_with_hit.add(patient_id)
-
-  # --- Step 4: Build output DataFrame ---
-  output_df = pd.DataFrame({
-      'original_id': all_samples,
-      'PPV_Missense': [1 if s in patients_with_hit else 0 for s in all_samples]
-  })
-
-  # --- Step 5: Write to TSV ---
-  output_df.to_csv("PPV_Missense_flags.tsv", sep='\t', index=False)
+  output_df.to_csv("~{cancer_type}.num_ppv_missense.tsv", sep="\t", index=False)
 
   CODE
   >>>
   output {
-    File out1 = "patient_criteria.tsv"
-    File out2 = "PPV_Missense_flags.tsv"
+    File out1 = "~{cancer_type}.num_ppv_missense.tsv"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"
