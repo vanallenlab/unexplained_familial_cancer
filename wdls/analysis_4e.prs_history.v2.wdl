@@ -7,14 +7,15 @@ version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 workflow ANALYSIS_4E_PRS_HISTORY {
   input {
-    Array[String] ufc_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","leukemia","lung","lung","lung","lung","melanoma","melanoma","melanoma","non-hodgkins","non-hodgkins","ovary","ovary","ovary","ovary","pancreas","pancreas","pancreas","prostate","prostate","prostate","prostate","thyroid","brain","esophagus"]
-    Array[String] aou_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","blood_soft_tissue","lung","lung","lung","lung","skin","skin","skin","blood_soft_tissue","blood_soft_tissue","ovary","ovary","ovary","ovary","pancreas","pancreas","pancreas","prostate","prostate","prostate","prostate","thyroid","brain","esophagus"]
-    Array[String] PGS_IDS = ["PGS000783","PGS003380","PGS004242","PGS004688","PGS004241","PGS000782","PGS004687","PGS000784","PGS003389","PGS000785","PGS003386","PGS004243","PGS004689","PGS000786","PGS003381","PGS004244","PGS000787","PGS004690","PGS004245","PGS000788","PGS000789","PGS003391","PGS004246","PGS004691","PGS000790","PGS003382","PGS004247","PGS000791","PGS004248","PGS000793","PGS003385","PGS004249","PGS004692","PGS000794","PGS004250","PGS004693","PGS000795","PGS003383","PGS004251","PGS004694","PGS000797","PGS003384","PGS003388"]
+    Array[String] ufc_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","leukemia","lung","lung","lung","lung","melanoma","melanoma","melanoma","non-hodgkins","non-hodgkins","ovary","ovary","ovary","ovary","pancreas","pancreas","pancreas","prostate","prostate","prostate","prostate","thyroid","brain"]
+    Array[String] aou_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","blood_soft_tissue","lung","lung","lung","lung","skin","skin","skin","blood_soft_tissue","blood_soft_tissue","ovary","ovary","ovary","ovary","pancreas","pancreas","pancreas","prostate","prostate","prostate","prostate","thyroid","brain"]
+    Array[String] PGS_IDS = ["PGS000783","PGS003380","PGS004242","PGS004688","PGS004241","PGS000782","PGS004687","PGS000784","PGS003389","PGS000785","PGS003386","PGS004243","PGS004689","PGS000786","PGS003381","PGS004244","PGS000787","PGS004690","PGS004245","PGS000788","PGS000789","PGS003391","PGS004246","PGS004691","PGS000790","PGS003382","PGS004247","PGS000791","PGS004248","PGS000793","PGS003385","PGS004249","PGS004692","PGS000794","PGS004250","PGS004693","PGS000795","PGS003383","PGS004251","PGS004694","PGS000797","PGS003384"]
     File analysis_4_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/"
+    File google_bucket = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/"
   }
-  Int negative_shards = 42
+  Int negative_shards = 41
   scatter(i in range(length(PGS_IDS) - negative_shards)){
-    File metadata = analysis_4_dir + "UFC_REFERENCE_FILES/" + aou_cancer_type + "_family/" + aou_cancer_type + "_family.metadata" 
+    File metadata = google_bucket + "UFC_REFERENCE_FILES/analysis/" + aou_cancer_type[i] + "_family/" + aou_cancer_type[i] + "_family.metadata" 
     File prs_file = analysis_4_dir  + PGS_IDS[i] + ".raw.pgs"
 
     call T1_analyze_history_and_regress {
@@ -52,7 +53,7 @@ task T1_analyze_history_and_regress {
 
   # --- Load files ---
   prs = pd.read_csv("~{prs_file}", sep="\t", index_col=False)
-  metadata = pd.read_csv("~{metadata}",sep='\t', usecols = ['original_id','inferred_sex'],index_col=False)
+  metadata = pd.read_csv("~{metadata}",sep='\t',index_col=False)
   metadata.rename(columns={'original_id':'sample'}, inplace=True)
 
   # --- Ensure consistent sample IDs ---
@@ -60,8 +61,8 @@ task T1_analyze_history_and_regress {
   metadata['sample'] = metadata['sample'].astype(str)
 
   # --- Merge with family history ---
-  merged = prs.merge(metadata, left_on="sample", right_on="Sample", how="inner")
-
+  merged = prs.merge(metadata, left_on="sample", right_on="sample", how="inner")
+  merged.to_csv("tmp.tsv",sep='\t',index=False)
   # --- Initialize group ---
   merged['group'] = "control"
 
@@ -72,28 +73,29 @@ task T1_analyze_history_and_regress {
   # --- Define groups ---
 
   # Define excluded-only cancer types
-  excluded = ["unspecific", "basal_cell", "squamous_cell"]
+  excluded = ["unspecific", "basal_cell", "squamous_cell","skin"]
 
   mask_not_familial = (
-      ~merged['original_dx'].fillna("").str.lower().str.contains('|'.join(['control', ufc_cancer])) &
+      ~merged['original_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains('|'.join(['control', ufc_cancer])) &
       # Keep only those who have *something else* besides the excluded terms
-      merged['original_dx'].fillna("").str.lower().apply(
+      merged['original_dx'].fillna("").str.lower().str.replace("male_breast", "").apply(
           lambda x: any(term not in excluded and term != "" for term in x.split(';'))
       ) &
-      (merged['maternal_family_dx'].fillna("").str.lower().str.contains(aou_cancer) | merged['paternal_family_dx'].fillna("").str.lower().str.contains(aou_cancer))
+      (merged['maternal_family_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(aou_cancer) | merged['paternal_family_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(aou_cancer))
   )
   merged.loc[mask_not_familial, 'group'] = f"Not-Inherited {ufc_cancer.capitalize()}"
 
   # Familial: original_dx contains breast, family_dx contains breast
   mask_familial = (
-      merged['original_dx'].fillna("").str.lower().str.contains(ufc_cancer) &
-      (merged['maternal_family_dx'].fillna("").str.lower().str.contains(aou_cancer) | merged['paternal_family_dx'].fillna("").str.lower().str.contains(aou_cancer))
+      merged['original_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(ufc_cancer) &
+      (merged['maternal_family_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(aou_cancer) | merged['paternal_family_dx'].fillna("").str.lower().str.replace("male_breast", "").str.contains(aou_cancer))
   )
   merged.loc[mask_familial, 'group'] = f"Familial {ufc_cancer.capitalize()}"
 
   merged = merged[merged['group'].isin([
       f"Familial {ufc_cancer.capitalize()}",
-      f"Not-Inherited {ufc_cancer.capitalize()}"
+      f"Not-Inherited {ufc_cancer.capitalize()}",
+      f"control"
   ])]
 
   merged[['PC1','PC2','PC3','PC4','age']] = merged[['PC1','PC2','PC3','PC4','age']].apply(zscore)
@@ -125,6 +127,7 @@ task T1_analyze_history_and_regress {
 
   output {
     File out1 = "~{ufc_cancer_type}.~{PGS_ID}.analysis_4e.tsv"
+    File out2 = "tmp.tsv"
   }
 
   runtime {

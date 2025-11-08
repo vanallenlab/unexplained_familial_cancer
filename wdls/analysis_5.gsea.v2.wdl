@@ -8,8 +8,7 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_5_GSEA {
   input {
-    String step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/STEP_10_VISUALIZE_VEP/77bd97e7-cc41-422e-948a-ee33a709c73b/call-merge_variant_counts/shard-4/ufc.cpg.variant_counts.tsv"
-    #String step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/v2/ufc.cpg.variant_counts.tsv.gz"
+    String step_10_cpg_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/ufc_cpg.tsv"
     Array[String] cancer_types = ["basal_cell","bladder","breast","colorectal","hematologic","kidney","lung","melanoma","neuroendocrine","nervous","non-hodgkins","ovary","prostate","sarcoma","squamous_cell","thyroid","uterus","cervix"]
     #Array[String] cancer_types = ["basal_cell","bladder"]
     String analysis_5_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5_GSEA/"
@@ -33,58 +32,54 @@ workflow ANALYSIS_5_GSEA {
         gene_list = T0_get_path_genes.out1,
         variant_tsv = step_10_cpg_file
     }
-
-    # Perform Analysis
-    #call T2_gsea as T2_gsea_revel050_001{
-    #  input:
-    #    variants_tsv = T1_get_rows.out1,
-    #    sample_metadata = sample_data,
-    #    cancer_type = cancer_type,
-    #    path_threshold = "REVEL_050",
-    #    allele_frequency = "0.01"
-    #}
-    #call T2_gsea as T2_gsea_revel075_001{
-    #  input:
-    #    variants_tsv = T1_get_rows.out3,
-    #    sample_metadata = sample_data,
-    #    cancer_type = cancer_type,
-    #    path_threshold = "REVEL_075",
-    #    allele_frequency = "0.01"
-    #}
-    # Perform Analysis
-    #call T2_gsea as T2_gsea_revel050_0001{
-    #  input:
-    #    variants_tsv = T1_get_rows.out2,
-    #    sample_metadata = sample_data,
-    #    cancer_type = cancer_type,
-    #    path_threshold = "REVEL_050",
-    #    allele_frequency = "0.001"
-    #}
-    #call T2_gsea as T2_gsea_revel075_0001{
-    #  input:
-    #    variants_tsv = T1_get_rows.out4,
-    #    sample_metadata = sample_data,
-    #    cancer_type = cancer_type,
-    #    path_threshold = "REVEL_075",
-    #    allele_frequency = "0.001"
-    #}
-    # Perform Analysis
-    #call T2_gsea as T2_gsea_VUS_001{
-    #  input:
-    #    variants_tsv = T1_get_rows.out5,
-    #    sample_metadata = sample_data,
-    #    cancer_type = cancer_type,
-    #    path_threshold = "VUS_001",
-    #    allele_frequency = "0.01"
-    #}
-    #call T2_gsea as T2_gsea_VUS_0001{
-    #  input:
-    #    variants_tsv = T1_get_rows.out6,
-    #    sample_metadata = sample_data,
-    #    cancer_type = cancer_type,
-    #    path_threshold = "VUS_0001",
-    #    allele_frequency = "0.001"
-    #}
+    call T2_gsea as T2_gsea_TIER0_001{
+      input:
+        variants_tsv = T1_get_rows.out7,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "Tier0_001",
+        allele_frequency = "0.01"
+    }
+    call T2_gsea as T2_gsea_TIER0_0001{
+      input:
+        variants_tsv = T1_get_rows.out8,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "Tier0_0001",
+        allele_frequency = "0.001"
+    }
+    call T2_gsea as T2_gsea_TIER2_001{
+      input:
+        variants_tsv = T1_get_rows.out5,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "Tier2_001",
+        allele_frequency = "0.01"
+    }
+    call T2_gsea as T2_gsea_TIER2_0001{
+      input:
+        variants_tsv = T1_get_rows.out6,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "Tier2_0001",
+        allele_frequency = "0.001"
+    }
+    call T2_gsea as T2_gsea_TIER3_001{
+      input:
+        variants_tsv = T1_get_rows.out1,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "Tier3_001",
+        allele_frequency = "0.01"
+    }
+    call T2_gsea as T2_gsea_TIER3_0001{
+      input:
+        variants_tsv = T1_get_rows.out2,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "Tier3_0001",
+        allele_frequency = "0.001"
+    }
     call T2_gsea as T2_gsea_TIER4_001{
       input:
         variants_tsv = T1_get_rows.out3,
@@ -93,13 +88,67 @@ workflow ANALYSIS_5_GSEA {
         path_threshold = "Tier4_001",
         allele_frequency = "0.01"
     }
+    call T2_gsea as T2_gsea_TIER4_0001{
+      input:
+        variants_tsv = T1_get_rows.out4,
+        sample_metadata = sample_data,
+        cancer_type = cancer_type,
+        path_threshold = "Tier4_0001",
+        allele_frequency = "0.001"
+    }
   }
-  call Tasks.concatenateFiles_noheader{
+  call Tasks.concatenateFiles_noheader as concat_tier0_001{
+    input:
+      files = T2_gsea_TIER0_001.out1,
+      callset_name = biological_pathway + "_" + "001"
+  }
+  call Tasks.concatenateFiles_noheader as concat_tier0_0001{
+    input:
+      files = T2_gsea_TIER0_0001.out1,
+      callset_name = biological_pathway + "_" + "0001"
+  }
+  call Tasks.concatenateFiles_noheader as concat_tier2_001{
+    input:
+      files = T2_gsea_TIER2_001.out1,
+      callset_name = biological_pathway + "_" + "001"
+  }
+  call Tasks.concatenateFiles_noheader as concat_tier2_0001{
+    input:
+      files = T2_gsea_TIER2_0001.out1,
+      callset_name = biological_pathway + "_" + "0001"
+  }
+  call Tasks.concatenateFiles_noheader as concat_tier3_001{
+    input:
+      files = T2_gsea_TIER3_001.out1,
+      callset_name = biological_pathway + "_" + "001"
+  }
+  call Tasks.concatenateFiles_noheader as concat_tier3_0001{
+    input:
+      files = T2_gsea_TIER3_0001.out1,
+      callset_name = biological_pathway + "_" + "0001"
+  }
+  call Tasks.concatenateFiles_noheader as concat_tier4_001{
     input:
       files = T2_gsea_TIER4_001.out1,
       callset_name = biological_pathway + "_" + "001"
   }
-  
+  call Tasks.concatenateFiles_noheader as concat_tier4_0001{
+    input:
+      files = T2_gsea_TIER4_0001.out1,
+      callset_name = biological_pathway + "_" + "0001"
+  }
+
+  call Tasks.concatenateFiles_noheader as concat_final{
+    input:
+      files = [concat_tier0_001.out2,concat_tier0_0001.out2,concat_tier2_001.out2,concat_tier2_0001.out2,concat_tier3_001.out2,concat_tier3_0001.out2,concat_tier4_001.out2,concat_tier4_0001.out2],
+      callset_name = "cosmic_genes"
+  }
+  call Tasks.copy_file_to_storage{
+    input:
+      text_file = concat_final.out1,
+      output_dir = analysis_5_output_dir
+  }
+
 }
 
 task T0_get_path_genes{
@@ -162,6 +211,17 @@ task T1_get_rows {
 
   # Filter where gene_impact is in genes
   df_VUS = df[df['gene_impact'].isin(
+      [f"{g}_{suffix}" for g in genes for suffix in ["Tier2_001"]]
+  )]
+  df_VUS.to_csv("tier2_001.tsv",sep='\t',index=False)
+
+  # Filter where gene_impact is in genes
+  df_VUS = df[df['gene_impact'].isin(
+      [f"{g}_{suffix}" for g in genes for suffix in ["Tier2_0001"]]
+  )]
+  df_VUS.to_csv("tier2_0001.tsv",sep='\t',index=False) 
+  # Filter where gene_impact is in genes
+  df_VUS = df[df['gene_impact'].isin(
       [f"{g}_{suffix}" for g in genes for suffix in ["Tier0_001"]]
   )]
   df_VUS.to_csv("tier0_001.tsv",sep='\t',index=False)
@@ -170,7 +230,7 @@ task T1_get_rows {
   df_VUS = df[df['gene_impact'].isin(
       [f"{g}_{suffix}" for g in genes for suffix in ["Tier0_0001"]]
   )]
-  df_VUS.to_csv("tier0_0001.tsv",sep='\t',index=False) 
+  df_VUS.to_csv("tier0_0001.tsv",sep='\t',index=False)
   CODE
   >>>
   output{
@@ -178,8 +238,10 @@ task T1_get_rows {
     File out2 = "tier3_0001.tsv"
     File out3 = "tier4_001.tsv"
     File out4 = "tier4_0001.tsv"
-    File out5 = "tier0_001.tsv"
-    File out6 = "tier0_0001.tsv"
+    File out5 = "tier2_001.tsv"
+    File out6 = "tier2_0001.tsv"
+    File out7 = "tier0_001.tsv"
+    File out8 = "tier0_0001.tsv"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"

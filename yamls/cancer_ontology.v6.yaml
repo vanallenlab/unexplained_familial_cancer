@@ -218,7 +218,6 @@ cancer_ontology:
             - primary_malignant_neoplasm_of_body_of_uterus
             - primary_malignant_neoplasm_of_isthmus_of_uterus
             - primary_malignant_neoplasm_of_uterus
-            - endometrial_intraepithelial_neoplasia
             - malignant_neoplasm_of_endometrium_of_corpus_uteri
             - neoplasm_of_endometrium
             - primary_malignant_neoplasm_of_endometrium
@@ -353,7 +352,6 @@ cancer_ontology:
         - adenocarcinoma_of_prostate
         - malignant_tumor_of_prostate
         - metastasis_from_malignant_tumor_of_prostate
-        - prostatic_intraepithelial_neoplasia
         - primary_malignant_neoplasm_of_prostate
         - recurrent_malignant_neoplasm_of_prostate
 
@@ -724,3 +722,5 @@ cancer_ontology:
         - primary_malignant_neoplasm_of_female_genital_organ
         - estrogen_receptor_negative_neoplasm
         - estrogen_receptor_positive_tumor
+        - endometrial_intraepithelial_neoplasia
+        - prostatic_intraepithelial_neoplasia

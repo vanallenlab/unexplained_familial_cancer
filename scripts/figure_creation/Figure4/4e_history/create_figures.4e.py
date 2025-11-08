@@ -64,8 +64,9 @@ df = pd.read_csv(input_file, sep="\t")
 # Filter to Familial and Not-Inherited
 familial_label = f"Familial {cancer_type.capitalize()}"
 not_inherited_label = f"Not-Inherited {cancer_type.capitalize()}"
+control_label = "control"
 
-df = df[df['group'].isin([familial_label, not_inherited_label])].copy()
+df = df[df['group'].isin([familial_label, not_inherited_label,control])].copy()
 
 # -------------------------------
 # 3. Load color scheme
