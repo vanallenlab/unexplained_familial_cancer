@@ -8,7 +8,7 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow ANALYSIS_5B_MISSENSE_COVARIATE {
   input {
-    File step_10_cpg_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/STEP_10_VISUALIZE_VEP/77bd97e7-cc41-422e-948a-ee33a709c73b/call-merge_variant_counts/shard-4/ufc.cpg.variant_counts.tsv"
+    File step_10_cpg_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/ufc_cpg.tsv"
     #File analysis_5_output
     File cosmic_tsv = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cosmic_ufc.tsv"
     #File sample_list
@@ -18,7 +18,7 @@ workflow ANALYSIS_5B_MISSENSE_COVARIATE {
   
   call T1_filter_step_5 {
     input:
-      analysis_5_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/ANALYSIS_5_GSEA/4b4224e2-7b5c-407f-a0e4-38c57ae3059d/call-concatenateFiles_noheader/all_cpg_001.tsv"
+      analysis_5_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5_GSEA/cosmic_genes.tsv"
   }
   scatter (cancer_type in cancer_types) {
     File sample_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".list"
