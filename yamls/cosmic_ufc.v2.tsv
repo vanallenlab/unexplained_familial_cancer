@@ -12,7 +12,7 @@ BRCA1	"breast,ovary"
 BRCA2	"breast,ovary,pancreas,hematologic"
 BRIP1	"hematologic,breast"
 BUB1B	bone,soft_tissue,sarcoma
-CDC73	parathyroid
+CDC73	other_endocrine
 CDH1	gastrointestinal,stomach
 CDH10	gastrointestinal,pancreas
 CDK4	melanoma
@@ -45,7 +45,7 @@ HGF	bladder
 HNF1A	other
 HRAS	"soft_tissue,sarcoma,bladder"
 KDR	melanoma
-KIT	"soft_tissue,basal_cell,squamous_cell,melanoma,sarcoma"
+KIT	"soft_tissue,basal_cell,squamous_cell,sarcoma"
 LMO1	neuroblastoma
 LZTR1	nervous,soft_tissue,sarcoma
 MAX	neuroendocrine
@@ -104,7 +104,7 @@ TSC2	kidney
 USP9X	colorectal
 VHL	"kidney,neuroendocrine"
 WAS	non-hodgkins
-WRN	"bone,soft_tissue,sarcoma,nervous,all"
+WRN	"bone,soft_tissue,sarcoma,nervous,thyroid,melanoma"
 WT1	wilms_tumor
 XPA	"melanoma,basal_cell,squamous_cell"
 XPC	"melanoma,basal_cell,squamous_cell"
