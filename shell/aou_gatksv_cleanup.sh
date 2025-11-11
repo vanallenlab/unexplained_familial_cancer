@@ -1516,5 +1516,38 @@ cleanup_garbage
 # ANNOTATE VCF #
 ################
 
-# TODO: implement this
+# Reaffirm staging directory
+staging_dir=staging/annotation
+if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
+
+# Write template .json for callset annotation
+cat << EOF > $staging_dir/AnnotateVcf.inputs.template.json
+{
+  "AnnotateVcf.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz",
+  "AnnotateVcf.contig_list": "gs://dfci-g2c-refs/hg38/contig_lists/\$CONTIG.list",
+  "AnnotateVcf.prefix": "dfci-ufc.sv.v1.0.\$CONTIG",
+  "AnnotateVcf.protein_coding_gtf": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/gencode.v47.basic.protein_coding.canonical.gtf",
+  "AnnotateVcf.sv_per_shard": 5000,
+  "AnnotateVcf.external_af_ref_bed": "gs://gatk-sv-resources-public/gnomad_AF/gnomad_v4_SV.Freq.tsv.gz",
+  "AnnotateVcf.external_af_ref_prefix": "gnomad_v4.1_sv",
+  "AnnotateVcf.external_af_population": ["ALL","AFR","AMR","EAS","EUR","MID","FIN","ASJ","RMI","SAS","AMI"],
+  "AnnotateVcf.use_hail": false,
+  "AnnotateVcf.gcs_project": "$GPROJECT",
+  "AnnotateVcf.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-06-27-v1.0.4-63e6c81e",
+  "AnnotateVcf.sv_base_mini_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
+  "AnnotateVcf.gatk_docker": "us.gcr.io/broad-dsde-methods/eph/gatk:2024-07-02-4.6.0.0-1-g4af2b49e9-NIGHTLY-SNAPSHOT"
+}
+EOF
+
+# Apply posthoc cleanup step 2 to each chromosome
+code/scripts/manage_chromshards.py \
+  --wdl code/wdl/gatk-sv/AnnotateVcf.wdl \
+  --input-json-template $staging_dir/AnnotateVcf.inputs.template.json \
+  --staging-bucket $WORKSPACE_BUCKET/data/AnnotateVcf \
+  --dependencies-zip gatksv.dependencies.zip  \
+  --status-tsv cromshell/progress/AnnotateVcf.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --outer-gate 30 \
+  --submission-gate 0 \
+  --max-attempts 2
 

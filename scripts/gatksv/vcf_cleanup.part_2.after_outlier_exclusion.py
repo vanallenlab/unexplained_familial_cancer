@@ -28,6 +28,7 @@ import numpy as np
 import pandas as pd
 import pybedtools as pbt
 import pysam
+import re
 from scipy.stats import fisher_exact
 from sys import stdin, stdout
 
@@ -75,6 +76,63 @@ def update_af(record):
     return record
 
 
+def cleanup_cpx_ints(record):
+    """
+    Clean up weird edge case records where their complex intervals don't 
+    match the reported CPX TYPE
+    """
+
+    itypes = 'del dup ins inv'.split()
+
+    # First, infer how many intervals there _should_ be
+    cpx_type = record.info.get('CPX_TYPE').lower()
+    if cpx_type is None:
+        return record
+    exp_ints = {itype : cpx_type.count(itype) for itype in itypes}
+
+    # Next, count how many intervals there _actually_ are
+    cpx_ints = record.info.get('CPX_INTERVALS')
+    obs_ints = {itype : sum([x.lower().startswith(itype) for x in cpx_ints]) 
+                for itype in itypes}
+
+    # Don't worry about inverted orientations for dispersed duplications
+    if 'ddup' in cpx_type or 'ins' in cpx_type:
+        exp_ints.pop('inv')
+        obs_ints.pop('inv')
+
+    # If interval types match, do nothing
+    if exp_ints == obs_ints:
+        return record
+
+    # Otherwise, clean up intervals s/t there are no more than expected
+    recbt = pbt.BedTool('{}\t{}\t{}\n'.format(record.chrom, record.pos, record.stop), 
+                        from_string=True)
+    for itype in itypes:
+        # Skip interval types with the same or fewer than expected intervals
+        if obs_ints[itype] <= exp_ints[itype]:
+            continue
+
+        # Blanket prune unexpected interval types
+        if exp_ints[itype] == 0:
+            cpx_ints = [i for i in cpx_ints if not i.startswith(itype.upper())]
+            continue
+
+        # Otherwise, keep the expected number of intervals prioritzed based 
+        # on coverage by overall record coordinates
+        ibt_str = [re.sub('[:-]', '\t', i.split('_')[1]) 
+                   for i in cpx_ints if i.startswith(itype.upper())]
+        ibt = pbt.BedTool('\n'.join(ibt_str), from_string=True)
+        idf = ibt.coverage(recbt).to_dataframe()
+        idf = idf.sort_values(by=idf.columns[-1], ascending=False)
+        keep_ints = ['{}_{}:{}-{}'.format(itype.upper(), *il) 
+                     for il in idf.iloc[0:exp_ints[itype], 0:3].values.tolist()]
+        cpx_ints = [i for i in cpx_ints if not i.startswith(itype.upper())] + keep_ints
+
+    record.info['CPX_INTERVALS'] = tuple(cpx_ints)
+
+    return record
+
+
 def is_artifact_deletion(record):
     """
     Checks whether a record is a deletion in the artifact zone
@@ -83,8 +141,8 @@ def is_artifact_deletion(record):
     svtype = record.info['SVTYPE']
     svlen = record.info['SVLEN']
     if svtype == "DEL" \
-    and svlen > 400 \
-    and svlen < 1000 \
+    and svlen > 1250 \
+    and svlen < 1800 \
     and record.info.get('AC', (0, ))[0] / record.info.get('AN', 1) < 0.05:
         return True
     else:
@@ -225,6 +283,12 @@ def main():
         and not is_multiallelic(record):
             continue
 
+        # Clean CPX_INTERVALS for complex variants
+        # NOTE: FOR AACR ABSTRACT, WE ARE JUST DROPPING THESE OUTRIGHT
+        if record.info['SVTYPE'] == 'CPX':
+            continue
+            # record = cleanup_cpx_ints(record)
+
         # Recompute NCR
         if not is_multiallelic(record):
             if record.chrom == 'chrX':
@@ -241,7 +305,7 @@ def main():
             if k not in 'HIGH_NCR HIGH_PCRMINUS_NOCALL_RATE'.split():
                 record.filter.add(k)
         if is_artifact_deletion(record):
-            if record.info.get('NCR', 0) > 1/250:
+            if record.info.get('NCR', 0) >= 0.01:
                 record.filter.add('HIGH_NCR')
         elif record.info.get('NCR', 0) >= 0.04:
             record.filter.add('HIGH_NCR')
