@@ -6,7 +6,7 @@ ATR	other
 AXIN2	colorectal
 BAP1	"melanoma,kidney"
 BARD1	"uterus,breast,ovary"
-BLM	"non-hodgkins,hematologic,squamous_cell,all"
+BLM	"non-hodgkins,hematologic,squamous_cell,breast,colorectal,lung,sarcoma,nervous,basal_cell"
 BMPR1A	"gastrointestinal,colorectal"
 BRCA1	"breast,ovary"
 BRCA2	"breast,ovary,pancreas,hematologic"
@@ -97,14 +97,14 @@ SUFU	nervous
 TERT	melanoma
 TGFBR2	colorectal
 TMEM127	"neuroendocrine,kidney"
-TP53	breast,hematologic,nervous,sarcoma,bone,soft_tissue,all
+TP53	breast,hematologic,nervous,sarcoma,bone,soft_tissue,lung,prostate,colorectal,melanoma
 TP63	lung
 TSC1	kidney
 TSC2	kidney
 USP9X	colorectal
 VHL	"kidney,neuroendocrine"
 WAS	non-hodgkins
-WRN	"bone,soft_tissue,sarcoma,nervous,thyroid,melanoma,all"
+WRN	"bone,soft_tissue,sarcoma,nervous,thyroid,melanoma,hematologic,basal_cell,squamous_cell,ovary,uterus,bladder,prostate,breast,lung"
 WT1	wilms_tumor
 XPA	"melanoma,basal_cell,squamous_cell"
 XPC	"melanoma,basal_cell,squamous_cell"
