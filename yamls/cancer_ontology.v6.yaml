@@ -270,6 +270,7 @@ cancer_ontology:
       sub_systems:
         - name: Non-Hodgkin
           types:
+            - burkitts_lymphoma_clinical
             - diffuse_nonhodgkins_lymphoma,_small_cell_clinical
             - bcell_lymphoma_clinical
             - diffuse_follicle_center_lymphoma
@@ -288,6 +289,8 @@ cancer_ontology:
             - primary_cutaneous_cd30+_large_tcell_lymphoma
             - primary_cutaneous_tcell_lymphoma
             - primary_mediastinal_thymic_large_bcell_lymphoma
+            - large_cell_anaplastic_lymphoma
+            - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
       types:       
         - blastic_plasmacytoid_dendritic_cell_neoplasm
         - classical_hodgkin_lymphoma
@@ -669,10 +672,6 @@ cancer_ontology:
         - malignant_mesothelioma_of_pleura
         - primary_malignant_neoplasm_of_pleura
 
-    - name: Environmental Lymphoma
-      types:
-        - large_cell_anaplastic_lymphoma
-        - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
         
     - name: Unspecific
       types:
