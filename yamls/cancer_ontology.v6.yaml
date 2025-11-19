@@ -87,6 +87,9 @@ cancer_ontology:
 
     - name: Colorectal
       types:
+        - overlapping_malignant_neoplasm_of_rectum,_anus_and_anal_canal
+        - malignant_neoplasm_of_rectum,_rectosigmoid_junction_and_anus
+        - malignant_neoplasm,_overlapping_lesion_of_rectum,_anus_and_anal_canal
         - malignant_neoplasm_of_colon_and/or_rectum
         - malignant_tumor_of_ascending_colon
         - malignant_tumor_of_cecum
@@ -229,6 +232,7 @@ cancer_ontology:
       sub_systems:
         - name: Leukemia
           types:
+            - leukemia
             - acute_lymphoid_leukemia
             - acute_lymphoid_leukemia_in_remission
             - acute_leukemia
@@ -419,6 +423,7 @@ cancer_ontology:
             - intraepidermal_squamous_carcinoma_of_scalp
             - intraepidermal_squamous_carcinoma_of_trunk
             - metastatic_squamous_cell_carcinoma
+            - squamous_cell_carcinoma_of_skin_of_trunk
             - squamous_cell_carcinoma
             - squamous_cell_carcinoma_of_hand
             - squamous_cell_carcinoma_of_shoulder
@@ -588,10 +593,8 @@ cancer_ontology:
             - malignant_tumor_of_anal_canal
             - primary_malignant_neoplasm_of_anal_canal
             - primary_malignant_neoplasm_of_anus
-            - overlapping_malignant_neoplasm_of_rectum,_anus_and_anal_canal
             - squamous_cell_carcinoma_of_anal_margin
-            - malignant_neoplasm_of_rectum,_rectosigmoid_junction_and_anus
-            - malignant_neoplasm,_overlapping_lesion_of_rectum,_anus_and_anal_canal
+
         - name: Cervix
           types:
             - cervical_intraepithelial_neoplasia_grade_1
@@ -706,7 +709,6 @@ cancer_ontology:
         - neoplasm_of_intrapelvic_lymph_node
         - neoplasm_of_intrathoracic_lymph_nodes
         - neoplasm_of_lymph_node
-        - leukemia
         - neoplasm_of_lymph_node_of_lower_limb
         - neoplasm_of_lymph_nodes_of_upper_limb
         - lymphoid_leukemia

@@ -21,11 +21,6 @@ anti_cancer_ontology:
     - name: Kidney
       types:
         - primary_malignant_neoplasm_of_renal_pelvis
-    - name: Non-Hodgkin
-      types:
-        - burkitts_lymphoma_clinical
-        - large_cell_anaplastic_lymphoma
-        - extranodal_marginal_zone_bcell_lymphoma_of_mucosaassociated_lymphoid_tissue_maltlymphoma
     - name: Eye
       types:
         - malignant_melanoma_of_right_choroid
