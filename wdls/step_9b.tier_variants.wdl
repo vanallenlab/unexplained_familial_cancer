@@ -150,26 +150,26 @@ workflow STEP_9B_TIER_VARIANTS {
   #    output_dir = step_9b_output_dir
   #}
 
-  call Tasks.concatenateFiles as Tier2_Concat_001 {
-    input:
-      files = T2_Filter_Tier2_001.out1,
-      output_name = "tier2_001"
-  }
-  call Tasks.concatenateFiles as Tier2_Concat_0001 {
-    input:
-      files = T2_Filter_Tier2_0001.out1,
-      output_name = "tier2_0001"
-  }
-  call Tasks.copy_file_to_storage as copy2_001{
-    input:
-      text_file = Tier2_Concat_001.out2,
-      output_dir = step_9b_output_dir
-  }
-  call Tasks.copy_file_to_storage as copy2_0001{
-    input:
-      text_file = Tier2_Concat_0001.out2,
-      output_dir = step_9b_output_dir
-  }
+  #call Tasks.concatenateFiles as Tier2_Concat_001 {
+  #  input:
+  #    files = T2_Filter_Tier2_001.out1,
+  #    output_name = "tier2_001"
+  #}
+  #call Tasks.concatenateFiles as Tier2_Concat_0001 {
+  #  input:
+  #    files = T2_Filter_Tier2_0001.out1,
+  #    output_name = "tier2_0001"
+  #}
+  #call Tasks.copy_file_to_storage as copy2_001{
+  #  input:
+  #    text_file = Tier2_Concat_001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
+  #call Tasks.copy_file_to_storage as copy2_0001{
+  #  input:
+  #    text_file = Tier2_Concat_0001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
 
   #call Tasks.concatenateFiles as Tier3_Concat_001 {
   #  input:
@@ -268,6 +268,27 @@ workflow STEP_9B_TIER_VARIANTS {
   #    output_dir = step_9b_output_dir
   #}
 
+  call Tasks.concatenateFiles as Tier7_Concat_001 {
+    input:
+      files = T2_Filter_Tier2_001.out2,
+      output_name = "tier7_001"
+  }
+  call Tasks.concatenateFiles as Tier7_Concat_0001 {
+    input:
+      files = T2_Filter_Tier2_0001.out2,
+      output_name = "tier7_0001"
+  }
+  call Tasks.copy_file_to_storage as copy7_001{
+    input:
+      text_file = Tier7_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy7_0001{
+    input:
+      text_file = Tier7_Concat_0001.out2,
+      output_dir = step_9b_output_dir
+  }
+  #
   # gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv
   #call make_group_file as make_group_file_001 {
   #  input:
@@ -277,6 +298,7 @@ workflow STEP_9B_TIER_VARIANTS {
   #    tier4 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_001.tsv",
   #    tier5 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier5_001.tsv",
   #    tier6 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier6_001.tsv",
+  #    tier7 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier7_001.tsv",
   #    af = "001",
   #    genes_list = genes_list
   #}
@@ -288,15 +310,16 @@ workflow STEP_9B_TIER_VARIANTS {
   #    tier4 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_0001.tsv",
   #    tier5 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier5_0001.tsv",
   #    tier6 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier6_0001.tsv",
+  #    tier7 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier7_0001.tsv",
   #    af = "0001",
   #    genes_list = genes_list
   #}
-  #call Tasks.copy_file_to_storage as copy7_001{
+  #call Tasks.copy_file_to_storage as copy8_001{
   #  input:
   #    text_file = make_group_file_001.out1,
   #    output_dir = step_9b_output_dir
   #}
-  #call Tasks.copy_file_to_storage as copy7_0001{
+  #call Tasks.copy_file_to_storage as copy8_0001{
   #  input:
   #    text_file = make_group_file_0001.out1,
   #    output_dir = step_9b_output_dir
@@ -331,6 +354,7 @@ task make_group_file {
     File tier4
     File tier5
     File tier6
+    File tier7
     String af
     File genes_list
   }
@@ -341,7 +365,7 @@ task make_group_file {
   from collections import defaultdict
 
   # Ordered from highest to lowest
-  tiers = ["~{tier1}", "~{tier2}", "~{tier3}", "~{tier4}", "~{tier5}", "~{tier6}"]
+  tiers = ["~{tier1}", "~{tier2}", "~{tier3}", "~{tier4}", "~{tier5}", "~{tier7}","~{tier6}"]
   tier_labels = {f"tier{i}": f"T{i}" for i in range(1, 7)}
 
   # Dictionary: gene -> {variant: tier_label}
@@ -604,11 +628,16 @@ task T2_Filter_Tier2 {
 
   # Write filtered results back
   df_filtered[['SPLICE_GENE','ID']].drop_duplicates().to_csv("splice_variants.txt", sep='\t', index=False,header=False)
+
+  df_filtered = df[(df['LOFTEE'] == "LC") | (df[score_cols].max(axis=1) >= 0.2))]
+  df_filtered = df_filtered[df_filtered['SPLICE_GENE'] != "."]
+  df_filtered[['SPLICE_GENE','ID']].drop_duplicates().to_csv("splice_variants.tier7.txt", sep='\t', index=False,header=False)
   CODE
 
   >>>
   output {
     File out1 = "splice_variants.txt"
+    File out2 = "splice_variants.tier7.txt"
   }
 
   runtime {

@@ -515,6 +515,9 @@ cancer_ontology:
           types:
             - carcinoid_tumor_of_appendix
             - neuroendocrine_carcinoma_of_appendix
+        - name: Parathyroid
+          types:
+            - primary_malignant_neoplasm_of_parathyroid_gland
       types:
         - carcinoid_tumor
         - malignant_carcinoid_tumor
@@ -535,9 +538,6 @@ cancer_ontology:
             - malignant_tumor_of_thyroid_gland
             - papillary_thyroid_carcinoma
             - primary_malignant_neoplasm_of_thyroid_gland
-        - name: Parathyroid
-          types:
-            - primary_malignant_neoplasm_of_parathyroid_gland
       types:
         - primary_malignant_neoplasm_of_endocrine_gland
 
