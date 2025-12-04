@@ -10,14 +10,14 @@ workflow ANALYSIS_3B_INVESTIGATE {
   input {
     #Array[File] shard_vcfs
     #File metadata_file
-    String cancer_type = "thyroid"
-    Array[String] keep_genes = ["CHEK2"]
+    String cancer_type = "kidney"
+    Array[String] keep_genes = ["ZNF346"]
     Array[String] exclude_genes = ['TTN']
   }
   String analysis_3_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/"
-  File saige_results = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/" + cancer_type + ".saige.tsv"
-  File groupfile_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/" + cancer_type + ".001.groupfile"
-  File groupfile_0001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/" + cancer_type + ".0001.groupfile"
+  File saige_results = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/" + cancer_type + ".saige.recalibrated.stats.tsv.gz"
+  File groupfile_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/ufc_001.groupfile"
+  File groupfile_0001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/ufc_0001.groupfile"
   ############################
   # Task 1: Filter Genes by P-value
   ############################
@@ -103,13 +103,13 @@ task T1_Filter_Genes {
   # Load SAIGE results
   df = pd.read_csv("~{saige_results}", sep='\t', index_col=False)
   df = df[(df['MAC'] <= 50)]
-  df_tmp1 = df[(df['Pvalue'] <= 0.001)]
-  df_tmp2 = df[(df['Region'].isin(keep_genes)) & (~df['Region'].isin(exclude_genes))]
-  df_tmp2 = df_tmp2.loc[df_tmp2.groupby('Region')['Pvalue'].idxmin()]
+  df_tmp1 = df[(df['recalibrated_p'] <= 0.00001)]
+  df_tmp2 = df[(df['#gene'].isin(keep_genes)) & (~df['#gene'].isin(exclude_genes))]
+  df_tmp2 = df_tmp2.loc[df_tmp2.groupby('#gene')['recalibrated_p'].idxmin()]
   df = pd.concat([df_tmp1,df_tmp2])
-  df = df[df['Group'].isin(['HIGH', 'HIGH;REVEL075', 'HIGH;REVEL075;REVEL050'])]
+  df = df[df['criteria'].isin(['T1','T3', 'T1;T2', 'T1;T2;T3', 'T1;T2;T3;T4','T5'])]
   # For each Region, find the row with the smallest Pvalue
-  df = df.loc[df.groupby('Region')['Pvalue'].idxmin()].reset_index(drop=True)
+  df = df.loc[df.groupby('#gene')['recalibrated_p'].idxmin()].reset_index(drop=True)
 
   print("1: SAIGE results filtered")
 
@@ -122,10 +122,10 @@ task T1_Filter_Genes {
   # Collect variants
   gene_variants = {}
   for _, row in df.iterrows():
-      gene = row['Region']
+      gene = row['#gene']
       print(gene)
-      maf = row['max_MAF']
-      group = row['Group']
+      maf = row['max_AF']
+      group = row['criteria']
 
       # Choose groupfile
       gf = gf_001 if abs(maf - 0.01) < 1e-6 else gf_0001
@@ -264,6 +264,7 @@ task T2_Find_Carriers {
     for vcf in "${vcfs_to_use[@]}"; do
       shard_name=$(basename "$vcf" .vcf.bgz)
       bcftools view --include "ID==@~{variants}" "$vcf" -O z -o "filtered_vcfs/${shard_name}.filtered.vcf.gz"
+      bcftools index -t "filtered_vcfs/${shard_name}.filtered.vcf.gz"
     done
 
     # Merge all filtered outputs if there’s more than one
@@ -325,7 +326,8 @@ task T3_Merge_Metadata {
     'intake_qc_pop',
     'age',
     'original_dx',
-    'family_dx'
+    'maternal_family_dx_counts',
+    'paternal_family_dx_counts'
   ]
 
   merged_subset = merged[columns_to_keep]

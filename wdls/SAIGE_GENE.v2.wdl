@@ -8,23 +8,22 @@ import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow SAIGE_GENE {
   input {
-    File rare_variants_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/rare_001.tsv"
-    File rare_variants_0001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/rare_0001.tsv"
+    File rare_variants_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/saige_gene_001_variants.tsv"
+    File rare_variants_0001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/saige_gene_0001_variants.tsv"
     File group_file_001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/ufc_001.groupfile"
     File group_file_0001 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/ufc_0001.groupfile"
     String step_8_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_8_FILTER_TO_TP_VARIANTS/sharded_vcfs"
     File subjects_list
     String cancer_type
     File ld_pruned_vcf = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_11_GENETIC_RELATEDNESS/ufc_1000G_snps.ld_pruned.vcf.gz"
-    File autosomal_gene_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/gencode.v47.autosomal.protein_coding.genes.list"
     File sample_data
     File aou_phenotypes = "gs://fc-secure-d21aa6b0-1d19-42dc-93e3-42de3578da45/dfci-g2c-inputs/phenotypes/dfci-g2c.aou.phenos.tsv.gz"
     File non_aou_phenotypes = "gs://dfci-g2c-inputs/phenotypes/dfci-g2c.non_aou.phenos.tsv.gz"
     String analysis_3_saige_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_3_SAIGE_GENE/results/"
     String single_sex_analysis
-    File? pgs_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/ADJUSTED_PRS/breast.PGS000783.pgs"
+    File aou_list = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/cohorts/ufc_subjects.aou.list"
+    
   }
-  File ppv_missense_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_5_GSEA/" + cancer_type + ".num_ppv_missense.tsv"
   # Takes in a directory and outputs a Array[File] holding all of the vcf shards for each pathway
   call gather_vcfs {
     input:
@@ -36,20 +35,20 @@ workflow SAIGE_GENE {
       unsorted_vcf_list = gather_vcfs.vcf_list
   }
 
-  Int negative_shards = 2900
+  Int negative_shards = 0
   
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
     # Filter VCF to Low Frequency Variants, variants found w/in cohort, and removed INFO
     call process_vcf as process_vcf_001{
       input:
         vcf = sort_vcf_list.vcf_arr[i],
-        sample_list = subjects_list,
+        sample_list = aou_list,
         rare_variants = rare_variants_001
     }
     call process_vcf as process_vcf_0001{
       input:
         vcf = sort_vcf_list.vcf_arr[i],
-        sample_list = subjects_list,
+        sample_list = aou_list,
         rare_variants = rare_variants_0001
     }
   }
@@ -59,9 +58,7 @@ workflow SAIGE_GENE {
       sample_data = sample_data,
       aou_phenotypes = aou_phenotypes,
       non_aou_phenotypes = non_aou_phenotypes,
-      subjects_list = subjects_list,
-      pgs_file = pgs_file,
-      ppv_missense_file = ppv_missense_file
+      subjects_list = subjects_list
   }
 
   call ConcatVcfs as ConcatVcfs_001 {
@@ -83,6 +80,12 @@ workflow SAIGE_GENE {
       vcf = ld_pruned_vcf,
       output_prefix = "ufc_ld"
   }
+
+  #call plink as plink_rare_variants {
+  #  input:
+  #    vcf = ConcatVcfs_001.merged_vcf,
+  #    output_prefix = "ufc_rare_variants"
+  #}
 
   call saige_gene_step0 {
     input:
@@ -163,12 +166,17 @@ workflow SAIGE_GENE {
       output_name = cancer_type
   }
 
-  call Tasks.copy_file_to_storage as copy3{
+  call RecalibrateSaigeStats {
     input:
-      text_file = sortSAIGE_Output.out1,
-      output_dir = analysis_3_saige_dir
+      raw_stats_tsv = sortSAIGE_Output.out1,
+      output_prefix = "~{cancer_type}"
   }
 
+  call Tasks.copy_file_to_storage as copy3{
+    input:
+      text_file = RecalibrateSaigeStats.out1,
+      output_dir = analysis_3_saige_dir
+  }
 }
 
 task copy_to_storage {
@@ -718,8 +726,6 @@ task get_covariates {
     File non_aou_phenotypes
     File subjects_list
 
-    File? pgs_file
-    File ppv_missense_file
   }
   command <<<
   set -eu -o pipefail
@@ -732,17 +738,8 @@ task get_covariates {
   aou_phenotypes = pd.read_csv("~{aou_phenotypes}",sep='\t')
   non_aou_phenotypes = pd.read_csv("~{non_aou_phenotypes}",sep='\t')
   
-  if "~{pgs_file}" != "":
-    prs_df = pd.read_csv("~{pgs_file}",sep='\t',index_col=False)
-    prs_df['original_id'] = prs_df['sample'].astype(str).str.strip()
-    sample_data['original_id'] = sample_data['original_id'].astype(str).str.strip()
-    sample_data = pd.merge(sample_data, prs_df, on='original_id')
-
-  ppv_missense_df = pd.read_csv("~{ppv_missense_file}",sep='\t',index_col=False)
-  ppv_missense_df['original_id'] = ppv_missense_df['original_id'].astype(str).str.strip()
-
   # Normalize sample_data PCS
-  covariates = [f"PC{i}" for i in range(1, 5)] 
+  covariates = [f"PC{i}" for i in range(1, 5)] + ["age"] 
   sample_data[covariates] = sample_data[covariates].apply(zscore)
 
   # Concatenate the two DataFrames
@@ -760,7 +757,6 @@ task get_covariates {
 
   # Merge the DataFrames
   merged_df = pd.merge(sample_data, phenotypes, left_on="original_id", right_on="Sample")
-  merged_df = pd.merge(merged_df,ppv_missense_df,on='original_id')
    
   # Add in cancer as a binary trait
   merged_df['cancer_status'] = merged_df['cancer'].apply(lambda x: 1 if x not in ['unknown', 'control'] else 0)
@@ -808,7 +804,7 @@ task saige_gene_step0 {
        --nThreads=4  \
        --outputPrefix=sparseGRM       \
        --numRandomMarkerforSparseKin=2000      \
-       --relatednessCutoff=0.125; then
+       --relatednessCutoff=0.3; then
     echo "Error: Sparse GRM creation failed" >&2
     exit 1
   fi
@@ -822,8 +818,8 @@ task saige_gene_step0 {
     memory: "8 GB"
   }
   output {
-    File sparseGRMFile = "sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx"
-    File sparseGRMSampleIDFile = "sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+    File sparseGRMFile = "sparseGRM_relatednessCutoff_0.3_2000_randomMarkersUsed.sparseGRM.mtx"
+    File sparseGRMSampleIDFile = "sparseGRM_relatednessCutoff_0.3_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
   }
 }
 
@@ -869,17 +865,15 @@ task saige_gene_step1 {
   # Shared parameters
   CMD="step1_fitNULLGLMM.R \
     --plinkFile=./ufc \
-    --sparseGRMFile=~{sparseGRMFile} \
-    --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
-    --useSparseGRMtoFitNULL=TRUE \
-    --isCateVariance=TRUE \
     --phenoFile=~{sample_data} \
     --phenoCol=cancer_status \
     --traitType=binary \
     --sampleIDColinphenoFile=original_id \
-    --useSparseGRMforVarRatio=TRUE \
-    --outputPrefix=./test_run"
-
+    --outputPrefix=./test_run \
+    --sparseGRMFile=~{sparseGRMFile} \
+    --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
+    --useSparseGRMtoFitNULL=TRUE \
+    --isCateVarianceRatio=FALSE"
   # Add covariates and sex-related arguments if this is NOT a single-sex analysis
   # Examples of when this should be True are Breast, Prostate, Ovarian, etc
   #if [ "~{single_sex_analysis}" = "False" ]; then
@@ -894,22 +888,17 @@ task saige_gene_step1 {
   #fi
 
   # Start with the base covariates
-  COVARS="PC1,PC2,PC3,PC4,num_ppv_missense"
+  COVARS="PC1,PC2,PC3,PC4"
 
-  # Add PGS if the column exists in the sample file
-  header=$(head -1 ~{sample_data})
-  if [[ "$header" =~ PGS ]]; then
-      COVARS="$COVARS,PGS"
-  fi
 
   # Add sex-related covariates if this is not a single-sex analysis
   if [ "~{single_sex_analysis}" = "False" ]; then
       COVARS="sex,$COVARS"
       CMD="$CMD \
-        --covarColList=$COVARS \
-        --sexCol=sex_karyotype \
-        --FemaleCode=XO,XX,XXX \
-        --MaleCode=XY,XYY,XXY"
+        --covarColList=$COVARS" # \
+        #--sexCol=sex_karyotype \
+        #--FemaleCode=XO,XX,XXX \
+        #--MaleCode=XY,XYY,XXY"
   else
       CMD="$CMD --covarColList=$COVARS"
   fi
@@ -953,13 +942,14 @@ task saige_gene_step2 {
     --minMAC=0.5 \
     --sampleFile=~{sampleFile} \
     --GMMATmodelFile=~{rda} \
-    --max_MAC_for_ER=10 \
-    --varianceRatioFile=~{varianceRatio} \
     --sparseGRMFile=~{sparseGRMFile} \
     --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
+    --max_MAC_for_ER=10 \
+    --varianceRatioFile=~{varianceRatio} \
     --groupFile=~{group_file} \
-    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T5,T6 \
-    --maxMAF_in_groupTest=0.05 \
+    --annotation_in_groupTest=T1,T1:T2,T2,T1:T2:T3,T1:T2:T3:T4,T3,T4,T5,T6,T7,T2:T6,T3:T4:T5 \
+    --is_output_moreDetails=TRUE \
+    --maxMAF_in_groupTest=0.1\
     2>&1 | tee saige.~{cancer_type}.log ; then
   
     echo "Error: Step2 failed" >&2
@@ -1005,14 +995,15 @@ task saige_gene_step2_beta {
     --minMAC=0.5 \
     --sampleFile=~{sampleFile} \
     --GMMATmodelFile=~{rda} \
-    --varianceRatioFile=~{varianceRatio} \
     --sparseGRMFile=~{sparseGRMFile} \
-    --max_MAC_for_ER=10 \
     --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
+    --max_MAC_for_ER=10 \
+    --varianceRatioFile=~{varianceRatio} \
     --groupFile=~{group_file} \
+    --annotation_in_groupTest=T1,T1:T2,T2,T1:T2:T3,T1:T2:T3:T4,T3,T4,T5,T6,T7,T2:T6,T3:T4:T5 \
+    --is_output_moreDetails=TRUE \
+    --maxMAF_in_groupTest=0.1\
     --is_no_weight_in_groupTest=TRUE \
-    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T5,T6\
-    --maxMAF_in_groupTest=0.05 \
     2>&1 | tee saige.~{cancer_type}.log ; then
 
     echo "Error: Step2 failed" >&2
@@ -1164,5 +1155,41 @@ task concatenateFiles {
   }
   output{
     File out = "~{callset_name}.tsv"
+  }
+}
+
+task RecalibrateSaigeStats {
+  input {
+    File raw_stats_tsv
+    String output_prefix
+
+    Int disk_gb = 20
+    Float mem_gb = 7.5
+    Int n_cpu = 4
+    String docker = "vanallenlab/g2c_analysis:4c4511c"
+  }
+
+  String out_tsv = output_prefix + ".saige.recalibrated.stats.tsv"
+
+  command <<<
+    set -eu -o pipefail
+
+    /opt/pancan_germline_wgs/scripts/association/recalibrate_saige_gene.R \
+      -i "~{raw_stats_tsv}" \
+      -o "~{out_tsv}"
+    gzip -f "~{out_tsv}"
+  >>>
+
+  output {
+    File out1 = "~{out_tsv}.gz"
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{mem_gb} GB"
+    cpu: n_cpu
+    disks: "local-disk " + disk_gb + " HDD"
+    preemptible: 1
+    maxRetries: 1
   }
 }

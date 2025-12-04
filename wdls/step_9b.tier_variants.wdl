@@ -15,16 +15,16 @@ workflow STEP_9B_TIER_VARIANTS {
   }
   
   Int positive_shards = 2960
-  call Tasks.gather_positive_vcfs {
-    input:
-      dir = step_9_output_dir,
-      positive_shards = positive_shards
-  }
+  #call Tasks.gather_positive_vcfs {
+  #  input:
+  #    dir = step_9_output_dir,
+  #    positive_shards = positive_shards
+  #}
 
-  call Tasks.sort_vcf_list {
-    input:
-      unsorted_vcf_list = gather_positive_vcfs.vcf_list
-  }
+  #call Tasks.sort_vcf_list {
+  #  input:
+  #    unsorted_vcf_list = gather_positive_vcfs.vcf_list
+  #}
 
   Int negative_shards = 0
   scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
@@ -150,26 +150,26 @@ workflow STEP_9B_TIER_VARIANTS {
   #    output_dir = step_9b_output_dir
   #}
 
-  #call Tasks.concatenateFiles as Tier2_Concat_001 {
-  #  input:
-  #    files = T2_Filter_Tier2_001.out1,
-  #    output_name = "tier2_001"
-  #}
-  #call Tasks.concatenateFiles as Tier2_Concat_0001 {
-  #  input:
-  #    files = T2_Filter_Tier2_0001.out1,
-  #    output_name = "tier2_0001"
-  #}
-  #call Tasks.copy_file_to_storage as copy2_001{
-  #  input:
-  #    text_file = Tier2_Concat_001.out2,
-  #    output_dir = step_9b_output_dir
-  #}
-  #call Tasks.copy_file_to_storage as copy2_0001{
-  #  input:
-  #    text_file = Tier2_Concat_0001.out2,
-  #    output_dir = step_9b_output_dir
-  #}
+  call Tasks.concatenateFiles as Tier2_Concat_001 {
+    input:
+      files = T2_Filter_Tier2_001.out1,
+      output_name = "tier2_001"
+  }
+  call Tasks.concatenateFiles as Tier2_Concat_0001 {
+    input:
+      files = T2_Filter_Tier2_0001.out1,
+      output_name = "tier2_0001"
+  }
+  call Tasks.copy_file_to_storage as copy2_001{
+    input:
+      text_file = Tier2_Concat_001.out2,
+      output_dir = step_9b_output_dir
+  }
+  call Tasks.copy_file_to_storage as copy2_0001{
+    input:
+      text_file = Tier2_Concat_0001.out2,
+      output_dir = step_9b_output_dir
+  }
 
   #call Tasks.concatenateFiles as Tier3_Concat_001 {
   #  input:
@@ -268,28 +268,27 @@ workflow STEP_9B_TIER_VARIANTS {
   #    output_dir = step_9b_output_dir
   #}
 
-  call Tasks.concatenateFiles as Tier7_Concat_001 {
-    input:
-      files = T2_Filter_Tier2_001.out2,
-      output_name = "tier7_001"
-  }
-  call Tasks.concatenateFiles as Tier7_Concat_0001 {
-    input:
-      files = T2_Filter_Tier2_0001.out2,
-      output_name = "tier7_0001"
-  }
-  call Tasks.copy_file_to_storage as copy7_001{
-    input:
-      text_file = Tier7_Concat_001.out2,
-      output_dir = step_9b_output_dir
-  }
-  call Tasks.copy_file_to_storage as copy7_0001{
-    input:
-      text_file = Tier7_Concat_0001.out2,
-      output_dir = step_9b_output_dir
-  }
+  #call Tasks.concatenateFiles as Tier7_Concat_001 {
+  #  input:
+  #    files = T2_Filter_Tier2_001.out2,
+  #    output_name = "tier7_001"
+  #}
+  #call Tasks.concatenateFiles as Tier7_Concat_0001 {
+  #  input:
+  #    files = T2_Filter_Tier2_0001.out2,
+  #    output_name = "tier7_0001"
+  #}
+  #call Tasks.copy_file_to_storage as copy7_001{
+  #  input:
+  #    text_file = Tier7_Concat_001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
+  #call Tasks.copy_file_to_storage as copy7_0001{
+  #  input:
+  #    text_file = Tier7_Concat_0001.out2,
+  #    output_dir = step_9b_output_dir
+  #}
   #
-  # gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv
   #call make_group_file as make_group_file_001 {
   #  input:
   #    tier1 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv",
@@ -298,7 +297,6 @@ workflow STEP_9B_TIER_VARIANTS {
   #    tier4 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_001.tsv",
   #    tier5 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier5_001.tsv",
   #    tier6 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier6_001.tsv",
-  #    tier7 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier7_001.tsv",
   #    af = "001",
   #    genes_list = genes_list
   #}
@@ -310,7 +308,6 @@ workflow STEP_9B_TIER_VARIANTS {
   #    tier4 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_0001.tsv",
   #    tier5 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier5_0001.tsv",
   #    tier6 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier6_0001.tsv",
-  #    tier7 = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier7_0001.tsv",
   #    af = "0001",
   #    genes_list = genes_list
   #}
@@ -324,26 +321,6 @@ workflow STEP_9B_TIER_VARIANTS {
   #    text_file = make_group_file_0001.out1,
   #    output_dir = step_9b_output_dir
   #}
-  #call make_group_file as make_group_file_001 {
-  #  input:
-  #    tier1 = Tier1_Concat_001.out2,
-  #    tier2 = Tier2_Concat_001.out2,
-  #    tier3 = Tier3_Concat_001.out2,
-  #    tier4 = Tier4_Concat_001.out2,
-  #    tier5 = Tier5_Concat_001.out2,
-  #    tier6 = Tier6_Concat_001.out2,
-  #    af = "001"
-  #}
-  #call make_group_file as make_group_file_0001 {
-  #  input:
-  #    tier1 = Tier1_Concat_0001.out2,
-  #    tier2 = Tier2_Concat_0001.out2,
-  #    tier3 = Tier3_Concat_0001.out2,
-  #    tier4 = Tier4_Concat_0001.out2,
-  #    tier5 = Tier5_Concat_0001.out2,
-  #    tier6 = Tier6_Concat_0001.out2,
-  #    af = "0001"
-  #}
 }
 
 task make_group_file {
@@ -354,7 +331,6 @@ task make_group_file {
     File tier4
     File tier5
     File tier6
-    File tier7
     String af
     File genes_list
   }
@@ -365,7 +341,7 @@ task make_group_file {
   from collections import defaultdict
 
   # Ordered from highest to lowest
-  tiers = ["~{tier1}", "~{tier2}", "~{tier3}", "~{tier4}", "~{tier5}", "~{tier7}","~{tier6}"]
+  tiers = ["~{tier1}", "~{tier2}", "~{tier3}", "~{tier4}", "~{tier5}", "~{tier6}"]
   tier_labels = {f"tier{i}": f"T{i}" for i in range(1, 7)}
 
   # Dictionary: gene -> {variant: tier_label}
@@ -610,12 +586,24 @@ task T2_Filter_Tier2 {
   # Get necessary information
   # Extract necessary VEP + SpliceAI info
   bcftools view --include ID==@~{rare_variants} ~{vcf} -G -O z -o tmp.vcf.gz
-  echo -e 'GENE\tID\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\tLOFTEE\tCLINVAR\n' > tmp0.txt
-  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\t%LoF\t%clinvar_CLNSIG\n' -d >> tmp0.txt
+  echo -e 'GENE\tID\tSPLICE_AG\tSPLICE_AL\tSPLICE_DG\tSPLICE_DL\tSPLICE_GENE\tLOFTEE\tCLINVAR\t%CONSEQUENCE\t%BIOTYPE\n' > tmp0.txt
+  bcftools +split-vep tmp.vcf.gz -f '%SYMBOL\t%ID\t%SpliceAI_pred_DS_AG\t%SpliceAI_pred_DS_AL\t%SpliceAI_pred_DS_DG\t%SpliceAI_pred_DS_DL\t%SpliceAI_pred_SYMBOL\t%LoF\t%clinvar_CLNSIG\t%Consequence\t%BIOTYPE\n' -d >> tmp0.txt
 
   python3 <<CODE
   import pandas as pd
   df = pd.read_csv("tmp0.txt",sep='\t',index_col=False)
+
+  # Identify IDs to remove:
+  # those that have ANY row where (missense_variant AND protein_coding)
+  ids_to_remove = (
+      df.groupby("ID")
+        .filter(lambda g: ((g["CONSEQUENCE"].str.contains("missense_variant")) &
+                           (g["BIOTYPE"] == "protein_coding")).any())
+        ["ID"].unique()
+  )
+
+  # Drop those IDs from df
+  df = df[~df["ID"].isin(ids_to_remove)]
 
   # Convert SpliceAI score columns to numeric (coerce invalids to NaN)
   score_cols = ["SPLICE_AG", "SPLICE_AL", "SPLICE_DG", "SPLICE_DL"]
@@ -629,7 +617,7 @@ task T2_Filter_Tier2 {
   # Write filtered results back
   df_filtered[['SPLICE_GENE','ID']].drop_duplicates().to_csv("splice_variants.txt", sep='\t', index=False,header=False)
 
-  df_filtered = df[(df['LOFTEE'] == "LC") | (df[score_cols].max(axis=1) >= 0.2))]
+  df_filtered = df[(df['LOFTEE'] == "LC") | (df[score_cols].max(axis=1) >= 0.2)]
   df_filtered = df_filtered[df_filtered['SPLICE_GENE'] != "."]
   df_filtered[['SPLICE_GENE','ID']].drop_duplicates().to_csv("splice_variants.tier7.txt", sep='\t', index=False,header=False)
   CODE
