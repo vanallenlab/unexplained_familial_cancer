@@ -9,7 +9,7 @@ workflow ANALYSIS_1C_LOGISTIC_REGRESSION {
   input {
     String cancer_type = "neuroendocrine"
     File analysis_1b_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/ANALYSIS_1B_GENES/26bad88a-1bfa-46bd-8c70-f0cf8443f185/call-concat2/out.tsv.gz" 
-    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1C_RESULTS_GENES_0kb/" 
+    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/results/" 
   }
   File step_12_data = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
   Int negative_shards = 0
@@ -29,18 +29,14 @@ workflow ANALYSIS_1C_LOGISTIC_REGRESSION {
   }
   call Tasks.concatenateFiles_noheader as concat1 {
     input:
-      files = T2_RunLogisticRegression.out1
+      files = T2_RunLogisticRegression.out1,
+      callset_name = cancer_type + ".roh_analysis"
   }
-  #call Tasks.concatenateGzippedFiles_noheader as concat2 {
-  #  input:
-  #    files = concat1.out1,
-  #    callset_name = cancer_type + "_roh"
-  #}
-  #call Tasks.copy_file_to_storage {
-  #  input:
-  #    text_file = concat2.out1,
-  #    output_dir = output_dir 
-  #}
+  call Tasks.copy_file_to_storage {
+    input:
+      text_file = concat1.out1,
+      output_dir = output_dir 
+  }
 }
 
 task T1_split_file {

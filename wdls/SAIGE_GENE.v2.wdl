@@ -804,7 +804,7 @@ task saige_gene_step0 {
        --nThreads=4  \
        --outputPrefix=sparseGRM       \
        --numRandomMarkerforSparseKin=2000      \
-       --relatednessCutoff=0.3; then
+       --relatednessCutoff=0.125; then
     echo "Error: Sparse GRM creation failed" >&2
     exit 1
   fi
@@ -818,8 +818,8 @@ task saige_gene_step0 {
     memory: "8 GB"
   }
   output {
-    File sparseGRMFile = "sparseGRM_relatednessCutoff_0.3_2000_randomMarkersUsed.sparseGRM.mtx"
-    File sparseGRMSampleIDFile = "sparseGRM_relatednessCutoff_0.3_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+    File sparseGRMFile = "sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx"
+    File sparseGRMSampleIDFile = "sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
   }
 }
 
@@ -947,7 +947,7 @@ task saige_gene_step2 {
     --max_MAC_for_ER=10 \
     --varianceRatioFile=~{varianceRatio} \
     --groupFile=~{group_file} \
-    --annotation_in_groupTest=T1,T1:T2,T2,T1:T2:T3,T1:T2:T3:T4,T3,T4,T5,T6,T7,T2:T6,T3:T4:T5 \
+    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T1:T2:T3:T4:T5,T2,T3,T4,T5,T6 \
     --is_output_moreDetails=TRUE \
     --maxMAF_in_groupTest=0.1\
     2>&1 | tee saige.~{cancer_type}.log ; then
@@ -1000,7 +1000,7 @@ task saige_gene_step2_beta {
     --max_MAC_for_ER=10 \
     --varianceRatioFile=~{varianceRatio} \
     --groupFile=~{group_file} \
-    --annotation_in_groupTest=T1,T1:T2,T2,T1:T2:T3,T1:T2:T3:T4,T3,T4,T5,T6,T7,T2:T6,T3:T4:T5 \
+    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T1:T2:T3:T4:T5,T2,T3,T4,T5,T6 \
     --is_output_moreDetails=TRUE \
     --maxMAF_in_groupTest=0.1\
     --is_no_weight_in_groupTest=TRUE \

@@ -4,60 +4,52 @@ import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 
-def return_pvals(file, max_maf, annotation, column_of_interest = "Pvalue"):
-	df = pd.read_csv(file, sep='\t')
-	df = df[(df['Group'] == annotation) & (df['max_MAF'] == max_maf)]
-	p_vals = list(df[column_of_interest])
-	return p_vals
+def return_pvals(file, max_maf, annotation, column_of_interest="Pvalue"):
+    df = pd.read_csv(file, sep='\t')
+    df = df[(df['Group'] == annotation) & (df['max_MAF'] == max_maf)]
+    if column_of_interest not in df:
+        return []
+    return df[column_of_interest].dropna().tolist()
+
 
 def main():
-	"""
-    Main block
-    """
-	parser = argparse.ArgumentParser(
-    	description=__doc__,
-    	formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data', required=True)
+    parser.add_argument('-o', '--output', required=False, default='saige_results.png')
+    args = parser.parse_args()
 
-	parser.add_argument('-d', '--data', required=True, help = 'SAIGE Output')
-	parser.add_argument('-o', '--output', required=False, default = 'saige_results.png', help='output png dir') 
-	args = parser.parse_args()
+    df = pd.read_csv(args.data, sep='\t')
 
-	### FILES ###
-	df = pd.read_csv(args.data, sep='\t', index_col=False)
+    max_mafs = [0.01, 0.001]
+    groups = sorted(df['Group'].unique())
 
-    # Get dimensions for our analysis
-	#max_mafs = sorted(list(set(df['max_MAF'])))
-	max_mafs = [0.01,0.001]
-	nrows = len(max_mafs)
+    nrows = len(max_mafs)
+    ncols = len(groups)
 
-	groups = sorted(list(set(df['Group'])))
-	ncols = len(groups)
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4*ncols, 3*nrows))
+    axes = np.atleast_2d(axes)
 
-	# Base width and height per subplot (in inches)
-	base_width = 4
-	base_height = 3
+    for i, af in enumerate(max_mafs):
+        for j, grouping in enumerate(groups):
 
-	# Adjust figsize based on grid shape
-	fig_width = base_width * ncols
-	fig_height = base_height * nrows
+            p_vals = np.array(
+                return_pvals(args.data, af, grouping), 
+                dtype=float
+            )
 
+            if len(p_vals) == 0 or np.all(np.isnan(p_vals)):
+                axes[i, j].set_title(f"{grouping} <= {af*100}% (no data)")
+                axes[i, j].plot([], [])
+                continue
 
-    ### QQ PLOT ###
-	figure, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize = (fig_width,fig_height))
-	axes = np.atleast_2d(axes)
-	fontsize = 10
-	for i in range(nrows):
-		for j in range (ncols):
-			af = max_mafs[i]
-			grouping = groups[j]
-			p_vals = return_pvals(args.data, af, annotation=grouping)
-			qqman.qqplot(p_vals, ax=axes[i, j], title=f"{grouping} <={af * 100}%")
-			axes[i, j].set_title(f"{grouping} <={af * 100}%", fontsize=fontsize)
+            qqman.qqplot(p_vals, ax=axes[i, j])
+            axes[i, j].set_title(f"{grouping} <= {af*100}%")
+
+    plt.tight_layout()
+    plt.savefig(args.output)
+    plt.close()
 
 
-	figure.tight_layout()
-	plt.savefig(args.output,format="png")
-	plt.close()
 
 if __name__ == "__main__":
 	main()

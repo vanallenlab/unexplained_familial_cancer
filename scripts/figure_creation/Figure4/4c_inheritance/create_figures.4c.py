@@ -109,17 +109,45 @@ for g1, g2 in pairs:
 # 5. Plot with significance annotations
 # -------------------------------
 
+# group_order = ['Control', f"Isolated {cancer_type.capitalize()}", f"Familial {cancer_type.capitalize()}"]
+
+# # --- Compute counts per group ---
+# counts = df['group'].value_counts().to_dict()
+
+# # --- Build custom labels with counts ---
+# group_labels = []
+# for g in group_order:
+#     n = counts.get(g, 0)
+#     label_count = f"<20" if n < 20 else str(n)
+#     group_labels.append(f"{g.replace("_"," ")}\n(n={label_count})")
+
 group_order = ['Control', f"Isolated {cancer_type.capitalize()}", f"Familial {cancer_type.capitalize()}"]
 
-# --- Compute counts per group ---
-counts = df['group'].value_counts().to_dict()
+isolated = f"Isolated {cancer_type.capitalize()}"
+familial = f"Familial {cancer_type.capitalize()}"
+control = "Control"
 
-# --- Build custom labels with counts ---
-group_labels = []
-for g in group_order:
-    n = counts.get(g, 0)
-    label_count = f"<20" if n < 20 else str(n)
-    group_labels.append(f"{g}\n(n={label_count})")
+# get counts
+counts = df['group'].value_counts().to_dict()
+n_iso = counts.get(isolated, 0)
+n_fam = counts.get(familial, 0)
+n_ctrl = counts.get(control, 0)
+
+# function to generate label
+def paired_label(n, other_n):
+    if n <= 20 or other_n <= 20:
+        return "≤20" if n <= 20 else "≥20"
+    else:
+        return "=" + str(n)
+
+group_labels = [
+    f"{control}\n(n={n_ctrl})",
+    f"{isolated}\n(n{paired_label(n_iso, n_fam)})",
+    f"{familial}\n(n{paired_label(n_fam, n_iso)})"
+]
+
+
+
 
 plt.figure(figsize=(4,3))
 
@@ -138,14 +166,43 @@ sns.boxplot(
 #sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette="Set2", showfliers=False)
 #sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=2, alpha=0.5)
 
-# --- Overlay points only if group has >20 samples ---
+#--- Overlay points only if group has >20 samples ---
+# for g in group_order:
+#     subset = df[df['group'] == g]
+#     if len(subset) > 20:
+#         sns.stripplot(
+#             data=subset, x='group', y='PGS',
+#             order=group_order, color='black', size=2, alpha=0.5
+#         )
+
+isolated = f"Isolated {cancer_type.capitalize()}"
+familial = f"Familial {cancer_type.capitalize()}"
+control = "Control"
+
+# get counts
+counts = df['group'].value_counts().to_dict()
+n_iso = counts.get(isolated, 0)
+n_fam = counts.get(familial, 0)
+n_ctrl = counts.get(control, 0)
+
+# overlay dots
 for g in group_order:
     subset = df[df['group'] == g]
-    if len(subset) > 20:
+
+    if g == control:
+        # always overlay dots for Control
         sns.stripplot(
             data=subset, x='group', y='PGS',
             order=group_order, color='black', size=2, alpha=0.5
         )
+    elif g in (isolated, familial):
+        # overlay dots only if both paired groups > 20
+        if n_iso > 20 and n_fam > 20:
+            sns.stripplot(
+                data=subset, x='group', y='PGS',
+                order=group_order, color='black', size=2, alpha=0.5
+            )
+
 
 y_max = df['PGS'].max()
 y_min = df['PGS'].min()
@@ -163,12 +220,17 @@ for i, (g1, g2) in enumerate(pairs):
     p_text = "p < 1e-15" if p_val < 1e-15 else f"p = {p_val:.2e}"
     plt.text((x1+x2)/2, y + 0.01, p_text, ha='center', va='bottom', fontsize=5)
 
-plt.title(f"PGS ({PGS_ID}) distribution by {cancer_type.capitalize()} Family History",fontsize=7)
+plt.title(f"PGS ({PGS_ID}) distribution by {cancer_type.replace("_"," ").title()} Family History",fontsize=7)
 plt.ylabel(f"PGS ({PGS_ID}) Z-Score",fontsize=5)
 plt.xlabel("")
 
 # --- Replace default x-axis labels with custom labels ---
-plt.xticks(ticks=range(len(group_order)), labels=group_labels, rotation=20,fontsize=5)
+group_labels_display = [
+    f"{control}\n(n={n_ctrl})",
+    f"{isolated.replace("_"," ").title()}\n(n{paired_label(n_iso, n_fam)})",
+    f"{familial.replace("_"," ").title()}\n(n{paired_label(n_fam, n_iso)})"
+]
+plt.xticks(ticks=range(len(group_order)), labels=group_labels_display, rotation=20,fontsize=5)
 plt.ylim(y_min - 0.1*y_range, y_max + len(pairs)*spacing + 0.1*y_range)
 plt.tight_layout()
 plt.savefig(png_file, dpi=300)
