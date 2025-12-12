@@ -1,7 +1,7 @@
 cancer_ontology:
   description: An ontology of cancer types categorized by organ systems.
   systems:
-    - name: Bone and Soft Tissue
+    - name: Sarcoma
       sub_systems:
         - name: Bone
           types:
@@ -515,9 +515,6 @@ cancer_ontology:
           types:
             - carcinoid_tumor_of_appendix
             - neuroendocrine_carcinoma_of_appendix
-        - name: Parathyroid
-          types:
-            - primary_malignant_neoplasm_of_parathyroid_gland
       types:
         - carcinoid_tumor
         - malignant_carcinoid_tumor
@@ -538,6 +535,9 @@ cancer_ontology:
             - malignant_tumor_of_thyroid_gland
             - papillary_thyroid_carcinoma
             - primary_malignant_neoplasm_of_thyroid_gland
+        - name: Parathyroid
+          types:
+            - primary_malignant_neoplasm_of_parathyroid_gland
       types:
         - primary_malignant_neoplasm_of_endocrine_gland
 
@@ -603,10 +603,6 @@ cancer_ontology:
             - malignant_tumor_of_cervix
             - primary_malignant_neoplasm_of_endocervix
             - primary_malignant_neoplasm_of_uterine_cervix
-        - name: CIN #HPV
-          types:
-            - cervical_intraepithelial_neoplasia_grade_1
-            - cervical_intraepithelial_neoplasia_grade_2
         - name: Oropharynx #HPV
           types:
             - carcinoma_of_base_of_tongue
@@ -724,4 +720,3 @@ cancer_ontology:
         - estrogen_receptor_negative_neoplasm
         - estrogen_receptor_positive_tumor
         - endometrial_intraepithelial_neoplasia
-        - prostatic_intraepithelial_neoplasia
