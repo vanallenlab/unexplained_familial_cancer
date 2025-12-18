@@ -7,8 +7,37 @@ from scipy.interpolate import make_interp_spline
 import sys
 import os
 
-broad_genomic_range = "chr8:105300001-105400000"
-def plot_smoothed_genomic_data(filepath):
+def parse_color_file(filepath: str) -> dict:
+    """
+    Parse a color mapping file and return a dictionary of name → hex color.
+
+    Each line should look like:
+      Breast: "#FFC0CB"  # pink
+
+    The function ignores comments and blank lines.
+    """
+    color_map = {}
+
+    with open(filepath, "r") as infile:
+        for line in infile:
+            # Strip whitespace and skip empty/comment lines
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            # Split key and value
+            if ":" in line:
+                key, value = line.split(":", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+
+                color_map[key.lower()] = value
+
+    return color_map
+
+cancer_color = parse_color_file("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml")
+
+def plot_smoothed_genomic_data(filepath,highlight_start,highlight_end,broad_genomic_range):
     """
     Reads tab-separated genomic data from a file, extracts the position, 
     applies a rolling mean to reduce volatility, and generates a smooth 
@@ -75,7 +104,7 @@ def plot_smoothed_genomic_data(filepath):
 
     # 4. Finalize Chart Aesthetics
     ax.set_title(f'{broad_genomic_range.capitalize()}', fontsize=16)
-    ax.set_xlabel(f"Chr{chr_num} Position", fontsize=12)
+    #ax.set_xlabel(f"Chr{chr_num} Position", fontsize=12)
     ax.set_ylabel('Percent Homozygosed', fontsize=12)
 
     # Format Y-axis ticks as percentage
@@ -90,10 +119,6 @@ def plot_smoothed_genomic_data(filepath):
 
     ax.xaxis.set_major_formatter(FuncFormatter(comma_formatter))
     ax.tick_params(axis='x', pad=8)   # increase pad (default is 4)
-
-    # Highlight start and end coordinates
-    highlight_start = 56750001
-    highlight_end   = 56850000
 
     # Add shaded region
     ax.axvspan(
@@ -120,4 +145,10 @@ if __name__ == '__main__':
         sys.exit(1)
 
     input_filepath = sys.argv[1]
-    plot_smoothed_genomic_data(input_filepath)
+    wide_range = sys.argv[2]
+    narrow_range = sys.argv[3]
+    chrom = wide_range.split(":").[0]
+    narrow_start = wide_range.split(":")[1].split('-')[0]
+    narrow_end = wide_range.split(":")[1].split('-')[1]
+
+    plot_smoothed_genomic_data(input_filepath,highlight_start=narrow_start,highlight_end=narrow_end,broad_genomic_range=wide_range)

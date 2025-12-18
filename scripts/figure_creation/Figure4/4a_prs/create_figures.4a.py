@@ -34,7 +34,7 @@ def parse_color_file(filepath: str) -> dict:
     return color_map
 
 cancer_color = parse_color_file("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml")
-print(cancer_color)
+
 or_table = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_by_all/FINAL_PRS.OR.tsv",sep='\t',index_col=False)
 pval_table = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_by_all/FINAL_PRS.pvalue.tsv",sep='\t',index_col=False)
 
