@@ -7,7 +7,7 @@ from scipy.interpolate import make_interp_spline
 import sys
 import os
 
-broad_genomic_range = "chr8:105100001-105600000"
+broad_genomic_range = "chr8:105300001-105400000"
 def plot_smoothed_genomic_data(filepath):
     """
     Reads tab-separated genomic data from a file, extracts the position, 
@@ -92,8 +92,8 @@ def plot_smoothed_genomic_data(filepath):
     ax.tick_params(axis='x', pad=8)   # increase pad (default is 4)
 
     # Highlight start and end coordinates
-    highlight_start = 105300001
-    highlight_end   = 105400000
+    highlight_start = 56750001
+    highlight_end   = 56850000
 
     # Add shaded region
     ax.axvspan(

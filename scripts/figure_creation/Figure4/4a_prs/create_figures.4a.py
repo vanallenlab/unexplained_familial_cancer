@@ -42,16 +42,16 @@ pval_table = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/analysis_4b
 # Define the PGS identifiers per cancer
 #"basal_cell":     ["PGS000790"],
 cancer_configs = {
-    "breast":       ["PGS004688"],
-    "prostate":     ["PGS004694"],
-    "colorectal":   ["PGS003386"],
+    "breast": ["PGS004688"],
     "cervix": ["PGS000784"],
+    "colorectal": ["PGS003386"],
     "kidney": ["PGS004690"],
-    "melanoma":     ["PGS003382"],
-    "squamous_cell":     ["PGS000790"],
-    "thyroid": ["PGS000797"],
-    "nervous": ["PGS003384"],
-    "non-hodgkins": ["PGS000791"]
+    "lung": ["PGS000789"],
+    "melanoma": ["PGS003382"],
+    "non-hodgkin": ["PGS000791"],
+    "prostate": ["PGS004694"],
+    "squamous_cell": ["PGS000790"],
+    "thyroid": ["PGS000797"], 
 }
 
 # Set up plot style

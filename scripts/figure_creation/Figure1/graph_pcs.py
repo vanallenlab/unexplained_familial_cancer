@@ -4,7 +4,7 @@ import yaml
 import numpy as np
 
 # --- Load input data ---
-df = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/step_11_pcs/merged_pcs.tsv", sep="\t")
+df = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/demographics/demographics.tsv", sep="\t")
 
 # --- Load colors from YAML ---
 with open("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml", "r") as f:
@@ -66,5 +66,5 @@ leg = ax.legend(
 )
 
 plt.tight_layout()
-plt.savefig("/Users/noah/Desktop/ufc_repository/results/step_11_pcs/pc_figure.png")
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/demographics/pc_figure.png",dpi=400)
 #plt.show()
