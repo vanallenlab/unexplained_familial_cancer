@@ -182,7 +182,7 @@ def main():
 
     # Load ROH data and phenotypic data
     roh_df = pd.read_csv(args.roh_file,sep='\t',index_col=False,header=None,names=['RG','Sample','Chromosome','Start','End','Length','Num_markers','Quality'])
-    phenotype_df = pd.read_csv("phenotype_data.tsv",sep="\t", dtype=str)
+    phenotype_df = pd.read_csv("phenotype_data.tsv",sep="\t", dtype=str,index_col=False)
 
     # Ensure correct dtypes
     roh_df["Sample"] = roh_df["Sample"].astype(str)
