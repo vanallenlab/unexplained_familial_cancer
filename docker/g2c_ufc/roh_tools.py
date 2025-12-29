@@ -185,7 +185,7 @@ def main():
     phenotype_df = pd.read_csv("phenotype_data.tsv",sep="\t", dtype=str)
 
     # Ensure correct dtypes
-	roh_df["Sample"] = roh_df["Sample"].astype(str)
+    roh_df["Sample"] = roh_df["Sample"].astype(str)
 	roh_df["Length"] = roh_df["Length"].astype(float)
 
     # Load samples list (one sample ID per line)
