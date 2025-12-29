@@ -181,7 +181,7 @@ def main():
     args = parser.parse_args()
 
     # Load ROH data and phenotypic data
-    roh_df = pd.read_csv(args.roh_file,sep='\t',index=False,header=None,names=['RG','Sample','Chromosome','Start','End','Length','Num_markers','Quality'])
+    roh_df = pd.read_csv(args.roh_file,sep='\t',index_col=False,header=None,names=['RG','Sample','Chromosome','Start','End','Length','Num_markers','Quality'])
     phenotype_df = pd.read_csv("phenotype_data.tsv",sep="\t", dtype=str)
 
     # Ensure correct dtypes
