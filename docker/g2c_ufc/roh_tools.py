@@ -188,6 +188,14 @@ def main():
 	roh_df["Sample"] = roh_df["Sample"].astype(str)
 	roh_df["Length"] = roh_df["Length"].astype(float)
 
+    # Load samples list (one sample ID per line)
+    samples = pd.read_csv(args.samples,header=None,dtype=str)[0].tolist()
+
+    samples = set(samples)
+
+    # Filter ROH dataframe
+    roh_df = roh_df[roh_df["Sample"].isin(samples)]
+
     
 
     # Run everything
