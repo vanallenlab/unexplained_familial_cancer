@@ -152,9 +152,40 @@ task filter_sv {
   tabix -p vcf tmp.vcf.gz
 
   bcftools view -S ~{ufc_subjects_list} --force-samples tmp.vcf.gz -Oz -o aou.vcf.gz
-  bcftools query -i 'AF<0.01 && gnomad_v4.1_sv_AFR_AF < 0.01 && gnomad_v4.1_sv_EUR_AF < 0.01 && gnomad_v4.1_sv_AMR_AF < 0.01 && gnomad_v4.1_sv_EAS_AF < 0.01 && gnomad_v4.1_sv_SAS_AF < 0.01 && gnomad_v4.1_sv_FIN_AF < 0.01 && gnomad_v4.1_sv_ASJ_AF < 0.1 && gnomad_v4.1_sv_AMI_AF < 0.1 && gnomad_v4.1_sv_RMI_AF < 0.1 && gnomad_v4.1_sv_MID_AF < 0.1' -f '%ID\n' aou.vcf.gz > rare_svs.001.tsv
+  #bcftools query -i 'AF<0.01 && gnomad_v4.1_sv_AFR_AF < 0.01 && gnomad_v4.1_sv_EUR_AF < 0.01 && gnomad_v4.1_sv_AMR_AF < 0.01 && gnomad_v4.1_sv_EAS_AF < 0.01 && gnomad_v4.1_sv_SAS_AF < 0.01 && gnomad_v4.1_sv_FIN_AF < 0.01 && gnomad_v4.1_sv_ASJ_AF < 0.1 && gnomad_v4.1_sv_AMI_AF < 0.1 && gnomad_v4.1_sv_RMI_AF < 0.1 && gnomad_v4.1_sv_MID_AF < 0.1' -f '%ID\n' aou.vcf.gz > rare_svs.001.tsv
+  bcftools query \
+    -i '
+      (AF < 0.01 || AF = ".") &&
+      (gnomad_v4.1_sv_AFR_AF < 0.01 || gnomad_v4.1_sv_AFR_AF = ".") &&
+      (gnomad_v4.1_sv_EUR_AF < 0.01 || gnomad_v4.1_sv_EUR_AF = ".") &&
+      (gnomad_v4.1_sv_AMR_AF < 0.01 || gnomad_v4.1_sv_AMR_AF = ".") &&
+      (gnomad_v4.1_sv_EAS_AF < 0.01 || gnomad_v4.1_sv_EAS_AF = ".") &&
+      (gnomad_v4.1_sv_SAS_AF < 0.01 || gnomad_v4.1_sv_SAS_AF = ".") &&
+      (gnomad_v4.1_sv_FIN_AF < 0.01 || gnomad_v4.1_sv_FIN_AF = ".") &&
+      (gnomad_v4.1_sv_ASJ_AF < 0.1  || gnomad_v4.1_sv_ASJ_AF = ".") &&
+      (gnomad_v4.1_sv_AMI_AF < 0.1  || gnomad_v4.1_sv_AMI_AF = ".") &&
+      (gnomad_v4.1_sv_RMI_AF < 0.1  || gnomad_v4.1_sv_RMI_AF = ".") &&
+      (gnomad_v4.1_sv_MID_AF < 0.1  || gnomad_v4.1_sv_MID_AF = ".")
+    ' \
+    -f '%ID\n' aou.vcf.gz > rare_svs.001.tsv
 
-  bcftools query -i 'AF<0.001 && gnomad_v4.1_sv_AFR_AF < 0.001 && gnomad_v4.1_sv_EUR_AF < 0.001 && gnomad_v4.1_sv_AMR_AF < 0.001 && gnomad_v4.1_sv_EAS_AF < 0.001 && gnomad_v4.1_sv_SAS_AF < 0.001 && gnomad_v4.1_sv_FIN_AF < 0.001 && gnomad_v4.1_sv_ASJ_AF< 0.01 && gnomad_v4.1_sv_AMI_AF < 0.01 && gnomad_v4.1_sv_RMI_AF < 0.01 && gnomad_v4.1_sv_MID_AF < 0.01' -f '%ID\n' aou.vcf.gz > rare_svs.0001.tsv
+  #bcftools query -i 'AF<0.001 && gnomad_v4.1_sv_AFR_AF < 0.001 && gnomad_v4.1_sv_EUR_AF < 0.001 && gnomad_v4.1_sv_AMR_AF < 0.001 && gnomad_v4.1_sv_EAS_AF < 0.001 && gnomad_v4.1_sv_SAS_AF < 0.001 && gnomad_v4.1_sv_FIN_AF < 0.001 && gnomad_v4.1_sv_ASJ_AF< 0.01 && gnomad_v4.1_sv_AMI_AF < 0.01 && gnomad_v4.1_sv_RMI_AF < 0.01 && gnomad_v4.1_sv_MID_AF < 0.01' -f '%ID\n' aou.vcf.gz > rare_svs.0001.tsv
+
+  bcftools query \
+    -i '
+      (AF < 0.001 || AF = ".") &&
+      (gnomad_v4.1_sv_AFR_AF < 0.001 || gnomad_v4.1_sv_AFR_AF = ".") &&
+      (gnomad_v4.1_sv_EUR_AF < 0.001 || gnomad_v4.1_sv_EUR_AF = ".") &&
+      (gnomad_v4.1_sv_AMR_AF < 0.001 || gnomad_v4.1_sv_AMR_AF = ".") &&
+      (gnomad_v4.1_sv_EAS_AF < 0.001 || gnomad_v4.1_sv_EAS_AF = ".") &&
+      (gnomad_v4.1_sv_SAS_AF < 0.001 || gnomad_v4.1_sv_SAS_AF = ".") &&
+      (gnomad_v4.1_sv_FIN_AF < 0.001 || gnomad_v4.1_sv_FIN_AF = ".") &&
+      (gnomad_v4.1_sv_ASJ_AF < 0.01  || gnomad_v4.1_sv_ASJ_AF = ".") &&
+      (gnomad_v4.1_sv_AMI_AF < 0.01  || gnomad_v4.1_sv_AMI_AF = ".") &&
+      (gnomad_v4.1_sv_RMI_AF < 0.01  || gnomad_v4.1_sv_RMI_AF = ".") &&
+      (gnomad_v4.1_sv_MID_AF < 0.01  || gnomad_v4.1_sv_MID_AF = ".")
+    ' \
+    -f '%ID\n' aou.vcf.gz > rare_svs.0001.tsv
 
   bcftools view -i 'ID=@rare_svs.001.tsv' aou.vcf.gz -Oz -o tmp_001.vcf.gz
   echo -e 'ID\tAF\tSV_LENGTH\tPREDICTED_BREAKEND_EXONIC\tPREDICTED_COPY_GAIN\tPREDICTED_DUP_PARTIAL\tPREDICTED_INTERGENIC\tPREDICTED_INTRAGENIC_EXON_DUP\tPREDICTED_INTRONIC\tPREDICTED_INV_SPAN\tPREDICTED_LOF\tPREDICTED_MSV_EXON_OVERLAP\tPREDICTED_NEAREST_TSS\tPREDICTED_NONCODING_BREAKPOINT\tPREDICTED_NONCODING_SPAN\tPREDICTED_PARTIAL_DISPERSED_DUP\tPREDICTED_PARTIAL_EXON_DUP\tPREDICTED_PROMOTER\tPREDICTED_TSS_DUP\tPREDICTED_UTR\tSAMPLES\n' >> ufc.structural_variants.txt
