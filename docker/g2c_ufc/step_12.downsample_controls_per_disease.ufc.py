@@ -182,10 +182,16 @@ def maximal_non_related_subset_dfs_family_style(family, kinship_file, meta, pref
     #     G.nodes, key=lambda n: (cancer_status.get(n, 'control') == 'control', G.degree[n])
     # )
     # Sort nodes: preferred cancer type first, other cancers next, then controls
+
+    def has_preferred_cancer(cancer_str, preferred):
+        if not isinstance(cancer_str, str):
+            return False
+        return preferred in [x.strip() for x in cancer_str.split(';')]
+
     node_list = sorted(
         G.nodes,
         key=lambda n: (
-            0 if cancer_status.get(n) == preferred_cancer_type else
+            0 if has_preferred_cancer(cancer_status.get(n, ''), preferred_cancer_type) else
             1 if cancer_status.get(n, 'control') != 'control' else
             2,
             G.degree[n]  # within each group, sort by degree
@@ -571,8 +577,10 @@ def main():
     familial_set = set()
     for family in family_units:
         if args.preferred_cancer_type != "NO PREFERENCE":
+            print("going family style!!")
             subset = maximal_non_related_subset_dfs_family_style(family, args.kinship, meta,args.preferred_cancer_type)
         else:
+            print("no family style")
             subset = maximal_non_related_subset_dfs(family, args.kinship, meta)
         familial_set.update(subset)
 
