@@ -514,6 +514,7 @@ def main():
     # Filter to just cases in our study as well as cases in the specific subtype
     meta = meta[meta['original_id'].astype(str).str.strip().isin(samples)]
 
+    print("before filtering pgvs",meta['original_dx'].str.contains('Breast', case=False, na=False).sum())
     with open(args.log_file, "a") as f:
         f.write(f"Excluding: {len(exclude_samples)} with known pathogenic variants.\n")
 
@@ -529,6 +530,8 @@ def main():
     meta = meta[meta['cancer'] != "unknown"]
     sample_size2 = len(meta)
     
+    print("after filterining unknwons",meta['original_dx'].str.contains('Breast', case=False, na=False).sum())
+
     with open(args.log_file, "a") as f:
         f.write(f"{sample_size2}\t{(sample_size1 - sample_size2)}\t{round(((sample_size1 - sample_size2)/sample_size1),3) * 100}\tRemove samples with unknown cancer status.\n")
 
@@ -594,7 +597,9 @@ def main():
     # Grab all cases not involved in a family
     non_familial_set = extract_non_familial_set(samples=set(meta['original_id']),kinship_file=args.kinship)
     family_units = extract_family_units(kinship_file=args.kinship)
-    print(family_units)
+
+    print("before family filtering",meta['original_dx'].str.contains('Breast', case=False, na=False).sum())
+
     familial_set = set()
     for family in family_units:
         if args.preferred_cancer_type != "NO PREFERENCE":
@@ -607,7 +612,8 @@ def main():
 
     # Filter our data to our maximal unrelated set of individuals
     meta = meta[meta['original_id'].isin(non_familial_set.union(familial_set))]
-
+    
+    print("after family filtering",meta['original_dx'].str.contains('Breast', case=False, na=False).sum())
     sample_size5 = len(meta)
     with open(args.log_file, "a") as f:
         f.write(f"{sample_size5}\t{(sample_size4 - sample_size5)}\t{round(((sample_size4 - sample_size5)/sample_size4),3) * 100}\tExcluded due to relatedness with other individuals.\n")
