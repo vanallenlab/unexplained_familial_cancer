@@ -51,7 +51,7 @@ def extract_family_units(kinship_file):
     
     # Add edges from kinship file
     for _, row in kinship.iterrows():
-        G.add_edge(str(row['#ID1']), str(row['ID2']))
+        G.add_edge(str(int(row['#ID1'])), str(int(row['ID2'])))
 
     # Get connected components (family units)
     family_units = [set(component) for component in nx.connected_components(G)]
