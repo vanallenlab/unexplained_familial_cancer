@@ -472,7 +472,6 @@ def main():
     # Load sample metadata
     meta = pd.read_csv(args.metadata, sep='\t',index_col=False)
     meta['original_id'] = meta['original_id'].astype(str)
-    meta['case_control'] = (meta['original_dx'] != "control").astype(int)
     phenotype_data = pd.read_csv(args.phenotype_data,sep='\t',index_col=False)
     phenotype_data['Sample'] = phenotype_data['Sample'].astype(str)
     phenotype_data = phenotype_data[~((phenotype_data['cancer'] == "control") & (phenotype_data['maternal_family_dx'].notna() | phenotype_data['paternal_family_dx'].notna()))]
@@ -599,6 +598,7 @@ def main():
     with open(args.log_file, "a") as f:
         f.write(f"{sample_size6}\t{(sample_size5 - sample_size6)}\t{round(((sample_size5 - sample_size6)/sample_size5),3) * 100}\tMatched by ancestry allowing 3x controls as cases per ancestry.\n")
 
+    meta['case_control'] = (meta['original_dx'] != "control").astype(int)
     ## Print Summary Statistics
     with open(args.log_file, 'a') as f:
         f.write("===== Summary Report =====\n\n")
