@@ -147,6 +147,27 @@ def maximal_non_related_subset_dfs(family, kinship_file, meta):
 
     return best[0]
 
+def dfs_independent_set_family_style(G, node_list, selected, best, cancer_status, preferred_cancer_type):
+
+    def has_preferred_cancer(node): c = cancer_status.get(node, ''); return isinstance(c, str) and preferred_cancer_type in [x.strip() for x in c.split(';')]
+
+    def score(nodes): return (sum(has_preferred_cancer(n) for n in nodes), sum(cancer_status.get(n, 'control') != 'control' for n in nodes), len(nodes))
+
+    if not node_list:
+        if score(selected) > score(best[0]): best[0] = selected.copy()
+        return
+
+    node = node_list[0]
+
+    if all(neigh not in selected for neigh in G.neighbors(node)):
+        selected.add(node)
+        remaining = [n for n in node_list[1:] if n not in G.neighbors(node)]
+        dfs_independent_set_family_style(G, remaining, selected, best, cancer_status, preferred_cancer_type)
+        selected.remove(node)
+
+    dfs_independent_set_family_style(G, node_list[1:], selected, best, cancer_status, preferred_cancer_type)
+
+
 def maximal_non_related_subset_dfs_family_style(family, kinship_file, meta, preferred_cancer_type):
     """
     DFS-based search to find a maximal independent set within a family group.
@@ -201,7 +222,7 @@ def maximal_non_related_subset_dfs_family_style(family, kinship_file, meta, pref
     # DFS setup
     selected = set()
     best = [set()]  # use list as mutable container to hold best set
-    dfs_independent_set(G, node_list, selected, best, cancer_status)
+    dfs_independent_set(G, node_list, selected, best, cancer_status,preferred_cancer_type)
 
     return best[0]
 
