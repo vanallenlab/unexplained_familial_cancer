@@ -129,6 +129,68 @@ def maximal_non_related_subset_dfs(family, kinship_file, meta):
     node_list = sorted(
         G.nodes, key=lambda n: (cancer_status.get(n, 'control') == 'control', G.degree[n])
     )
+    # Sort nodes: preferred cancer type first, other cancers next, then controls
+    # node_list = sorted(
+    #     G.nodes,
+    #     key=lambda n: (
+    #         0 if cancer_status.get(n) == preferred_cancer_type else
+    #         1 if cancer_status.get(n, 'control') != 'control' else
+    #         2,
+    #         G.degree[n]  # within each group, sort by degree
+    #     )
+    # )
+
+    # DFS setup
+    selected = set()
+    best = [set()]  # use list as mutable container to hold best set
+    dfs_independent_set(G, node_list, selected, best, cancer_status)
+
+    return best[0]
+
+def maximal_non_related_subset_dfs_family_style(family, kinship_file, meta, preferred_cancer_type):
+    """
+    DFS-based search to find a maximal independent set within a family group.
+    Only includes individuals present in the metadata.
+    """
+
+    # Filter family members to only those present in metadata
+    available_ids = set(meta['original_id'])
+    family = family & available_ids  # intersection
+
+    # Load kinship
+    kinship = pd.read_csv(kinship_file, delim_whitespace=True)
+    edges = kinship[
+        kinship['#ID1'].isin(family) & kinship['ID2'].isin(family)
+    ][['#ID1', 'ID2']].values
+
+
+    if not family:
+        return set()  # nothing to do if no valid individuals
+
+    # Build graph
+    G = nx.Graph()
+    G.add_nodes_from(family)
+    G.add_edges_from(edges)
+
+    # Cancer info
+    cancer_status = meta.set_index('original_id').loc[list(family)]['cancer'].to_dict()
+    #cancer_status = meta.set_index('original_id').loc[family]['cancer'].to_dict()
+    nx.set_node_attributes(G, cancer_status, name='cancer')
+
+    # Sort nodes to prioritize cases first
+    # node_list = sorted(
+    #     G.nodes, key=lambda n: (cancer_status.get(n, 'control') == 'control', G.degree[n])
+    # )
+    # Sort nodes: preferred cancer type first, other cancers next, then controls
+    node_list = sorted(
+        G.nodes,
+        key=lambda n: (
+            0 if cancer_status.get(n) == preferred_cancer_type else
+            1 if cancer_status.get(n, 'control') != 'control' else
+            2,
+            G.degree[n]  # within each group, sort by degree
+        )
+    )
 
     # DFS setup
     selected = set()
@@ -387,7 +449,7 @@ def main():
     parser.add_argument('--complex-logic', required=False, default=None,
                     help='Complex filtering logic string, e.g., '
                          '"(Breast:patient AND Prostate:family) OR (Prostate:patient AND Breast:family)"')
-
+    parser.add_argument('--preferred-cancer-type',required=True,default="NO PREFERENCE", help='when choosing between multiple cancer types, what should we choose first?')
     args = parser.parse_args()
 
     # Make the log file
@@ -508,7 +570,10 @@ def main():
 
     familial_set = set()
     for family in family_units:
-        subset = maximal_non_related_subset_dfs(family, args.kinship, meta)
+        if args.preferred_cancer_type != "NO PREFERENCE":
+            subset = maximal_non_related_subset_dfs_family_style(family, args.kinship, meta,args.preferred_cancer_type)
+        else:
+            subset = maximal_non_related_subset_dfs(family, args.kinship, meta)
         familial_set.update(subset)
 
     # Filter our data to our maximal unrelated set of individuals
