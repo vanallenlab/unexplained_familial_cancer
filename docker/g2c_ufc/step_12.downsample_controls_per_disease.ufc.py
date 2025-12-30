@@ -573,7 +573,7 @@ def main():
     # Grab all cases not involved in a family
     non_familial_set = extract_non_familial_set(samples=set(meta['original_id']),kinship_file=args.kinship)
     family_units = extract_family_units(kinship_file=args.kinship)
-
+    print(family_units)
     familial_set = set()
     for family in family_units:
         if args.preferred_cancer_type != "NO PREFERENCE":
