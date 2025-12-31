@@ -490,7 +490,7 @@ def main():
     parser.add_argument('--complex-logic', required=False, default=None,
                     help='Complex filtering logic string, e.g., '
                          '"(Breast:patient AND Prostate:family) OR (Prostate:patient AND Breast:family)"')
-    parser.add_argument('--preferred-cancer-type',required=True,default="NO PREFERENCE", help='when choosing between multiple cancer types, what should we choose first?')
+    parser.add_argument('--preferred-cancer-type',required=False,default="NO PREFERENCE", help='when choosing between multiple cancer types, what should we choose first?')
     args = parser.parse_args()
 
     # Make the log file
