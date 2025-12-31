@@ -528,7 +528,6 @@ def main():
     # Filter to just cases in our study as well as cases in the specific subtype
     meta = meta[meta['original_id'].astype(str).str.strip().isin(samples)]
 
-    print("before filtering pgvs",meta['original_dx'].str.contains('Breast', case=False, na=False).sum())
     with open(args.log_file, "a") as f:
         f.write(f"Excluding: {len(exclude_samples)} with known pathogenic variants.\n")
 
