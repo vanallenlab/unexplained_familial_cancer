@@ -101,6 +101,20 @@ def maximal_non_related_subset_dfs(family, kinship_file, meta):
     Only includes individuals present in the metadata.
     """
 
+    # Normalize original_id to clean strings (handles floats like 1234.0)
+    meta = meta.copy()
+    meta['original_id'] = (
+        pd.to_numeric(meta['original_id'], errors='coerce')
+          .astype('Int64')
+          .astype(str)
+    )
+
+    # Normalize family IDs to clean strings
+    family = {
+        str(int(x)) if isinstance(x, float) and x.is_integer() else str(x)
+        for x in family
+    }
+
     # Filter family members to only those present in metadata
     available_ids = set(meta['original_id'])
     family = family & available_ids  # intersection
