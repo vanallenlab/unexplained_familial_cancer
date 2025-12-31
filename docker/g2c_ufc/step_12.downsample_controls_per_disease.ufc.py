@@ -66,7 +66,13 @@ def select_unrelated_samples(kinship_file, meta, preferred_cancer_type=None):
     for _, row in kin.iterrows():
         id1, id2 = row['ID1'], row['ID2']
 
-        if id1 not in meta.index or id2 not in meta.index:
+        if id1 not in meta.index and id2 not in meta.index:
+            continue
+        elif id1 in meta.index and id2 not in meta.index:
+            keep.add(id1)
+            continue
+        elif id1 not in meta.index and id2 in meta.index:
+            keep.add(id2)
             continue
 
         s1 = meta.loc[id1]
