@@ -26,80 +26,6 @@ from scipy.stats import chisquare, fisher_exact
 
 #### Noah's Version ####
 
-import pandas as pd
-
-def select_unrelated_samples(kinship_file, meta, preferred_cancer_type=None):
-    """
-    Returns a set of original_id values to KEEP.
-    """
-
-    # ---- Normalize IDs in meta ----
-    meta = meta.copy()
-    meta['original_id'] = meta['original_id'].apply(normalize_id)
-
-    meta = meta.set_index('original_id')
-
-    # ---- Load kinship (only first two columns matter) ----
-    kin = pd.read_csv(
-        kinship_file,
-        sep="\t",
-        usecols=[0, 1],
-        names=["ID1", "ID2"],
-        header=0
-    )
-
-    kin['ID1'] = kin['ID1'].apply(normalize_id)
-    kin['ID2'] = kin['ID2'].apply(normalize_id)
-
-    related_ids = set(kin['ID1']).union(set(kin['ID2']))
-
-    # ---- Start with everyone who is NOT related ----
-    keep = set(meta.index) - related_ids
-
-    # ---- Function to check exact cancer match ----
-    def has_preferred_cancer(dx):
-        if pd.isna(dx):
-            return False
-        return preferred_cancer_type in dx.split(';')
-
-    # ---- Resolve each related pair ----
-    for _, row in kin.iterrows():
-        id1, id2 = row['ID1'], row['ID2']
-
-        if id1 not in meta.index or id2 not in meta.index:
-            continue
-
-        s1 = meta.loc[id1]
-        s2 = meta.loc[id2]
-
-        # Preferred cancer logic (if provided)
-        if preferred_cancer_type is not None:
-            s1_match = has_preferred_cancer(s1['original_dx'])
-            s2_match = has_preferred_cancer(s2['original_dx'])
-
-            if s1_match and not s2_match:
-                keep.add(id1)
-                continue
-            if s2_match and not s1_match:
-                keep.add(id2)
-                continue
-            # If both or neither match → fall through to age
-
-        # Age-based decision
-        if s1['age'] <= s2['age']:
-            keep.add(id1)
-        else:
-            keep.add(id2)
-
-    return keep
-
-def normalize_id(x):
-    try:
-        return str(int(float(x)))
-    except (ValueError, TypeError):
-        return str(x)
-
-
 def extract_non_familial_set(samples, kinship_file):
     """
     Given a set of sample IDs and a kinship file (with columns #ID1 and ID2),
@@ -564,7 +490,7 @@ def main():
     parser.add_argument('--complex-logic', required=False, default=None,
                     help='Complex filtering logic string, e.g., '
                          '"(Breast:patient AND Prostate:family) OR (Prostate:patient AND Breast:family)"')
-    parser.add_argument('--preferred-cancer-type',required=False,default=None, help='when choosing between multiple cancer types, what should we choose first?')
+    parser.add_argument('--preferred-cancer-type',required=False,default="NO PREFERENCE", help='when choosing between multiple cancer types, what should we choose first?')
     args = parser.parse_args()
 
     # Make the log file
@@ -685,24 +611,22 @@ def main():
     non_familial_set = extract_non_familial_set(samples=set(meta['original_id']),kinship_file=args.kinship)
     family_units = extract_family_units(kinship_file=args.kinship)
 
-    keep_ids = select_unrelated_samples(args.kinship,meta,preferred_cancer_type=args.preferred_cancer_type)
-    print("ids to keep",len(keep_ids))
-    meta = meta.loc[meta.index.isin(keep_ids)]
+    print("before family filtering",meta['original_dx'].str.contains('Breast', case=False, na=False).sum())
 
-
-    # familial_set = set()
-    # for family in family_units:
-    #     if args.preferred_cancer_type != "NO PREFERENCE":
-    #         print("going family style!!")
-    #         subset = maximal_non_related_subset_dfs_family_style(family, args.kinship, meta,args.preferred_cancer_type)
-    #     else:
-    #         print("no family style")
-    #         subset = maximal_non_related_subset_dfs(family, args.kinship, meta)
-    #     familial_set.update(subset)
+    familial_set = set()
+    for family in family_units:
+        if args.preferred_cancer_type != "NO PREFERENCE":
+            print("going family style!!")
+            subset = maximal_non_related_subset_dfs_family_style(family, args.kinship, meta,args.preferred_cancer_type)
+        else:
+            print("no family style")
+            subset = maximal_non_related_subset_dfs(family, args.kinship, meta)
+        familial_set.update(subset)
 
     # Filter our data to our maximal unrelated set of individuals
-    #meta = meta[meta['original_id'].isin(non_familial_set.union(familial_set))]
+    meta = meta[meta['original_id'].isin(non_familial_set.union(familial_set))]
     
+    print("after family filtering",meta['original_dx'].str.contains('Breast', case=False, na=False).sum())
     sample_size5 = len(meta)
     with open(args.log_file, "a") as f:
         f.write(f"{sample_size5}\t{(sample_size4 - sample_size5)}\t{round(((sample_size4 - sample_size5)/sample_size4),3) * 100}\tExcluded due to relatedness with other individuals.\n")
