@@ -686,8 +686,9 @@ def main():
     family_units = extract_family_units(kinship_file=args.kinship)
 
     keep_ids = select_unrelated_samples(args.kinship,meta,preferred_cancer_type=args.preferred_cancer_type)
-    print("ids to keep",len(keep_ids))
-    meta = meta.loc[meta.index.isin(keep_ids)]
+    #print("ids to keep",len(keep_ids))
+    meta['original_id'] = (pd.to_numeric(meta['original_id'], errors='coerce').astype('Int64').astype(str))
+    meta = meta[meta['original_id'].isin(keep_ids)]
 
 
     # familial_set = set()
