@@ -9,9 +9,9 @@ or_df = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_
 
 # --- Keep these PGS IDs ---
 pgs_keep = [
-    "PGS003386","PGS000789","PGS000791","PGS000784",
-    "PGS004690","PGS003382","PGS004694","PGS000797","PGS004687",
-    "PGS003384","PGS000788","PGS000793","PGS004244","PGS004688"
+    "PGS000785","PGS000789","PGS000791","PGS000784",
+    "PGS000787","PGS003382","PGS004694","PGS000797","PGS004687",
+    "PGS003384","PGS000788","PGS004249","PGS004244","PGS004688"
 ]
 
 def filter_pgs(df):
@@ -104,9 +104,101 @@ plt.scatter(
     alpha=0.9,
     linewidth=0.5
 )
-plt.colorbar(label="-log10(p-value)")
+plt.colorbar(label=r"$-\log_{10}P$")
 plt.yticks(fontsize=14)
 #plt.xticks(fontsize=14,rotation=45, ha='right')
+
+
+### Plot different colors
+
+sig = sig = (merged["p_value"] <= 0.05) & (merged["OR"] > 1)
+nonsig = merged["p_value"] > 0.05
+
+# Base layer: all points, NO edges
+plt.scatter(
+    x=merged["x_pos"],
+    y=merged["Cancer"],
+    s=merged["OR"] ** 1.5 * 80,
+    c=merged["neglog10p"],
+    cmap="Reds",
+    alpha=0.9,
+    linewidth=0,
+    edgecolors="none",
+    zorder=1
+)
+
+# Overlay: significant points only, green edge
+plt.scatter(
+    x=merged.loc[sig, "x_pos"],
+    y=merged.loc[sig, "Cancer"],
+    s=merged.loc[sig, "OR"] ** 1.5 * 80,
+    c=merged.loc[sig, "neglog10p"],
+    cmap="Reds",
+    alpha=0.9,
+    linewidth=1.8,
+    edgecolors="green",
+    zorder=2
+)
+###
+
+#### Added OR scaling value ####
+or_vals = [0.5, 1, 2]
+
+size_handles = [
+    plt.scatter(
+        [], [], 
+        s=or_val ** 1.5 * 80,
+        color="white",
+        edgecolor="black",
+        linewidth=0.6,
+        label=f"OR = {or_val}"
+    )
+    for or_val in or_vals
+]
+
+# Create a legend handle for significant points
+sig_handle = plt.scatter(
+    [], [], 
+    s=100,                # choose a size similar to your points
+    c="white",            # fill color (matches non-significant points if needed)
+    edgecolor="green",    # green edge indicates significance
+    linewidth=1.2,        # thickness of green edge
+    label="P ≤ 0.05 & OR > 1"
+)
+
+all_handles = size_handles + [sig_handle]
+
+plt.legend(
+    handles=all_handles,
+    frameon=False,
+    loc="upper left",
+    bbox_to_anchor=(0.80, 0.35),  # adjust x,y manually
+    bbox_transform=plt.gcf().transFigure,
+    title_fontsize=10
+)
+
+
+
+# Add it to the legend (can be separate from size legend)
+# plt.legend(
+#     handles=[sig_handle],
+#     title="Significance",
+#     frameon=False,
+#     loc="upper left",
+#     bbox_to_anchor=(0.82, 0.15),  # adjust below colorbar
+#     bbox_transform=plt.gcf().transFigure,
+#     title_fontsize=10
+# )
+
+# plt.legend(
+#     handles=size_handles,
+#     title="Odds Ratio",
+#     frameon=False,
+#     loc="lower right",
+#     bbox_to_anchor=(1.35, 1)
+# )
+#### Added OR scaling value ####
+
 # --- Apply ordered ticks ---
 plt.xticks(
     ticks=range(len(x_order)),
@@ -119,5 +211,5 @@ plt.xlabel("PRS Inteneded Cancer",fontsize=20)
 plt.title("Polygenic Scores Across Cancers", fontsize=16, fontweight='bold')
 plt.grid(False)
 plt.tight_layout()
-plt.savefig("pgs_cancer_circle_matrix.png", dpi=300)
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_by_all/pgs_cancer_circle_matrix.png", dpi=300)
 plt.show()

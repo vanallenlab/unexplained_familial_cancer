@@ -37,23 +37,24 @@ PGS_LOOKUP = dict(zip(pgs_map["cancer"], pgs_map["pgs_id"]))
 # ============================================================
 df = pd.read_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t")
 df = df[df["original_dx"] != "control"].copy()
-
+pheno_df = pd.read_csv("dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz",sep='\t',usecols = ['original_id','inferred_sex','cohort'])
+pheno_df = pheno_df[pheno_df['cohort'] == "aou"]
+df['Sample'] = df['Sample'].astype(str)
+pheno_df['Sample'] = pheno_df['original_id'].astype(str)
+df = df.merge(pheno_df, on="Sample",how="left")
 df["original_id"] = df["Sample"].astype(str)
-
 # ============================================================
 # 3. Remove pathogenic variant samples
 # ============================================================
 pvs = set(
-    pd.read_csv("samples_with_pvs.nov7.list", header=None)[0].astype(str)
+    pd.read_csv("samples_to_exclude.jan29.list", header=None)[0].astype(str)
 )
 df = df[~df["original_id"].isin(pvs)].copy()
-
 # ============================================================
 # 4. Sex filtering + encoding
 # ============================================================
-df = df[df["reported_sex"].isin(["male", "female"])].copy()
-df["sex_binary"] = (df["reported_sex"] == "female").astype(int)
-
+df = df[df["inferred_sex"].isin(["male", "female"])].copy()
+df["sex_binary"] = (df["inferred_sex"] == "female").astype(int)
 # ============================================================
 # 5. Normalize diagnosis strings (NO SETS)
 # ============================================================
@@ -141,11 +142,10 @@ results = []
 
 for patient_cancer, family_cancer in product(PATIENT_CANCERS, FAMILY_CANCERS):
     sub = df.copy()
-
     if patient_cancer in FEMALE_ONLY:
-        sub = sub[sub["reported_sex"] == "female"]
+        sub = sub[sub["inferred_sex"] == "female"]
     if patient_cancer in MALE_ONLY:
-        sub = sub[sub["reported_sex"] == "male"]
+        sub = sub[sub["inferred_sex"] == "male"]
     if sub.empty:
         continue
 

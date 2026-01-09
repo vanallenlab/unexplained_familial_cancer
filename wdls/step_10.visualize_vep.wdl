@@ -10,9 +10,9 @@ workflow STEP_10_VISUALIZE_VEP {
     String step_9_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/sharded_vcfs" # Directory to STEP_9 Output VCFs
     File aou_subjects
     File gene_list
-    #Array[File] tier_files = ["gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_001.tsv"]
-    Array[File] tier_files = ["gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_0001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_0001.tsv"]
-    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_10_VISUALIZE_VEP/"
+    #Array[File] tier_files = ["gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier0_001.tsv"]
+    Array[File] tier_files = ["gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier0_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier0_0001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier1_0001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier2_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier2_0001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier3_0001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_001.tsv","gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_9_RUN_VEP/tier4_0001.tsv"]
+    String step_10_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/FINAL_FILES/"
   }
 
   call Tasks.gather_chromosome_level_vcfs {
@@ -33,7 +33,7 @@ workflow STEP_10_VISUALIZE_VEP {
       unsorted_vcf_list = concatenateFiles.out2
   }
 
-  Int negative_shards = 2890
+  Int negative_shards = 0
   scatter (tier_file in tier_files){
     scatter (i in range(length(sort_vcf_list.vcf_arr)-negative_shards)){
       call Convert_To_TSV {
@@ -61,14 +61,14 @@ workflow STEP_10_VISUALIZE_VEP {
   call Tasks.concatenateFiles_noheader {
     input:
       files = merge_variant_counts.out1,
-      callset_name = "ufc_cpg"
+      callset_name = "step_10_output.dec10_2025"
   }
 
-  #call Tasks.copy_file_to_storage{
-  #  input:
-  #    text_file = merge_variant_counts.out1,
-  #    output_dir = step_10_output_dir
-  #}
+  call Tasks.copy_file_to_storage{
+    input:
+      text_file = concatenateFiles_noheader.out1,
+      output_dir = step_10_output_dir
+  }
 }
 
 

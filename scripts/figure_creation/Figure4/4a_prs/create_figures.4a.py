@@ -44,14 +44,18 @@ pval_table = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/analysis_4b
 cancer_configs = {
     "breast": ["PGS004688"],
     "cervix": ["PGS000784"],
-    "colorectal": ["PGS003386"],
-    "kidney": ["PGS004690"],
-    "lung": ["PGS000789"],
+    "colorectal": ["PGS000785"],
+    "kidney": ["PGS000787"],
     "melanoma": ["PGS003382"],
     "non-hodgkin": ["PGS000791"],
     "prostate": ["PGS004694"],
-    "squamous_cell": ["PGS000790"],
-    "thyroid": ["PGS000797"], 
+    "thyroid": ["PGS000797"],
+    "hematologic":["PGS000788"],
+    "lung":["PGS000789"],
+    "ovary":["PGS004249"],
+    "uterus": ["PGS004244"],
+    "brain": ["PGS003384"],
+    "bladder":["PGS004687"]
 }
 
 # Set up plot style
@@ -71,7 +75,7 @@ plt.rcParams.update({
 pgs_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_4a_prs/")
 
 # Set up the figure: 4 rows × 5 columns
-fig, axes = plt.subplots(2, 5, figsize=(20, 4))
+fig, axes = plt.subplots(2, 7, figsize=(28, 4))
 fig.subplots_adjust(hspace=0.8, wspace=0.5)
 axes = axes.T.flatten()  # Fill left-to-right by cancer
 
@@ -140,6 +144,15 @@ for cancer, pgs_ids in cancer_configs.items():
             fontsize=9,
             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.7)
         )
+        # ax.text(
+        #     0.05, 0.05,  # x=0.05, y=0.05 → bottom-left with a little padding
+        #     f"OR = {or_value:.2f}\np = {p_val:.2e}",
+        #     transform=ax.transAxes,  # axes coordinates
+        #     ha='left', va='bottom',  # align text to the left and bottom
+        #     fontsize=9,
+        #     bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.7)
+        # )
+
 
         ax.set_title(f"{cancer.upper().replace("_"," ")} ({pgs_id})")
         ax.set_xlabel("PGS Score (Z-Score)")
@@ -187,6 +200,6 @@ for text in legend.get_texts():
 legend.get_title().set_weight("bold")  # bold title
 legend.get_title().set_color("black")  # title color
 
-plt.tight_layout(rect=[0, 0, 0.93, 1])  # leave room for legend
-plt.savefig("pgs_case_control_density_grid.png", dpi=300)
+plt.tight_layout(rect=[0, 0, 0.95, 1])  # leave room for legend
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/analysis_4a_prs/Figure_4B.png", dpi=600)
 #plt.show()

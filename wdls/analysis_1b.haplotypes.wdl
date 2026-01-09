@@ -10,41 +10,45 @@ workflow ANALYSIS_1B_SLIDING_WINDOWS {
 
     String analysis_1_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/"
     String analysis_1b_output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/sliding_windows/"
+    Array[Int] ROH_length_threshold = [0,10000,50000,100000]
     Array[String] chroms = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"]
     File gene_regions_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/genome_windows.txt"
   }
-
-  scatter(chr in chroms){
-   File chr_roh_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/roh.aou.chr" + chr + ".txt"
-    String output_name = "aou.chr" + chr + ".haplotypes.tsv"
-    call T1_split_file {
+  scatter (roh_length in ROH_length_threshold){
+    scatter(chr in chroms){
+     File chr_roh_file = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/roh.aou.chr" + chr + ".txt"
+      String output_name = "aou.chr" + chr + ".haplotypes.tsv"
+      call T1_split_file {
+        input:
+          file_to_split = gene_regions_file,
+          max_lines_per_chunk = 100,
+          chromosome = chr
+      }
+      scatter(chunk in T1_split_file.out1){
+       call T2_data_process {
+         input:
+           roh_file = chr_roh_file,
+           chr = chr,
+           gene_regions = chunk,
+           roh_length = roh_length,
+           output_name = output_name
+       }
+      }
+      call Tasks.concatenateFiles_noheader as concat1{
+        input:
+          files = select_all(T2_data_process.out1)
+      }
+    }
+    call Tasks.concatenateFiles_noheader as concat2{
       input:
-        file_to_split = gene_regions_file,
-        max_lines_per_chunk = 100,
-        chromosome = chr
+        files = concat1.out2,
+        callset_name = "analysis_1b_output." + roh_length + "kb.jan9"
     }
-    scatter(chunk in T1_split_file.out1){
-     call T2_data_process {
-       input:
-         roh_file = chr_roh_file,
-         chr = chr,
-         gene_regions = chunk,
-         output_name = output_name
-     }
-    }
-    call Tasks.concatenateFiles_noheader as concat1{
+    call Tasks.copy_file_to_storage {
       input:
-        files = T2_data_process.out1
+        text_file = concat2.out1,
+        output_dir = analysis_1b_output_dir
     }
-     #call Tasks.copy_file_to_storage {
-     #  input:
-     #    text_file = T2_data_process.out1,
-     #    output_dir = analysis_1b_output_dir
-     #}
-  }
-  call Tasks.concatenateFiles_noheader as concat2{
-    input:
-      files = concat1.out2
   }
 }
 
@@ -103,6 +107,7 @@ task T1_split_file {
 task T2_data_process{
   input {
     File roh_file
+    Int roh_length
     String chr
     File gene_regions # New input variable: the file containing gene regions
     String output_name 
@@ -134,7 +139,7 @@ task T2_data_process{
   roh_df = roh_df[roh_df["Type"] == "RG"]
 
   # Filter to ROHs longer than (insert value) bps
-  roh_df = roh_df[roh_df["Length"] > 0]
+  roh_df = roh_df[roh_df["Length"] > ~{roh_length}]
 
   # Get unique samples
   samples = sorted(roh_df["Sample"].unique())
@@ -193,7 +198,7 @@ task T2_data_process{
   CODE
   >>>
   output {
-    File out1 = "~{output_name}.tsv"
+    File? out1 = "~{output_name}.tsv"
   }
   runtime {
     docker: "vanallenlab/pydata_stack"

@@ -116,23 +116,43 @@ for _, row in label_df.iterrows():
 # 5. Reference lines (optional but helpful)
 # ------------------------------------------------------------
 # Bonferroni or nominal line (example: p = 0.05)
-plt.axhline(-np.log10(0.05), linestyle="--", color="red", linewidth=1)
-plt.axhline(-np.log10(0.05/224), linestyle="--", color="green", linewidth=1,label="Bonferonni Significance")
+plt.axhline(-np.log10(0.05), linestyle="--", color="black", linewidth=1)
+plt.axhline(-np.log10(0.05/224), linestyle="--", color="black", linewidth=1)
 plt.axvline(0, linestyle="--", color="black", linewidth=0.8)
 
 # ------------------------------------------------------------
 # 6. Labels & aesthetics
 # ------------------------------------------------------------
-plt.xlabel("log2(Odds Ratio)", fontsize=12)
-plt.ylabel("-log10(p-value)", fontsize=12)
-plt.title("Familial Cancer Enrichment (Fisher’s Exact Test)", fontsize=14)
-plt.legend(loc="upper left")
+plt.xlabel(r"$log_{2}(OR)$ for patient cancer given family history", fontsize=12)
+plt.ylabel(r"$-\log_{10}{P}$", fontsize=12)
+#plt.title("Clustering of ", fontsize=14)
+#plt.legend(loc="upper left")
+
+ax = plt.gca()
+
+##### Remove top and right spines
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+# Keep left and bottom spines
+ax.spines["left"].set_visible(True)
+ax.spines["bottom"].set_visible(True)
+
+# Optional: make axes slightly thicker
+ax.spines["left"].set_linewidth(1.2)
+ax.spines["bottom"].set_linewidth(1.2)
+
+# Ensure ticks are only on left/bottom
+ax.yaxis.set_ticks_position("left")
+ax.xaxis.set_ticks_position("bottom")
+#####
+
 plt.tight_layout()
 
 # ------------------------------------------------------------
 # 7. Save
 # ------------------------------------------------------------
 plt.savefig("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/familial_cancer_volcano.png", dpi=300)
-plt.savefig("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/familial_cancer_volcano.pdf")
+#plt.savefig("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/familial_cancer_volcano.pdf")
 plt.show()
 plt.close()

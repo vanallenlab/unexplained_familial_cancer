@@ -8,20 +8,26 @@ from itertools import product
 # ------------------------------------------------------------
 df = pd.read_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t")
 df = df[df['original_dx'] != "control"]
-df = df[df["reported_sex"].isin(["male", "female"])].copy()
-df["sex_binary"] = (df["reported_sex"] == "female").astype(int)
-df = df.rename(columns={"original_id": "Sample"})
+pheno_df = pd.read_csv("dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz",sep='\t',usecols = ['original_id','inferred_sex','cohort'])
+pheno_df = pheno_df[pheno_df['cohort'] == "aou"]
+df['Sample'] = df['Sample'].astype(str)
+pheno_df['Sample'] = pheno_df['original_id'].astype(str)
+df = df.merge(pheno_df, on="Sample",how="left")
+df = df[df["inferred_sex"].isin(["male", "female"])].copy()
+df["sex_binary"] = (df["inferred_sex"] == "female").astype(int)
+#df = df.rename(columns={"original_id": "Sample"})
 
 # ------------------------------------------------------------
 # 1b. Remove samples with known pathogenic variants
 # ------------------------------------------------------------
 pvs_samples = set(
     pd.read_csv(
-        "samples_with_pvs.nov7.list",
+        "samples_to_exclude.jan29.list",
         header=None
     )[0].astype(str)
 )
 
+print(df.columns)
 df = df[~df["Sample"].astype(str).isin(pvs_samples)].copy()
 
 # ------------------------------------------------------------
@@ -79,9 +85,9 @@ for patient_cancer, family_cancer in product(PATIENT_CANCERS, FAMILY_CANCERS):
 
     # Sex restrictions
     if patient_cancer in FEMALE_ONLY:
-        sub = sub[sub["reported_sex"] == "female"]
+        sub = sub[sub["inferred_sex"] == "female"]
     if patient_cancer in MALE_ONLY:
-        sub = sub[sub["reported_sex"] == "male"]
+        sub = sub[sub["inferred_sex"] == "male"]
 
     if sub.empty:
         continue

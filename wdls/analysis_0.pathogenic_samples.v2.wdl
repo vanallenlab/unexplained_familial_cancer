@@ -42,16 +42,6 @@ workflow ANALYSIS_0_PATHOGENIC_SAMPLES {
       callset_name = "missed_samples",
       files = T1_Convert_To_TSV.out1
   }
-  #call Tasks.concatenateFiles_noheader as concatenate_RECESSIVECPGs{
-  #  input:
-  #    callset_name = "recessive_samples",
-  #    files = T1_Convert_To_TSV.out2
-  #}
-  #call Tasks.concatenateFiles_noheader as concatenate_OTHERCPGs{
-  #  input:
-  #    callset_name = "other_samples",
-  #    files = T1_Convert_To_TSV.out3
-  #}
 }
 
 task T1_Convert_To_TSV {
@@ -72,6 +62,7 @@ task T1_Convert_To_TSV {
   bcftools view -R ~{cpg_bed_file} tmp1.vcf.gz -Oz -o tmp2.vcf.gz
 
   bcftools view --include ID==@~{rare_variants_001} tmp2.vcf.gz -O z -o tmp3.vcf.gz
+  rm ~{rare_variants_001}
  
   # Get the header started
   echo -e "CHROM\tPOS\tID\tREF\tALT\tIMPACT\tSYMBOL\tclinvar_clnsig\tBiotype\tConsequence\tSAMPLES" > ~{output_file}
@@ -90,13 +81,12 @@ task T1_Convert_To_TSV {
   df = pd.read_csv("~{output_file}",sep='\t',index_col=False)
   df = df[
       (
-          (df["IMPACT"] == "MODERATE") &
           (df["clinvar_clnsig"].isin(["Pathogenic", "Likely_pathogenic", "Pathogenic/Likely_pathogenic"]))
       )
       |
       (
           (df["IMPACT"] == "HIGH") &
-          (df["clinvar_clnsig"].isin(["Pathogenic", "Likely_pathogenic", "Pathogenic/Likely_pathogenic", "."]))
+          (~df["clinvar_clnsig"].isin(["Benign", "Likely_benign", "Benign/Likely_benign"]))
       )
   ]
 

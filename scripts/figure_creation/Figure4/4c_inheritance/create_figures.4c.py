@@ -221,7 +221,7 @@ for i, (g1, g2) in enumerate(pairs):
     plt.text((x1+x2)/2, y + 0.01, p_text, ha='center', va='bottom', fontsize=5)
 
 plt.title(f"PGS ({PGS_ID}) distribution by {cancer_type.replace("_"," ").title()} Family History",fontsize=7)
-plt.ylabel(f"PGS ({PGS_ID}) Z-Score",fontsize=5)
+plt.ylabel(f"PGS Z-Score",fontsize=10)
 plt.xlabel("")
 
 # --- Replace default x-axis labels with custom labels ---
@@ -230,7 +230,7 @@ group_labels_display = [
     f"{isolated.replace("_"," ").title()}\n(n{paired_label(n_iso, n_fam)})",
     f"{familial.replace("_"," ").title()}\n(n{paired_label(n_fam, n_iso)})"
 ]
-plt.xticks(ticks=range(len(group_order)), labels=group_labels_display, rotation=20,fontsize=5)
+plt.xticks(ticks=range(len(group_order)), labels=group_labels_display, rotation=20,fontsize=8)
 plt.ylim(y_min - 0.1*y_range, y_max + len(pairs)*spacing + 0.1*y_range)
 plt.tight_layout()
 plt.savefig(png_file, dpi=300)

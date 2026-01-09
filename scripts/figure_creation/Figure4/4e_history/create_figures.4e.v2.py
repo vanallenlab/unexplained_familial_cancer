@@ -110,47 +110,195 @@ for g1, g2 in pairs:
 # 5. Plot with significance annotations
 # -------------------------------
 
-group_order = ['Control', f"Not-Inherited {cancer_type.capitalize()}", f"Familial {cancer_type.capitalize()}"]
+# group_order = ['Control', f"Not-Inherited {cancer_type.capitalize()}", f"Familial {cancer_type.capitalize()}"]
 
-# --- Compute counts per group ---
-counts = df['group'].value_counts().to_dict()
 
-# --- Build custom labels with counts ---
-group_labels = []
-for g in group_order:
-    n = counts.get(g, 0)
-    label_count = f"<20" if n < 20 else str(n)
-    group_labels.append(f"{g}\n(n={label_count})")
+# # --- Compute counts per group ---
+# counts = df['group'].value_counts().to_dict()
 
-plt.figure(figsize=(4,3))
+# # --- Build custom labels with counts ---
+# group_labels = []
+# for g in group_order:
+#     n = counts.get(g, 0)
+#     label_count = f"<20" if n < 20 else str(n)
+#     group_labels.append(f"{g}\n(n={label_count})")
+
+# display_labels = []
+# for g in group_order:
+#     n = counts.get(g, 0)
+#     label_count = "<20" if n < 20 else str(n)
+
+#     if g.startswith("Not-Inherited"):
+#         label = f"{cancer_type.capitalize()} Family Discordant Case"
+#     else:
+#         label = g
+
+#     display_labels.append(f"{label}\n(n={label_count})")
+
+# plt.figure(figsize=(4,3))
+
+# # Palette must include all groups
+# palette_dict = {
+#     f"Not-Inherited {cancer_type.capitalize()}": cancer_color[cancer_type],  # initial placeholder
+#     f"Familial {cancer_type.capitalize()}": darken_color(cancer_color[cancer_type]),
+#     'Control': cancer_color["control"]
+# }
 
 # ax = sns.boxplot(
 #     data=df,
 #     x='group',
 #     y='PGS',
 #     order=group_order,
-#     palette={
-#         f"Not-Inherited {cancer_type.capitalize()}": cancer_color[cancer_type],
-#         f"Familial {cancer_type.capitalize()}": cancer_color[cancer_type],
-#         'Control': cancer_color["control"]
-#     },
+#     palette=palette_dict,
 #     showfliers=False
 # )
 
 # # --- Step 2: Add hatch (slashes) to the "Not-Inherited" box ---
-# not_inherited_label = f"Not-Inherited {cancer_type.capitalize()}"
+# #not_inherited_label = f"Not-Inherited {cancer_type.capitalize()}"
+# not_inherited_label = f"{cancer_type.capitalize()} Family Discordant Case"
 
-# for patch, label in zip(ax.artists, group_order):
-#     if label == not_inherited_label:
-#         patch.set_facecolor('white')          # white background
-#         patch.set_edgecolor(cancer_color[cancer_type])  # colored border
-#         patch.set_hatch("///")                # slashes
-#         patch.set_linewidth(1.2)
+# # Get index of the Not-Inherited box
+# xtick_labels = [t.get_text() for t in ax.get_xticklabels()]
+# x_pos = xtick_labels.index(not_inherited_label)
 
-# Palette must include all groups
+# # Box patch
+# box = ax.patches[x_pos]
+# box.set_facecolor(cancer_color["control"])              # white background
+# box.set_edgecolor(cancer_color[cancer_type])  # this controls the hatch color
+# box.set_hatch("///")
+# box.set_linewidth(1.2)
+
+# # Now override the surrounding lines (the box edges) to gray
+# for line in ax.lines:
+#     # Each box has 6 lines (top, bottom, left, right, whiskers)
+#     # Check if the line corresponds to the box we want by x-position
+#     xdata = line.get_xdata()
+#     if np.all((xdata >= x_pos - 0.5) & (xdata <= x_pos + 0.5)):
+#         line.set_color("gray")          # box border color
+#         line.set_linewidth(1.0)
+
+# # --- Overlay points only if group has >20 samples ---
+# for g in group_order:
+#     subset = df[df['group'] == g]
+#     if len(subset) > 20:
+#         sns.stripplot(
+#             data=subset, x='group', y='PGS',
+#             order=group_order, color='black', size=2, alpha=0.5
+#         )
+
+# y_max = df['PGS'].max()
+# y_min = df['PGS'].min()
+# y_range = y_max - y_min
+# spacing = 0.15 * y_range
+
+# #print(pairs)
+# for i, (g1, g2) in enumerate(pairs):
+#     #print(g1 + "-" + g2)
+#     x1, x2 = group_order.index(g1), group_order.index(g2)
+#     y = y_max + (i+1) * spacing
+#     plt.plot([x1, x1, x2, x2], [y-0.01, y, y, y-0.01], lw=1.0, c='black')
+
+#     p_val = p_values[(g1, g2)]
+#     p_text = "p < 1e-15" if p_val < 1e-15 else f"p = {p_val:.2e}"
+#     plt.text((x1+x2)/2, y + 0.01, p_text, ha='center', va='bottom', fontsize=5)
+
+# plt.title(f"PRS ({PGS_ID}) distribution by {cancer_type.capitalize()} Family History",fontsize=7)
+# plt.ylabel(f"PRS Z-Score",fontsize=10)
+# plt.xlabel("")
+
+# # --- Replace default x-axis labels with custom labels ---
+# plt.xticks(ticks=range(len(group_order)), labels=group_labels, rotation=20,fontsize=10)
+# plt.ylim(y_min - 0.1*y_range, y_max + len(pairs)*spacing + 0.1*y_range)
+# plt.tight_layout()
+# plt.savefig(png_file, dpi=300)
+# plt.close()
+
+# # -------------------------------
+# # 6. Write results file
+# # -------------------------------
+# with open(stats_file, "w") as f:
+#     f.write("# Summary statistics (mean, std)\n")
+#     f.write(summary_str + "\n\n")
+
+#     f.write("# Pairwise comparisons (one tailed t-test p-value and Cohen’s d→OR proxy)\n")
+#     for (g1, g2), p_val in p_values.items():
+#         f.write(f"{g1} vs {g2}:\tp = {p_val:.4e},\tOR≈{or_values[(g1,g2)]:.3f}\n")
+
+# #print(f"✅ Saved plot: {png_file}")
+# #print(f"✅ Saved stats: {stats_file}")
+
+# -------------------------------
+# 5. Plot with significance annotations
+# -------------------------------
+
+group_order = [
+    'Control',
+    f"Not-Inherited {cancer_type.capitalize()}",
+    f"Familial {cancer_type.capitalize()}"
+]
+
+# --- Compute counts per group ---
+counts = df['group'].value_counts().to_dict()
+
+# --- Build display labels (ONLY change display text) ---
+# display_labels = []
+# for g in group_order:
+#     n = counts.get(g, 0)
+#     label_count = "<20" if n <= 20 else str(n)
+
+#     if g.startswith("Not-Inherited"):
+#         label = f"{cancer_type.replace('_',' ').title()} Family \nDiscordant Case"
+#     elif g.startswith("Familial"):
+#         label = f"Familial {cancer_type.replace('_',' ').title()}"
+#     else:
+#         label = g
+
+#     display_labels.append(f"{label}\n(n={label_count})")
+
+
+### Added Jan 8 ###
+display_labels = []
+
+familial_group = next(g for g in group_order if g.startswith("Familial"))
+discordant_group = next(g for g in group_order if g.startswith("Not-Inherited"))
+
+n_fam = counts.get(familial_group, 0)
+n_disc = counts.get(discordant_group, 0)
+
+def paired_label(n, other_n):
+    if n <= 20:
+        return "≤20"
+    if other_n <= 20:
+        return "≥20"
+    return "=" + str(n)
+
+for g in group_order:
+    n = counts.get(g, 0)
+
+    if g.startswith("Not-Inherited"):
+        label = f"{cancer_type.replace('_',' ').title()} Family \nDiscordant Case"
+        label_count = paired_label(n, n_fam)
+
+    elif g.startswith("Familial"):
+        label = f"Familial {cancer_type.replace('_',' ').title()}"
+        label_count = paired_label(n, n_disc)
+
+    elif g.lower().startswith("control"):
+        label = g
+        label_count = "=" + str(n)
+
+    else:
+        label = g
+        label_count = str(n)
+
+    display_labels.append(f"{label}\n(n{label_count})")
+### Added Jan 8 ###
+plt.figure(figsize=(4, 3))
+
+# --- Palette (must match internal group names) ---
 palette_dict = {
-    f"Not-Inherited {cancer_type.capitalize()}": cancer_color[cancer_type],  # initial placeholder
-    f"Familial {cancer_type.capitalize()}": cancer_color[cancer_type],
+    f"Not-Inherited {cancer_type.capitalize()}": cancer_color[cancer_type],
+    f"Familial {cancer_type.capitalize()}": darken_color(cancer_color[cancer_type]),
     'Control': cancer_color["control"]
 }
 
@@ -163,84 +311,122 @@ ax = sns.boxplot(
     showfliers=False
 )
 
-# --- Step 2: Add hatch (slashes) to the "Not-Inherited" box ---
-not_inherited_label = f"Not-Inherited {cancer_type.capitalize()}"
+# --- Add hatch to Not-Inherited box (index-based, not label-based) ---
+not_inherited_idx = group_order.index(
+    f"Not-Inherited {cancer_type.capitalize()}"
+)
 
-# Get index of the Not-Inherited box
-xtick_labels = [t.get_text() for t in ax.get_xticklabels()]
-x_pos = xtick_labels.index(not_inherited_label)
-
-# Box patch
-box = ax.patches[x_pos]
-box.set_facecolor(cancer_color["control"])              # white background
-box.set_edgecolor(cancer_color[cancer_type])  # this controls the hatch color
+box = ax.patches[not_inherited_idx]
+box.set_facecolor(cancer_color["control"])
+box.set_edgecolor(cancer_color[cancer_type])  # hatch color
 box.set_hatch("///")
 box.set_linewidth(1.2)
 
-# Now override the surrounding lines (the box edges) to gray
+# --- Set surrounding box lines to gray ---
 for line in ax.lines:
-    # Each box has 6 lines (top, bottom, left, right, whiskers)
-    # Check if the line corresponds to the box we want by x-position
     xdata = line.get_xdata()
-    if np.all((xdata >= x_pos - 0.5) & (xdata <= x_pos + 0.5)):
-        line.set_color("gray")          # box border color
+    if np.all((xdata >= not_inherited_idx - 0.5) &
+              (xdata <= not_inherited_idx + 0.5)):
+        line.set_color("gray")
         line.set_linewidth(1.0)
 
-# for patch, label in zip(ax.artists, group_order):
-#     if label == not_inherited_label:
-#         patch.set_hatch("///")     # slashed fill
-#         patch.set_edgecolor("black")
-#         patch.set_linewidth(1.2)
-        
-#sns.boxplot(data=df, x='group', y='PGS', order=group_order, palette="Set2", showfliers=False)
-#sns.stripplot(data=df, x='group', y='PGS', order=group_order, color='black', size=2, alpha=0.5)
-
 # --- Overlay points only if group has >20 samples ---
+# for g in group_order:
+#     subset = df[df['group'] == g]
+#     if len(subset) > 20:
+#         sns.stripplot(
+#             data=subset,
+#             x='group',
+#             y='PGS',
+#             order=group_order,
+#             color='black',
+#             size=2,
+#             alpha=0.5
+#         )
+
+# --- Overlay points conditionally ---
+# --- Precompute group sizes ---
+group_sizes = df['group'].value_counts().to_dict()
+
+# --- Identify the paired disease groups ---
+familial_group = next(g for g in group_order if g.startswith("Familial"))
+discordant_group = next(g for g in group_order if g.startswith("Not-Inherited"))
+
+# --- Shared condition: BOTH must have ≥20 ---
+paired_ok = (
+    group_sizes.get(familial_group, 0) >= 20 and
+    group_sizes.get(discordant_group, 0) >= 20
+)
+
+# --- Overlay points conditionally ---
 for g in group_order:
     subset = df[df['group'] == g]
-    if len(subset) > 20:
+
+    show_points = (
+        g == "Control" or
+        (g in {familial_group, discordant_group} and paired_ok)
+    )
+
+    if show_points:
         sns.stripplot(
-            data=subset, x='group', y='PGS',
-            order=group_order, color='black', size=2, alpha=0.5
+            data=subset,
+            x='group',
+            y='PGS',
+            order=group_order,
+            color='black',
+            size=2,
+            alpha=0.5
         )
 
+
+# --- Significance annotations ---
 y_max = df['PGS'].max()
 y_min = df['PGS'].min()
 y_range = y_max - y_min
 spacing = 0.15 * y_range
 
-#print(pairs)
 for i, (g1, g2) in enumerate(pairs):
-    #print(g1 + "-" + g2)
     x1, x2 = group_order.index(g1), group_order.index(g2)
-    y = y_max + (i+1) * spacing
-    plt.plot([x1, x1, x2, x2], [y-0.01, y, y, y-0.01], lw=1.0, c='black')
+    y = y_max + (i + 1) * spacing
+
+    plt.plot([x1, x1, x2, x2],
+             [y - 0.01, y, y, y - 0.01],
+             lw=1.0,
+             c='black')
 
     p_val = p_values[(g1, g2)]
     p_text = "p < 1e-15" if p_val < 1e-15 else f"p = {p_val:.2e}"
-    plt.text((x1+x2)/2, y + 0.01, p_text, ha='center', va='bottom', fontsize=5)
 
-plt.title(f"PGS ({PGS_ID}) distribution by {cancer_type.capitalize()} Family History",fontsize=7)
-plt.ylabel(f"PGS ({PGS_ID}) Z-Score",fontsize=5)
+    plt.text(
+        (x1 + x2) / 2,
+        y + 0.01,
+        p_text,
+        ha='center',
+        va='bottom',
+        fontsize=5
+    )
+
+# --- Final formatting ---
+plt.title(
+    f"PRS ({PGS_ID}) distribution by {cancer_type.capitalize()} Family History",
+    fontsize=7
+)
+plt.ylabel("PRS Z-Score", fontsize=10)
 plt.xlabel("")
 
-# --- Replace default x-axis labels with custom labels ---
-plt.xticks(ticks=range(len(group_order)), labels=group_labels, rotation=20,fontsize=5)
-plt.ylim(y_min - 0.1*y_range, y_max + len(pairs)*spacing + 0.1*y_range)
+plt.xticks(
+    ticks=range(len(group_order)),
+    labels=display_labels,
+    rotation=20,
+    fontsize=8
+)
+
+plt.ylim(
+    y_min - 0.1 * y_range,
+    y_max + len(pairs) * spacing + 0.1 * y_range
+)
+
 plt.tight_layout()
 plt.savefig(png_file, dpi=300)
 plt.close()
 
-# -------------------------------
-# 6. Write results file
-# -------------------------------
-with open(stats_file, "w") as f:
-    f.write("# Summary statistics (mean, std)\n")
-    f.write(summary_str + "\n\n")
-
-    f.write("# Pairwise comparisons (one tailed t-test p-value and Cohen’s d→OR proxy)\n")
-    for (g1, g2), p_val in p_values.items():
-        f.write(f"{g1} vs {g2}:\tp = {p_val:.4e},\tOR≈{or_values[(g1,g2)]:.3f}\n")
-
-#print(f"✅ Saved plot: {png_file}")
-#print(f"✅ Saved stats: {stats_file}")

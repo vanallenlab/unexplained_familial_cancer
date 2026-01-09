@@ -7,35 +7,54 @@ version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 workflow ANALYSIS_1C_LOGISTIC_REGRESSION {
   input {
-    String cancer_type = "neuroendocrine"
-    File analysis_1b_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/cromwell-execution/ANALYSIS_1B_GENES/26bad88a-1bfa-46bd-8c70-f0cf8443f185/call-concat2/out.tsv.gz" 
+    Array[String] cancer_type = ["basal_cell","bladder","breast","cervix","colorectal","lung","uterus","ovary","kidney","squamous_cell","melanoma","prostate","brain","neuroendocrine","sarcoma","non-hodgkin","hematologic","thyroid"]
+    Int ROH_length_threshold = 0
     String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/results/" 
   }
   File step_12_data = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
   Int negative_shards = 0
-
+  File analysis_1b_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/analysis_1b_output." + ~{ROH_length_threshold} + ".tsv.gz"
   call T1_split_file {
     input:
       file_to_split = analysis_1b_output,
       max_lines_per_chunk = 5000
   }
-  scatter(i in range(length(T1_split_file.out1))){
-    call T2_RunLogisticRegression {
-      input:
-        raw_roh_hwas = T1_split_file.out1[i],
-        cancer_type = cancer_type,
-        sample_data = step_12_data
+  scatter (cancer_type in cancer_types){
+    scatter(i in range(length(T1_split_file.out1) - 0)){
+      call T2_RunLogisticRegression as T2 {
+        input:
+          raw_roh_hwas = T1_split_file.out1[i],
+          cancer_type = cancer_type,
+          sample_data = step_12_data
+      }
+      call T2_RunLogisticRegression as T2_euro{
+        input:
+          raw_roh_hwas = T1_split_file.out1[i],
+          cancer_type = cancer_type,
+          eur_only = "True",
+          sample_data = step_12_data
+      }
     }
-  }
-  call Tasks.concatenateFiles_noheader as concat1 {
-    input:
-      files = T2_RunLogisticRegression.out1,
-      callset_name = cancer_type + ".roh_analysis"
-  }
-  call Tasks.copy_file_to_storage {
-    input:
-      text_file = concat1.out1,
-      output_dir = output_dir 
+    call Tasks.concatenateFiles_noheader as concat1_euro {
+      input:
+        files = T2_euro.out1,
+        callset_name = cancer_type + ".euro_roh_analysis"
+    }
+    call Tasks.concatenateFiles_noheader as concat1 {
+      input:
+        files = T2.out1,
+        callset_name = cancer_type + ".roh_analysis"
+    }
+    call Tasks.copy_file_to_storage as copy{
+      input:
+        text_file = concat1.out1,
+        output_dir = output_dir
+    }
+    call Tasks.copy_file_to_storage as copy_euro{
+      input:
+        text_file = concat1_euro.out1,
+        output_dir = output_dir 
+    }
   }
 }
 
@@ -86,6 +105,7 @@ task T1_split_file {
 task T2_RunLogisticRegression {
   input {
     File raw_roh_hwas
+    String eur_only = "False"
     String cancer_type
     File sample_data
   }
@@ -103,7 +123,8 @@ task T2_RunLogisticRegression {
   # ------------------------------------------------------------
   haplotype_df = pd.read_csv("~{raw_roh_hwas}", sep="\t", index_col=False)
   df = pd.read_csv("~{sample_data}", sep="\t")
-  df = df[df['intake_qc_pop'] == "EUR"]
+  if "~{eur_only}" == "True":
+      df = df[df['intake_qc_pop'] == "EUR"]
 
   # Ensure original_id is string and stripped
   df["original_id"] = df["original_id"].astype(str).str.strip()
@@ -123,6 +144,7 @@ task T2_RunLogisticRegression {
 
   # Convert all gene columns to numeric
   gene_cols = [c for c in hap_matrix.columns if c != 'original_id']
+  print(hap_matrix.shape)
   hap_matrix[gene_cols] = hap_matrix[gene_cols].apply(pd.to_numeric, errors='coerce')
 
   # Strip whitespace from original_id

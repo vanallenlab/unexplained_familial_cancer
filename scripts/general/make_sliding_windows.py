@@ -28,120 +28,123 @@ CHROM_SIZES = {
     'chr22': 50818468,
 }
 
+BUFFER_BP = 2_000_000  # 2 Mb buffer on each side
+
 
 # =========================================================
-# Load & merge N-masked regions
+# Load & merge masked regions (new format)
 # =========================================================
-def load_nmasked(mask_file, min_required_length=50000):
+def load_buffered_regions(region_file):
     """
-    Reads N-masked regions and merges overlapping or adjacent intervals.
-    Keeps only intervals with length >= min_required_length.
-    Returns: dict of chrom → list of (start, end) merged intervals
+    Reads tab-delimited regions:
+    col2 = chrom, col3 = start, col4 = end
+    Applies ±2 Mb buffer and merges overlaps.
+    Returns: dict chrom -> list of (start, end)
     """
-    masked = {}
+    regions = {}
 
-    with open(mask_file) as f:
+    with open(region_file) as f:
         for line in f:
-            fields = line.strip().split("\t")
-            if len(fields) < 7:
+            if not line.strip():
                 continue
 
+            fields = line.rstrip().split("\t")
             chrom = fields[1]
             start = int(fields[2])
             end = int(fields[3])
-            length = int(fields[6])
 
-            # keep only long N-mask intervals
-            if length < min_required_length:
+            if chrom not in CHROM_SIZES:
                 continue
 
-            masked.setdefault(chrom, []).append((start, end))
+            chrom_len = CHROM_SIZES[chrom]
 
-    # Merge each chromosome's intervals
+            buffered_start = max(1, start - BUFFER_BP)
+            buffered_end = min(chrom_len, end + BUFFER_BP)
+
+            regions.setdefault(chrom, []).append((buffered_start, buffered_end))
+
+    # Merge overlapping buffered intervals per chromosome
     merged = {}
 
-    for chrom, intervals in masked.items():
-        if not intervals:
-            continue
-
+    for chrom, intervals in regions.items():
         intervals.sort()
         merged_intervals = []
 
-        current_start, current_end = intervals[0]
+        cur_start, cur_end = intervals[0]
 
         for s, e in intervals[1:]:
-            if s <= current_end:  # overlapping or adjacent
-                current_end = max(current_end, e)
+            if s <= cur_end:
+                cur_end = max(cur_end, e)
             else:
-                merged_intervals.append((current_start, current_end))
-                current_start, current_end = s, e
+                merged_intervals.append((cur_start, cur_end))
+                cur_start, cur_end = s, e
 
-        merged_intervals.append((current_start, current_end))
+        merged_intervals.append((cur_start, cur_end))
         merged[chrom] = merged_intervals
 
     return merged
 
 
 # =========================================================
-# Compute overlap between a window and N-masked intervals
+# Check overlap between window and masked regions
 # =========================================================
-def masked_overlap(win_start, win_end, intervals):
-    total = 0
+def overlaps_any(win_start, win_end, intervals):
     for s, e in intervals:
-        overlap = max(0, min(win_end, e) - max(win_start, s) + 1)
-        total += overlap
-    return total
+        if win_start <= e and win_end >= s:
+            return True
+    return False
 
 
 # =========================================================
 # Main sliding window generator
 # =========================================================
-def generate_sliding_windows(window_size_bp, step_size_bp, mask_file, output_filename="genome_windows.txt"):
-    nmasked = load_nmasked(mask_file, min_required_length=50000)
+def generate_sliding_windows(
+    window_size_bp,
+    step_size_bp,
+    region_file,
+    output_filename="genome_windows.txt"
+):
+    masked = load_buffered_regions(region_file)
 
+    total_kept = 0
     total_independent = 0
-    total_windows_kept = 0
 
-    with open(output_filename, "w") as f:
-        print(f"Generating Windows (window={window_size_bp}, step={step_size_bp})")
-        print(f"Excluding windows with ≥50kb overlap with N-masked regions\n")
+    with open(output_filename, "w") as out:
+        print(f"Generating windows (window={window_size_bp}, step={step_size_bp})")
+        print("Excluding windows overlapping buffered regions (±2 Mb)\n")
 
         sorted_chrs = sorted(CHROM_SIZES.keys(), key=lambda x: (len(x), x))
 
         for chrom in sorted_chrs:
-            chrom_length = CHROM_SIZES[chrom]
-            mask_list = nmasked.get(chrom, [])
+            chrom_len = CHROM_SIZES[chrom]
+            mask_list = masked.get(chrom, [])
 
             start = 1
             kept = 0
             independent = 0
 
-            while start + window_size_bp - 1 <= chrom_length:
+            while start + window_size_bp - 1 <= chrom_len:
                 end = start + window_size_bp - 1
                 window_id = f"{chrom}_{start}_{end}"
-                length = end - start + 1
 
-                # compute overlap with N-masked regions
-                overlap = masked_overlap(start, end, mask_list)
-
-                if overlap < 50000:
-                    f.write(f"{chrom}\t{start}\t{end}\t{window_id}\t{length}\n")
+                if not overlaps_any(start, end, mask_list):
+                    out.write(
+                        f"{chrom}\t{start}\t{end}\t{window_id}\t{window_size_bp}\n"
+                    )
                     kept += 1
 
-                    # Non-overlapping windows:
-                    # windows starting at positions 1, 1+window, 1+2*window, ...
+                    # independent windows (non-overlapping grid)
                     if (start - 1) % window_size_bp == 0:
                         independent += 1
 
                 start += step_size_bp
 
-            total_windows_kept += kept
+            total_kept += kept
             total_independent += independent
-
             print(f"{chrom}: {kept} windows kept ({independent} independent)")
 
     print("\n====================================================")
-    print(f"TOTAL WINDOWS KEPT: {total_windows_kept}")
+    print(f"TOTAL WINDOWS KEPT: {total_kept}")
     print(f"TOTAL INDEPENDENT (NON-OVERLAPPING): {total_independent}")
     print(f"BONFERRONI THRESHOLD = 0.05 / {total_independent:.0f}")
     print("====================================================")
@@ -152,8 +155,8 @@ def generate_sliding_windows(window_size_bp, step_size_bp, mask_file, output_fil
 # Run if script called directly
 # =========================================================
 if __name__ == "__main__":
-    WINDOW_SIZE = 100000    # 100 kb
-    STEP_SIZE = 50000       # 50 kb
-    MASK_FILE = "gap.txt"
+    WINDOW_SIZE = 100_000   # 100 kb
+    STEP_SIZE = 50_000      # 50 kb
+    REGION_FILE = "reference_files/centromeres.txt"
 
-    generate_sliding_windows(WINDOW_SIZE, STEP_SIZE, MASK_FILE)
+    generate_sliding_windows(WINDOW_SIZE, STEP_SIZE, REGION_FILE)
