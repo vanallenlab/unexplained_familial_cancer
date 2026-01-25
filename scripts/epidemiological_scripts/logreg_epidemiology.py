@@ -8,15 +8,14 @@ from itertools import product
 # ------------------------------------------------------------
 df = pd.read_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t")
 df = df[df['original_dx'] != "control"]
-pheno_df = pd.read_csv("dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz",sep='\t',usecols = ['original_id','inferred_sex','cohort'])
+pheno_df = pd.read_csv("dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz",sep='\t',usecols = ['original_id','inferred_sex','cohort','intake_qc_pop'])
 pheno_df = pheno_df[pheno_df['cohort'] == "aou"]
 df['Sample'] = df['Sample'].astype(str)
 pheno_df['Sample'] = pheno_df['original_id'].astype(str)
 df = df.merge(pheno_df, on="Sample",how="left")
 df = df[df["inferred_sex"].isin(["male", "female"])].copy()
 df["sex_binary"] = (df["inferred_sex"] == "female").astype(int)
-#df = df.rename(columns={"original_id": "Sample"})
-
+df = df[df['intake_qc_pop'] == 'EUR']
 # ------------------------------------------------------------
 # 1b. Remove samples with known pathogenic variants
 # ------------------------------------------------------------
@@ -102,7 +101,7 @@ for patient_cancer, family_cancer in product(PATIENT_CANCERS, FAMILY_CANCERS):
     ).astype(int)
 
     # Require minimal signal (cases with family history)
-    if sub.loc[sub["patient_has"] == 1, "family_has"].sum() < 3:
+    if sub.loc[sub["patient_has"] == 1, "family_has"].sum() < 2:
         continue
 
     # Design matrix

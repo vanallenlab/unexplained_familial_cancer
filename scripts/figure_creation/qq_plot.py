@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 
-def return_pvals(file, max_maf, annotation, column_of_interest="Pvalue"):
+def return_pvals(file, max_maf, annotation, column_of_interest="recalibrated_p"):
     df = pd.read_csv(file, sep='\t')
-    df = df[(df['Group'] == annotation) & (df['max_MAF'] == max_maf)]
+    df = df[(df['criteria'] == annotation) & (df['max_AF'] == max_maf)]
     if column_of_interest not in df:
         return []
     return df[column_of_interest].dropna().tolist()
@@ -21,7 +21,7 @@ def main():
     df = pd.read_csv(args.data, sep='\t')
 
     max_mafs = [0.01, 0.001]
-    groups = sorted(df['Group'].unique())
+    groups = sorted(df['criteria'].unique())
 
     nrows = len(max_mafs)
     ncols = len(groups)

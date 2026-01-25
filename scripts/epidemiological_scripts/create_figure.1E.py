@@ -84,14 +84,15 @@ df["color"] = np.where(
 # ------------------------------------------------------------
 # 4. Plot
 # ------------------------------------------------------------
-plt.figure(figsize=(8, 7))
+plt.figure(figsize=(2.5, 2.5))
 
 plt.scatter(
     df["log2_odds_ratio"],
     df["neg_log10_p"],
     c=df["color"],
     alpha=0.7,
-    edgecolors="none"
+    edgecolors="none",
+    s = 7
 )
 
 # ------------------------------------------------------------
@@ -105,7 +106,7 @@ for _, row in label_df.iterrows():
         row["log2_odds_ratio"],
         row["neg_log10_p"],
         label,
-        fontsize=8,
+        fontsize=5,
         ha="left",
         va="bottom",
         color="black",
@@ -123,9 +124,9 @@ plt.axvline(0, linestyle="--", color="black", linewidth=0.8)
 # ------------------------------------------------------------
 # 6. Labels & aesthetics
 # ------------------------------------------------------------
-plt.xlabel(r"$log_{2}(OR)$ for patient cancer given family history", fontsize=12)
-plt.ylabel(r"$-\log_{10}{P}$", fontsize=12)
-#plt.title("Clustering of ", fontsize=14)
+plt.xlabel(r"$log_{2}(OR)$", fontsize=5)
+plt.ylabel(r"$-\log_{10}{P}$", fontsize=5)
+plt.title("Patient Cancer ~ Family Cancer + Sex ", fontsize=7)
 #plt.legend(loc="upper left")
 
 ax = plt.gca()
@@ -153,6 +154,6 @@ plt.tight_layout()
 # 7. Save
 # ------------------------------------------------------------
 plt.savefig("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/familial_cancer_volcano.png", dpi=300)
-#plt.savefig("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/familial_cancer_volcano.pdf")
-plt.show()
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/familial_cancer_volcano.pdf")
+#plt.show()
 plt.close()

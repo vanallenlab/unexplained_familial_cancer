@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
@@ -7,57 +9,45 @@ import os
 # ============================================================
 # Configuration
 # ============================================================
-RAW_PGS_DIR = "raw_pgs"
-MAP_FILE = os.path.join(RAW_PGS_DIR, "cancer_pgs.map")
+RAW_VUS_DIR = "raw_vus"
+GENE_MATRIX_FILE = os.path.join(RAW_VUS_DIR, "gene_by_patient_binary_matrix.tsv.gz")
+COSMIC_FILE = "raw_vus/cosmic_ufc.v3.tsv"
 
 # ============================================================
-# 1. Load cancer → PGS map
-# ============================================================
-pgs_map = pd.read_csv(
-    MAP_FILE,
-    sep=r"\s+",
-    header=None,
-    names=["cancer", "pgs_id"]
-)
-
-pgs_map["cancer"] = pgs_map["cancer"].str.lower()
-
-# Melanoma equivalents
-#MELANOMA_EQUIV = {
-#    "melanoma": "skin",
-#    "melanoma": "basal_cell_carcinoma",
-#    "melanoma": "squamous_cell_carcinoma"
-#}
-
-#pgs_map["cancer"] = pgs_map["cancer"].replace(MELANOMA_EQUIV)
-PGS_LOOKUP = dict(zip(pgs_map["cancer"], pgs_map["pgs_id"]))
-
-# ============================================================
-# 2. Load phenotype table
+# 1. Load phenotype table
 # ============================================================
 df = pd.read_csv("dfci-ufc.aou.phenos.v2.tsv", sep="\t")
 df = df[df["original_dx"] != "control"].copy()
-pheno_df = pd.read_csv("dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz",sep='\t',usecols = ['original_id','inferred_sex','cohort','intake_qc_pop'])
-pheno_df = pheno_df[pheno_df['cohort'] == "aou"]
-df['Sample'] = df['Sample'].astype(str)
-pheno_df['Sample'] = pheno_df['original_id'].astype(str)
-df = df.merge(pheno_df, on="Sample",how="left")
+
+pheno_df = pd.read_csv(
+    "dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz",
+    sep="\t",
+    usecols=["original_id", "inferred_sex", "cohort",'intake_qc_pop']
+)
+pheno_df = pheno_df[pheno_df["cohort"] == "aou"]
+
+df["Sample"] = df["Sample"].astype(str)
+pheno_df["Sample"] = pheno_df["original_id"].astype(str)
+
+df = df.merge(pheno_df, on="Sample", how="left")
 df["original_id"] = df["Sample"].astype(str)
 df = df[df['intake_qc_pop'] == 'EUR']
 # ============================================================
-# 3. Remove pathogenic variant samples
+# 2. Remove pathogenic variant samples
 # ============================================================
 pvs = set(
     pd.read_csv("samples_to_exclude.jan29.list", header=None)[0].astype(str)
 )
 df = df[~df["original_id"].isin(pvs)].copy()
+
 # ============================================================
-# 4. Sex filtering + encoding
+# 3. Sex filtering + encoding
 # ============================================================
 df = df[df["inferred_sex"].isin(["male", "female"])].copy()
 df["sex_binary"] = (df["inferred_sex"] == "female").astype(int)
+
 # ============================================================
-# 5. Normalize diagnosis strings (NO SETS)
+# 4. Normalize diagnosis strings
 # ============================================================
 def normalize_dx(val):
     if pd.isna(val) or isinstance(val, bool):
@@ -69,10 +59,10 @@ df["maternal_dx"] = df["maternal_family_dx"].apply(normalize_dx)
 df["paternal_dx"] = df["paternal_family_dx"].apply(normalize_dx)
 
 # ============================================================
-# 6. Cancer definitions
+# 5. Cancer definitions
 # ============================================================
 PATIENT_CANCERS = {
-    "breast", "prostate", "colorectal", "cervix", "thyroid",
+    "breast", "prostate", "cervix","colorectal", "thyroid",
     "sarcoma", "neuroendocrine", "lung", "bladder", "kidney",
     "uterus", "ovary", "hematologic", "non-hodgkin",
     "basal_cell_carcinoma", "squamous_cell_carcinoma",
@@ -89,52 +79,38 @@ FEMALE_ONLY = {"breast", "uterus", "ovary", "cervix"}
 MALE_ONLY = {"prostate"}
 
 # ============================================================
-# 7. Safe cancer membership helper
+# 6. Diagnosis membership helper
 # ============================================================
 def has_dx(dx_string, cancer):
     if not dx_string:
         return False
     return cancer in {
-        x.strip()
-        for x in dx_string.split(";")
-        if x.strip()
+        x.strip() for x in dx_string.split(";") if x.strip()
     }
+
 # ============================================================
-# 8. PRS loader with case-only z-scoring
+# 7. Load gene-by-patient binary matrix
 # ============================================================
-def load_prs(cancer, case_ids):
-    if cancer not in PGS_LOOKUP:
-        return None
+gene_mat = pd.read_csv(GENE_MATRIX_FILE, sep="\t", compression="gzip", index_col=0)
+gene_mat = gene_mat.reset_index().rename(columns={"index": "Sample"})
+# Ensure 'Sample' is string
+gene_mat["Sample"] = gene_mat["Sample"].astype(str)
+# ============================================================
+# 8. Load COSMIC gene–cancer mapping
+# ============================================================
+cosmic = pd.read_csv(
+    COSMIC_FILE,
+    sep="\t",
+    header=None,
+    names=["gene", "cancers"]
+)
 
-    pgs_id = PGS_LOOKUP[cancer]
-    path = os.path.join(RAW_PGS_DIR, f"{pgs_id}.raw.pgs")
-
-    if not os.path.exists(path):
-        return None
-
-    pgs = pd.read_csv(path, sep="\t")
-    
-    if "sample" in pgs.columns:
-        pgs = pgs.rename(columns={"sample": "original_id"})
-
-    pgs["original_id"] = pgs["original_id"].astype(str)
-
-    if "PGS" not in pgs.columns:
-        return None
-
-    non_cases = pgs[~pgs["original_id"].isin(case_ids)]
-
-    mu = non_cases["PGS"].mean()
-    sd = non_cases["PGS"].std(ddof=0)
-
-    if sd == 0 or np.isnan(sd):
-        return None
-
-    pgs["prs_z"] = (pgs["PGS"] - mu) / sd
-
-    return pgs[["original_id", "prs_z"]].rename(
-        columns={"prs_z": f"{cancer}_prs"}
-    )
+cosmic["cancers"] = cosmic["cancers"].str.split(",")
+# Build lookup: cancer -> set of genes
+cancer_to_genes = {}
+for _, row in cosmic.iterrows():
+    for cancer in row["cancers"]:
+        cancer_to_genes.setdefault(cancer, set()).add(row["gene"])
 
 # ============================================================
 # 9. Main logistic regression scan
@@ -143,6 +119,12 @@ results = []
 
 for patient_cancer, family_cancer in product(PATIENT_CANCERS, FAMILY_CANCERS):
     sub = df.copy()
+
+    #if patient_cancer != "breast" or family_cancer != "breast":
+    #    continue
+    # -----------------------
+    # Sex restrictions
+    # -----------------------
     if patient_cancer in FEMALE_ONLY:
         sub = sub[sub["inferred_sex"] == "female"]
     if patient_cancer in MALE_ONLY:
@@ -150,7 +132,9 @@ for patient_cancer, family_cancer in product(PATIENT_CANCERS, FAMILY_CANCERS):
     if sub.empty:
         continue
 
-    # ---- Outcomes & predictors (SAFE) ----
+    # -----------------------
+    # Outcomes
+    # -----------------------
     sub["patient_has"] = sub["patient_dx"].apply(
         lambda x: has_dx(x, patient_cancer)
     ).astype(int)
@@ -161,48 +145,52 @@ for patient_cancer, family_cancer in product(PATIENT_CANCERS, FAMILY_CANCERS):
         axis=1
     ).astype(int)
 
+    # Require minimal signal
     if sub.loc[sub["patient_has"] == 1, "family_has"].sum() < 2:
         continue
 
-    case_ids = set(
-        sub.loc[sub["patient_has"] == 1, "original_id"]
-    )
-
     covars = ["family_has", "sex_binary"]
-    # ---- Patient PRS ----
-    patient_prs = load_prs(patient_cancer, case_ids)
-    if patient_prs is not None:
-        sub = sub.merge(patient_prs, on="original_id", how="left")
-        covars.append(f"{patient_cancer}_prs")
 
-    # ---- Family PRS ----
-    SKIN_PATIENT_SUBTYPES = {"basal_cell_carcinoma","melanoma","squamous_cell_carcinoma"}
+    # -----------------------
+    # Gene-based covariates
+    # -----------------------
+    relevant_genes = cancer_to_genes.get(patient_cancer, set())
+    #print(patient_cancer, relevant_genes)
+    #exit(0)
+    if relevant_genes:
+        gene_cols = [g for g in relevant_genes if g in gene_mat.columns]
+        if gene_cols:
+            #print(gene_cols)
+            sub = sub.merge(
+                gene_mat[["Sample"] + gene_cols],
+                on="Sample",
+                how="left"
+            )
+            # Keep only genes with ≥1 carrier among cases
+            case_mask = sub["patient_has"] == 1
+            active_genes = [
+                g for g in gene_cols
+                if sub.loc[case_mask, g].sum() > 0
+            ]
 
-    family_prs = load_prs(family_cancer, case_ids)
-    if family_prs is not None and patient_cancer.lower() != family_cancer.lower() and not (family_cancer.lower() == "skin" and patient_cancer.lower() in SKIN_PATIENT_SUBTYPES):
-        sub = sub.merge(family_prs, on="original_id", how="left")
-        covars.append(f"{family_cancer}_prs")
-    if patient_cancer in ("prostate","breast","ovary","uterus","cervix"):
+            covars.extend(active_genes)
+            #print(covars)
+            #exit(0)
+    # Remove sex if redundant
+    if patient_cancer in FEMALE_ONLY | MALE_ONLY:
         covars = [c for c in covars if c != "sex_binary"]
+
+    # -----------------------
+    # Model
+    # -----------------------
     try:
         X = sm.add_constant(sub[covars])
-    except KeyError as e:
-        missing = [c for c in covars if c not in sub.columns]
-        print(
-            f"[COVAR ERROR] patient_cancer={patient_cancer} "
-            f"family_cancer={family_cancer}"
-            f"missing={missing}"
-        )
-        continue
-    y = sub["patient_has"]
-
-    try:
+        y = sub["patient_has"]
         model = sm.Logit(y, X).fit(disp=False)
     except Exception as e:
         print(
-          f"[MODEL ERROR] patient_cancer={patient_cancer} "
-          f"family_cancer={family_cancer} "
-          f"error={repr(e)}"
+            f"[MODEL ERROR] patient={patient_cancer} family={family_cancer} "
+            f"error={repr(e)}"
         )
         continue
 
@@ -217,9 +205,11 @@ for patient_cancer, family_cancer in product(PATIENT_CANCERS, FAMILY_CANCERS):
         "n_intersection": int(
             ((sub["patient_has"] == 1) & (sub["family_has"] == 1)).sum()
         ),
-        "covariates": ",".join(covars)
+        "gene_covariates": ",".join(
+            [c for c in covars if c not in {"family_has", "sex_binary"}]
+        )
     })
-
+    #print(results)
 # ============================================================
 # 10. Output
 # ============================================================
@@ -229,10 +219,10 @@ out = pd.DataFrame(results).sort_values(
 )
 
 out.to_csv(
-    "patient_family_logistic_with_prs.tsv",
+    "patient_family_logistic_with_vus.tsv",
     sep="\t",
     index=False
 )
 
-print(f"Wrote {len(out)} rows to patient_family_logistic_with_prs.tsv")
+print(f"Wrote {len(out)} rows to patient_family_logistic_with_vus.tsv")
 

@@ -159,4 +159,4 @@ if __name__ == "__main__":
     STEP_SIZE = 50_000      # 50 kb
     REGION_FILE = "reference_files/centromeres.txt"
 
-    generate_sliding_windows(WINDOW_SIZE, STEP_SIZE, REGION_FILE)
+    generate_sliding_windows(WINDOW_SIZE, STEP_SIZE, REGION_FILE, output_filename=f"genome_windows.{WINDOW_SIZE}bp.txt")

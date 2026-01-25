@@ -85,7 +85,7 @@ y_map = {label: i for i, label in enumerate(y_order)}
 merged["x_pos"] = merged["x_label"].map(x_map)
 
 # --- Plot ---
-plt.figure(figsize=(14, 7))
+plt.figure(figsize=(4, 2))
 # plt.scatter(
 #     x=merged["Intended_Cancer_Type"].str.title() + " (" + merged["PGS_ID"] + ")",
 #     y=merged["Cancer"],
@@ -98,14 +98,14 @@ plt.figure(figsize=(14, 7))
 plt.scatter(
     x=merged["x_pos"],
     y=merged["Cancer"],
-    s=merged["OR"] ** 1.5 * 80,
+    s=merged["OR"],
     c=merged["neglog10p"],
     cmap="Reds",
     alpha=0.9,
     linewidth=0.5
 )
 plt.colorbar(label=r"$-\log_{10}P$")
-plt.yticks(fontsize=14)
+plt.yticks(fontsize=5)
 #plt.xticks(fontsize=14,rotation=45, ha='right')
 
 
@@ -118,7 +118,7 @@ nonsig = merged["p_value"] > 0.05
 plt.scatter(
     x=merged["x_pos"],
     y=merged["Cancer"],
-    s=merged["OR"] ** 1.5 * 80,
+    s=merged["OR"],
     c=merged["neglog10p"],
     cmap="Reds",
     alpha=0.9,
@@ -168,15 +168,21 @@ sig_handle = plt.scatter(
 
 all_handles = size_handles + [sig_handle]
 
+# plt.legend(
+#     handles=all_handles,
+#     frameon=False,
+#     loc="upper left",
+#     bbox_to_anchor=(0.80, 0.35),  # adjust x,y manually
+#     bbox_transform=plt.gcf().transFigure,
+#     title_fontsize=5
+# )
 plt.legend(
     handles=all_handles,
     frameon=False,
     loc="upper left",
-    bbox_to_anchor=(0.80, 0.35),  # adjust x,y manually
     bbox_transform=plt.gcf().transFigure,
-    title_fontsize=10
+    title_fontsize=5
 )
-
 
 
 # Add it to the legend (can be separate from size legend)
@@ -205,11 +211,13 @@ plt.xticks(
     labels=x_order,
     rotation=45,
     ha="right",
-    fontsize=14
+    fontsize=5
 )
-plt.xlabel("PRS Inteneded Cancer",fontsize=20)
-plt.title("Polygenic Scores Across Cancers", fontsize=16, fontweight='bold')
+plt.xlabel("PRS model",fontsize=7)
+plt.ylabel("Patient Cancers",fontsize=7)
+#plt.title("Polygenic Scores Across Cancers", fontsize=16, fontweight='bold')
 plt.grid(False)
 plt.tight_layout()
 plt.savefig("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_by_all/pgs_cancer_circle_matrix.png", dpi=300)
-plt.show()
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/analysis_4b_all_by_all/pgs_cancer_circle_matrix.pdf")
+

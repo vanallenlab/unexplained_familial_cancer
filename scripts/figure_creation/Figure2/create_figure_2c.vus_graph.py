@@ -171,5 +171,5 @@ ax.xaxis.set_ticks_position("bottom")
 #####
 
 plt.tight_layout()
-plt.savefig("tier_side_by_side_plot.png", dpi=300)
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/analysis_5_gsea_results/supplemental_vus.png", dpi=300)
 plt.show()

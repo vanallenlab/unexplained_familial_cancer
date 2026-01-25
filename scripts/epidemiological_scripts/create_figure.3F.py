@@ -1,7 +1,20 @@
+#!/usr/bin/env python3
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+from matplotlib.lines import Line2D
+
+# -------------------------------
+# Global matplotlib settings
+# -------------------------------
+plt.rcParams.update({
+    "font.family": "Arial",
+    "font.size": 7,
+    "axes.linewidth": 0.4,
+    "xtick.major.width": 0.4,
+    "ytick.major.width": 0.4,
+})
 
 # -------------------------------
 # 1. Load files
@@ -15,7 +28,7 @@ df_with_prs = pd.read_csv(file_with_prs, sep="\t")
 # -------------------------------
 # 2. Case-insensitive matching
 # -------------------------------
-for df in [df_no_prs, df_with_prs]:
+for df in (df_no_prs, df_with_prs):
     df["patient_cancer"] = df["patient_cancer"].str.lower()
     df["family_cancer"] = df["family_cancer"].str.lower()
 
@@ -25,23 +38,35 @@ for df in [df_no_prs, df_with_prs]:
 def normalize_family(row):
     pc = row["patient_cancer"]
     fc = row["family_cancer"]
-    
-    # Skin cancers
-    if fc == "skin" and pc in ["melanoma", "basal_cell_carcinoma", "squamous_cell_carcinoma"]:
+
+    if fc == "skin" and pc in {
+        "melanoma",
+        "basal_cell_carcinoma",
+        "squamous_cell_carcinoma",
+    }:
         return pc
-    # Hematologic
-    if fc == "blood_soft_tissue" and pc in ["hematologic", "non-hodgkin"]:
+
+    if fc == "blood_soft_tissue" and pc in {
+        "hematologic",
+        "non-hodgkin",
+    }:
         return pc
+
     return fc
 
-for df in [df_no_prs, df_with_prs]:
+for df in (df_no_prs, df_with_prs):
     df["family_cancer"] = df.apply(normalize_family, axis=1)
 
 # -------------------------------
-# 4. Keep only patient_cancer == family_cancer
+# 4. Keep only matching cancers
 # -------------------------------
-df_no_prs = df_no_prs[df_no_prs["patient_cancer"] == df_no_prs["family_cancer"]].copy()
-df_with_prs = df_with_prs[df_with_prs["patient_cancer"] == df_with_prs["family_cancer"]].copy()
+df_no_prs = df_no_prs[
+    df_no_prs["patient_cancer"] == df_no_prs["family_cancer"]
+].copy()
+
+df_with_prs = df_with_prs[
+    df_with_prs["patient_cancer"] == df_with_prs["family_cancer"]
+].copy()
 
 # -------------------------------
 # 5. Merge datasets
@@ -49,109 +74,129 @@ df_with_prs = df_with_prs[df_with_prs["patient_cancer"] == df_with_prs["family_c
 merged = df_no_prs.merge(
     df_with_prs,
     on=["patient_cancer", "family_cancer"],
-    suffixes=("_no_prs", "_with_prs")
+    suffixes=("_no_prs", "_with_prs"),
 )
-merged.to_csv("temp.tsv",sep='\t')
-# # -------------------------------
-# # 6. Volcano plot with arrows + dots
-# # -------------------------------
-# plt.figure(figsize=(10, 8))
-# sns.set(style="whitegrid")
-
-# for _, row in merged.iterrows():
-#     x_start = np.log2(row["odds_ratio_no_prs"])
-#     y_start = -np.log10(row["p_value_no_prs"])
-#     x_end = np.log2(row["odds_ratio_with_prs"])
-#     y_end = -np.log10(row["p_value_with_prs"])
-    
-#     # Arrow
-#     plt.arrow(
-#         x_start, y_start,
-#         x_end - x_start,
-#         y_end - y_start,
-#         length_includes_head=True,
-#         head_width=0.05,
-#         head_length=0.05,
-#         fc="blue",
-#         ec="blue",
-#         alpha=0.7
-#     )
-#     # Start and end dots
-#     plt.scatter(x_start, y_start, color="red", s=50, zorder=5)
-#     plt.scatter(x_end, y_end, color="green", s=50, zorder=5)
-    
-#     # Label at end
-#     plt.text(x_end, y_end, row["patient_cancer"], fontsize=9, alpha=0.8)
-
-# plt.axvline(0, color="grey", linestyle="--")
-# plt.xlabel("log2(OR)")
-# plt.ylabel("-log10(p-value)")
-# plt.title("Family history OR before vs after including PRS")
 
 # -------------------------------
-# 6. Volcano plot with arrows + dots
+# 6. Volcano plot function
 # -------------------------------
-plt.figure(figsize=(10, 8))
-sns.set(style="white")  # remove grid lines
+def plot_volcano(
+    merged,
+    outfile,
+    show_arrows=True,
+    show_labels=True,
+):
+    fig, ax = plt.subplots(figsize=(3.5, 3.5))
 
-ax = plt.gca()  # grab current axes
+    blue = "#1f77b4"
+    green = "#2ca02c"
 
-arrow_shrink = 0.2  # fraction of arrow to shorten (so it stops before end dot)
+    for _, row in merged.iterrows():
+        x0 = np.log2(row["odds_ratio_no_prs"])
+        y0 = -np.log10(row["p_value_no_prs"])
+        x1 = np.log2(row["odds_ratio_with_prs"])
+        y1 = -np.log10(row["p_value_with_prs"])
 
-for _, row in merged.iterrows():
-    x_start = np.log2(row["odds_ratio_no_prs"])
-    y_start = -np.log10(row["p_value_no_prs"])
-    x_end = np.log2(row["odds_ratio_with_prs"])
-    y_end = -np.log10(row["p_value_with_prs"])
-    
-    # Shorten arrow slightly so it stops before end dot
-    dx = (x_end - x_start) * (1 - arrow_shrink)
-    dy = (y_end - y_start) * (1 - arrow_shrink)
-    
-    # Arrow from no PRS -> with PRS
-    plt.arrow(
-        x_start, y_start,
-        dx, dy,
-        length_includes_head=True,
-        head_width=0.05,
-        head_length=0.05,
-        fc="blue",
-        ec="blue",
-        alpha=0.7,
-        zorder=4
+        if show_arrows:
+            ax.annotate(
+                "",
+                xy=(x1, y1),
+                xytext=(x0, y0),
+                arrowprops=dict(
+                    arrowstyle="->",
+                    linewidth=0.4,
+                    color=blue,
+                ),
+                zorder=3,
+            )
+
+        ax.scatter(
+            x0, y0,
+            s=14,
+            color=blue,
+            linewidth=0.4,
+            zorder=4,
+        )
+
+        ax.scatter(
+            x1, y1,
+            s=14,
+            color=green,
+            linewidth=0.4,
+            zorder=5,
+        )
+
+        if show_labels:
+            ax.text(
+                x1,
+                y1,
+                row["patient_cancer"].capitalize(),
+                fontsize=6,
+                ha="left",
+                va="bottom",
+            )
+
+    # Reference lines
+    ax.axhline(-np.log10(0.05), linestyle="--", linewidth=0.4, color="black")
+    ax.axhline(
+        -np.log10(0.05 / len(merged)),
+        linestyle="--",
+        linewidth=0.4,
+        color="black",
     )
+    ax.axvline(0, linestyle="--", linewidth=0.4, color="black")
+
+    # Labels
+    ax.set_xlabel(r"$\log_2(\mathrm{OR})$ ", labelpad=2)
+    ax.set_ylabel(r"$-\log_{10}P$", labelpad=2)
     
-    # Start dot (no PRS)
-    plt.scatter(x_start, y_start, color="red", s=50, zorder=5)
-    # End dot (with PRS)
-    plt.scatter(x_end, y_end, color="green", s=50, zorder=6)
-    
-    # Label at end
-    plt.text(x_end, y_end, row["patient_cancer"], fontsize=9, alpha=0.8)
+
+    # Legend
+    legend_elements = [
+        Line2D([0], [0], marker="o", color="none",
+               markerfacecolor=blue, markersize=4,
+               label="Without PRS"),
+        Line2D([0], [0], marker="o", color="none",
+               markerfacecolor=green, markersize=4,
+               label="With PRS"),
+    ]
+
+    ax.legend(
+        handles=legend_elements,
+        frameon=False,
+        loc="upper right",
+        fontsize=6,
+    )
+
+    # Spine cleanup
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.title("Patient Cancer ~ Family Cancer + Sex + PRS (Cancer Specific)", fontsize=7)
+    plt.tight_layout(pad=0.6)
+    plt.savefig(outfile, dpi=300)
+    plt.close()
 
 # -------------------------------
-# Reference lines
+# 7. Save outputs (exact paths)
 # -------------------------------
-plt.axhline(-np.log10(0.05), linestyle="--", color="black", linewidth=1)
-plt.axhline(-np.log10(0.05 / len(merged)), linestyle="--", color="black", linewidth=1)
-plt.axvline(0, linestyle="--", color="grey", linewidth=0.8)
+plot_volcano(
+    merged,
+    outfile="/Users/noah/Desktop/ufc_repository/results/epidemiological_results/Figure_3E_labels.png",
+    show_arrows=True,
+    show_labels=True,
+)
 
-# -------------------------------
-# Axis labels & title
-# -------------------------------
-plt.xlabel(r"$\log_2(\mathrm{OR})$ for patient cancer given family history", fontsize=12)
-plt.ylabel(r"$-\log_{10}(P)$", fontsize=12)
-plt.title("Family history OR before vs after including PRS", fontsize=14)
+plot_volcano(
+    merged,
+    outfile="/Users/noah/Desktop/ufc_repository/results/epidemiological_results/Figure_3E_no_labels.png",
+    show_arrows=False,
+    show_labels=False,
+)
 
-# -------------------------------
-# Clean spines & ticks
-# -------------------------------
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-ax.spines["left"].set_linewidth(1.2)
-ax.spines["bottom"].set_linewidth(1.2)
-ax.yaxis.set_ticks_position("left")
-ax.xaxis.set_ticks_position("bottom")
-
-plt.tight_layout()
-plt.show()
+plot_volcano(
+    merged,
+    outfile="/Users/noah/Desktop/ufc_repository/results/epidemiological_results/Figure_3E_no_labels.pdf",
+    show_arrows=False,
+    show_labels=False,
+)

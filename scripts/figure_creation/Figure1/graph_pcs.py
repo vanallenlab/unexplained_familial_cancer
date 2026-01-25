@@ -2,9 +2,25 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import yaml
 import numpy as np
+import matplotlib as mpl
+
+# -----------------------
+# Global font settings (Arial, size 5–7 only)
+# -----------------------
+mpl.rcParams.update({
+    "font.family": "Arial",
+    "font.size": 6,
+    "axes.labelsize": 6,
+    "xtick.labelsize": 7,
+    "ytick.labelsize": 7,
+    "legend.fontsize": 5,
+})
 
 # --- Load input data ---
-df = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/demographics/demographics.tsv", sep="\t")
+df = pd.read_csv(
+    "/Users/noah/Desktop/ufc_repository/results/demographics/demographics.tsv",
+    sep="\t"
+)
 
 # --- Load colors from YAML ---
 with open("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml", "r") as f:
@@ -26,11 +42,12 @@ df["label"] = df["intake_qc_pop"].map(label_map)
 # --- Compute population percentages ---
 pop_counts = df["intake_qc_pop"].value_counts(normalize=True) * 100
 df["pct_label"] = df["intake_qc_pop"].apply(
-    lambda x: f"{label_map.get(x, x)} ({pop_counts[x]:.0f}%)" if x in pop_counts else x
+    lambda x: f"{label_map.get(x, x)} ({pop_counts[x]:.0f}%)"
+    if x in pop_counts else x
 )
 
 # --- Create plot ---
-fig, ax = plt.subplots(figsize=(4, 3))
+fig, ax = plt.subplots(figsize=(2.5, 2.5))
 
 # Plot each ancestry group with black-edged markers
 for ancestry, subdf in df.groupby("intake_qc_pop"):
@@ -44,10 +61,10 @@ for ancestry, subdf in df.groupby("intake_qc_pop"):
     )
 
 # --- Axis labels ---
-ax.set_xlabel("Principal Component 1")
-ax.set_ylabel("Principal Component 2")
+ax.set_xlabel("Principal Component 1", fontsize=6)
+ax.set_ylabel("Principal Component 2", fontsize=6)
 
-# --- Simplify ticks: one every 0.4 starting from 0 ---
+# --- Simplify ticks: one every 0.04 starting from 0 ---
 plt.xticks(np.arange(0, plt.xlim()[1], 0.04))
 plt.yticks(np.arange(0, plt.ylim()[1], 0.04))
 
@@ -58,13 +75,20 @@ ax.spines["bottom"].set_linewidth(1)
 ax.spines["left"].set_linewidth(1)
 
 # --- Legend: clean, without box ---
-leg = ax.legend(
+ax.legend(
     loc="best",
     markerscale=2,
     frameon=False,
-    fontsize=8
+    fontsize=5
 )
 
 plt.tight_layout()
-plt.savefig("/Users/noah/Desktop/ufc_repository/results/demographics/pc_figure.png",dpi=400)
-#plt.show()
+plt.savefig(
+    "/Users/noah/Desktop/ufc_repository/results/demographics/pc_figure.png",
+    dpi=400
+)
+plt.savefig(
+    "/Users/noah/Desktop/ufc_repository/results/demographics/pc_figure.pdf",
+    dpi=400
+)
+# plt.show()
