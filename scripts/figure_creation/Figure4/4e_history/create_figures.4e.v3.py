@@ -178,6 +178,8 @@ y_range = y_max - y_min
 
 bracket_step = 0.12 * y_range
 bracket_height = 0.02 * y_range
+star_gap = -0.25       # distance from bracket to stars
+star_gap_ns = 0
 
 for i, (g1, g2) in enumerate(pairs):
     x1, x2 = groups.index(g1), groups.index(g2)
@@ -190,11 +192,20 @@ for i, (g1, g2) in enumerate(pairs):
         c="black",
     )
 
-    sig = significance_text(p_values[(g1, g2)])
+    # get significance string
+    sig_label = significance_text(p_values[(g1, g2)]) 
+
+    # set gap
+    if sig_label == "ns":
+        gap = star_gap_ns
+    else:
+        gap = star_gap
+        
+    
     ax.text(
         (x1 + x2) / 2,
-        y - 0.02 * y_range,
-        sig,
+        y + gap,
+        sig_label,
         ha="center",
         va="bottom",
         fontsize=STAR_FONTSIZE,
