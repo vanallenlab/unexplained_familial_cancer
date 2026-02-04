@@ -263,7 +263,7 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 
 # Get list of all sample IDs present in G2C SV callset after variant recalibration
 gsutil -m cat \
-  gs://fc-secure-d21aa6b0-1d19-42dc-93e3-42de3578da45/dfci-g2c-callsets/gatk-sv/module-outputs/18/chr22/ConcatVcfs/dfci-g2c.v1.chr22.concordance.vcf.gz \
+  $MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/sv_gt_cleanup/chr22/ConcatVcfs/dfci-g2c.v1.chr22.imputed.vcf.gz \
 | gunzip -c | head -n5000 | bcftools query -l \
 > $staging_dir/all_g2c_samples.post_gatksv.samples.list
 
@@ -273,7 +273,7 @@ gsutil -m cp \
   gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_4_RANDOM_FOREST/inputs/ufc_subjects.list \
   $staging_dir/
 zcat $staging_dir/dfci-g2c.sample_meta.posthoc_outliers.ceph_update.tsv.gz \
-| awk -v FS="\t" '{ if ($NF=="True" && $3 ~ /aou|ceph|mesa|ufc/) print }' \
+| awk -v FS="\t" '{ if ($NF=="True" && $3 == "aou") print }' \
 | sort -k2,2 \
 | join -1 2 -2 1 -t $'\t' \
   - <( sort $staging_dir/ufc_subjects.list ) \
@@ -304,7 +304,7 @@ cat << EOF > $staging_dir/ExcludeSamplesFromVcf.inputs.template.json
   "ExcludeSamplesFromVcf.docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
   "ExcludeSamplesFromVcf.exclude_samples_list": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.exclude_for_ufc_callset.samples.list",
   "ExcludeSamplesFromVcf.outfile_prefix": "dfci-ufc.gatksv.v1",
-  "ExcludeSamplesFromVcf.vcf": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/module-outputs/CollapseRedundantSvs/\$CONTIG/RC3/dfci-g2c.v1.\$CONTIG.concordance.gq_recalibrated.identical.reclustered.vcf.gz"
+  "ExcludeSamplesFromVcf.vcf": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/sv_gt_cleanup/\$CONTIG/ConcatVcfs/dfci-g2c.v1.\$CONTIG.imputed.vcf.gz"
 }
 EOF
 
@@ -1539,7 +1539,7 @@ cat << EOF > $staging_dir/AnnotateVcf.inputs.template.json
 }
 EOF
 
-# Apply posthoc cleanup step 2 to each chromosome
+# Annotate each chromosome
 code/scripts/manage_chromshards.py \
   --wdl code/wdl/gatk-sv/AnnotateVcf.wdl \
   --input-json-template $staging_dir/AnnotateVcf.inputs.template.json \
