@@ -50,7 +50,6 @@ MATCH_MAP = {
     "Basal_Cell_Carcinoma": ["Skin"],
     "Squamous_Cell_Carcinoma": ["Skin"],
     "Melanoma": ["Skin"],
-    "Sarcoma": ["Bone", "Blood_Soft_Tissue"],
     "Non-Hodgkin": ["Blood_Soft_Tissue"],
     "Hematologic": ["Blood_Soft_Tissue"],
 }

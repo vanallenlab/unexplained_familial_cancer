@@ -8,23 +8,22 @@ from matplotlib.patches import Patch
 # ------------------------------------------------------------
 # Hardcoded inputs / outputs
 # ------------------------------------------------------------
-IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32100001_32550000.roh_signal.tsv.gz"
-IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32000001_32650000.roh_signal.tsv.gz"
-OUT_PDF = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32100001_32550000.roh_signal.plot.pdf"
-OUT_PNG = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32100001_32550000.roh_signal.plot.png"
+IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113500001_113950000.roh_signal.tsv.gz"
+OUT_PDF = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113500001_113950000.roh_signal.plot.pdf"
+OUT_PNG = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113500001_113950000.roh_signal.plot.png"
 
 # Locus (hardcoded based on your haplotype string)
-CHR = "chr22"
-START = 32000001
-END   = 32650000
+CHR = "chr3"
+START = 113500001
+END   = 113950000
 
 # Plot settings
 DOWNSAMPLE_BP = 10          # plot every 100 bp (fast + looks identical)
-FIGSIZE = (4.5,3.5)         # inches (wide and short = good for genome tracks)
+FIGSIZE = (3,2)         # inches (wide and short = good for genome tracks)
 DPI = 450
 
 # Colors
-CASE_COLOR = "#98DF8A"       # nice green
+CASE_COLOR = "#9EDAE5"       # nice green
 CTRL_COLOR = "#B0B0B0"       # clean gray
 
 FONT_FAMILY = "Arial"
@@ -77,7 +76,7 @@ plt.rcParams.update({
 # ------------------------------------------------------------
 fig, ax = plt.subplots(figsize=FIGSIZE)
 
-ax.axvspan(32200001, 32450000, color='lightblue', alpha=0.4, zorder=0)
+ax.axvspan(113600001,113850000, color='lightblue', alpha=0.4, zorder=0)
 
 # Lines (simple + clean)
 line_case, = ax.plot(
@@ -105,7 +104,7 @@ ax.set_ylabel("% homozygosed (RoH ≥100 kb)")
 xticks = [START, (START + END) // 2, END]
 ax.set_xticks(xticks)
 ax.set_xticklabels([f"{x:,}" for x in xticks])
-ax.set_xlabel(f"chr22")
+ax.set_xlabel(f"chr3")
 
 # Clean look
 ax.spines["top"].set_visible(False)
@@ -126,35 +125,26 @@ ax.legend(handles=[line_case, line_control, sig_patch], frameon=False, loc="uppe
 fig.tight_layout(pad=0.6)
 
 # Plot genes
-# BPIFC
-plt.plot([32413845, 32464484], [0.2, 0.2], color='blue', lw=3,solid_capstyle='round')
+# SPICE1
+plt.plot([113442718,113515187], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
 
-#RTCB
-plt.plot([32387582,32412248], [0.23, 0.23], color='black', lw=3,solid_capstyle='round')
+# SIDT1
+plt.plot([113532555,113629575], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
 
-#FBOX7 32474676-32498829
-plt.plot([32474676,32498829], [0.17, 0.17], color='black', lw=3,solid_capstyle='round')
+# ATP6V1A
+plt.plot([113747033,113812056], [0.25, 0.25], color='black', lw=3,solid_capstyle='round')
 
-#SYN3 32507820-33058381
-plt.plot([332507820,33058381], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+# USF3 
+plt.plot([113648385,113696646], [0.2, 0.2], color='red', lw=3,solid_capstyle='round')
 
-#RFPL3 22:32354885-32361161
-plt.plot([32354885,32361161], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+# GRAMD1C
+plt.plot([113828182,113947174], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
 
-#SLC5A4 22:32218464-32255347
-plt.plot([32218464,32255347], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+# ZDHHC23
+plt.plot([113947901,113965401], [0.23, 0.25], color='black', lw=3,solid_capstyle='round')
 
-#RFPL2 22:32190435-32205073
-plt.plot([32190435,32205073], [0.23, 0.23], color='black', lw=3,solid_capstyle='round')
-
-# C22orf42 22:32149006-32159322
-plt.plot([32149006,32159322], [0.17, 0.17], color='black', lw=3,solid_capstyle='round')
-
-# SLC5A1 22:32043261-32113029
-plt.plot([32043261,32113029], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
-
-# SYN3 32507820-33058381
-plt.plot([32507820,33058381], [0.23, 0.23], color='black', lw=3,solid_capstyle='round')
+#NAA50 3:113716458-113746300
+plt.plot([113716458,113746300], [0.15, 0.15], color='black', lw=3,solid_capstyle='round')
 
 # ------------------------------------------------------------
 # Save

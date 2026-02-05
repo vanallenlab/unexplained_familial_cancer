@@ -35,10 +35,9 @@ def open_textmaybe_gz(path: Path):
 
 cancer_color = parse_color_file("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml")
 
-input_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/significant_regions/")
+input_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/results/")
 output_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/plots/")
 output_dir.mkdir(parents=True, exist_ok=True)
-
 FDR_Q = 0.1
 
 
@@ -52,7 +51,8 @@ def compute_bh_threshold(pvals, q=0.05):
 
 
 # === Process each HWAS file ===
-for file_path in input_dir.glob("*.tsv"):
+for file_path in input_dir.glob("*.tsv.gz"):
+    print("hello")
     if not file_path.name.endswith((".tsv", ".tsv.gz")):
         continue
 
@@ -131,7 +131,7 @@ for file_path in input_dir.glob("*.tsv"):
         #     save_kwargs={"dpi":400, "facecolor":"white"}  # pad_inches won't do much in v3.6.3
         # )
 
-        out_pdf = str(output_dir / "kidney_mqq.pdf")
+        out_pdf = str(output_dir / "kidney_man.pdf")
         out_qq_pdf = str(output_dir / "kidney_qq.pdf")
         mysumstats.plot_mqq(
             sig_level=bh_cutoff,
@@ -161,11 +161,11 @@ for file_path in input_dir.glob("*.tsv"):
             title_fontsize=7,    # plot title
             font_family="Arial",
             marker_size=(7,7.6),
-            fig_kwargs={"figsize": (1.8,2)},  # exact width x height in inches
+            fig_kwargs={"figsize": (1.6,1.6)},  # exact width x height in inches
             save=out_qq_pdf,
-            save_kwargs={"dpi":400, "facecolor":"white"}  # remove extra space
+            save_kwargs={"dpi":400, "facecolor":"white","bbox_inches": "tight","pad_inches": 0.02}  # remove extra space
         )
-
+        print(out_qq_pdf)
 
     except Exception as e:
         print(f"Failed to plot {file_path.name}: {e}\n")

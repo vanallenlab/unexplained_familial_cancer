@@ -12,9 +12,9 @@ def main():
     p = argparse.ArgumentParser(description="Plot AUROC curve in Nature Genetics-style formatting.")
     p.add_argument("--tsv", required=True, help="Input TSV with columns: cancer_status, percent_homozygosed")
     p.add_argument("--out", required=True, help="Output PDF/PNG path (recommended: PDF)")
-    p.add_argument("--figsize", nargs=2, type=float, default=[2.0, 2.0], metavar=("W", "H"),
+    p.add_argument("--figsize", nargs=2, type=float, default=[1.8, 1.8], metavar=("W", "H"),
                    help="Figure size in inches, e.g. --figsize 2.2 2.2")
-    p.add_argument("--color", default="#2ca25f", help="ROC curve color (hex or named), default green")
+    p.add_argument("--color", default="#98DF8A", help="ROC curve color (hex or named), default green")
     p.add_argument("--title", default=None, help="Optional title (Nat Gen usually prefers none)")
     args = p.parse_args()
 
@@ -57,7 +57,7 @@ def main():
         "axes.labelsize": 7,
         "xtick.labelsize": 7,
         "ytick.labelsize": 7,
-        "axes.linewidth": 0.8,
+        "axes.linewidth": 1,
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
     })
@@ -87,15 +87,15 @@ def main():
     # AUROC label on plot
     ax.text(
         0.60, 0.08,
-        f"AUROC = {auc:.3f}",
+        f"AUROC = {auc:.2f}",
         transform=ax.transAxes,
-        ha="left",
+        ha="center",
         va="bottom",
         fontsize=7
     )
 
     if args.title:
-        ax.set_title(args.title, fontsize=8)
+        ax.set_title(args.title, fontsize=7)
 
     fig.tight_layout(pad=0.4)
     fig.savefig(args.out, bbox_inches="tight", facecolor="white",pad_inches=0)

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 # 1. Load results
 # ------------------------------------------------------------
 df = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/patient_family_logistic_results.tsv", sep="\t")
+df = df[df['n_intersection'] >= 5]
 
 # ------------------------------------------------------------
 # 2. Prepare volcano plot values
@@ -42,8 +43,7 @@ family_to_patient_refinement = {
     },
     "Blood_Soft_Tissue": {
         "Hematologic",
-        "Non-Hodgkin",
-        "Sarcoma",
+        "Non-Hodgkin"
     },
     "Bone": {
         "Sarcoma"
@@ -118,7 +118,7 @@ for _, row in label_df.iterrows():
 # ------------------------------------------------------------
 # Bonferroni or nominal line (example: p = 0.05)
 plt.axhline(-np.log10(0.05), linestyle="--", color="black", linewidth=1)
-plt.axhline(-np.log10(0.05/224), linestyle="--", color="black", linewidth=1)
+plt.axhline(-np.log10(0.05/175), linestyle="--", color="black", linewidth=1)
 plt.axvline(0, linestyle="--", color="black", linewidth=0.8)
 
 # ------------------------------------------------------------
@@ -148,7 +148,8 @@ ax.yaxis.set_ticks_position("left")
 ax.xaxis.set_ticks_position("bottom")
 #####
 
-plt.tight_layout()
+
+plt.tight_layout(pad=0.2)
 
 # ------------------------------------------------------------
 # 7. Save

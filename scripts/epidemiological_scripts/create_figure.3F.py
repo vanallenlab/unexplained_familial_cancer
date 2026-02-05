@@ -23,7 +23,9 @@ file_no_prs = "/Users/noah/Desktop/ufc_repository/results/epidemiological_result
 file_with_prs = "/Users/noah/Desktop/ufc_repository/results/epidemiological_results/patient_family_logistic_with_prs.tsv"
 
 df_no_prs = pd.read_csv(file_no_prs, sep="\t")
+df_no_prs = df_no_prs[df_no_prs['n_intersection'] >= 5]
 df_with_prs = pd.read_csv(file_with_prs, sep="\t")
+df_with_prs = df_with_prs[df_with_prs['n_intersection'] >= 5]
 
 # -------------------------------
 # 2. Case-insensitive matching
