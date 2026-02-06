@@ -78,13 +78,39 @@ fig, ax = plt.subplots(figsize=FIGSIZE)
 
 ax.axvspan(113600001,113850000, color='lightblue', alpha=0.4, zorder=0)
 
+x_start = 113600001
+x_end   = 113850000
+y = 0.025
+
+# double-headed arrow
+ax.annotate(
+    "",
+    xy=(x_start, y),
+    xytext=(x_end, y),
+    arrowprops=dict(
+        arrowstyle="<->",
+        linewidth=1.5,
+        color="black"
+    ),
+    zorder=3
+)
+
+# centered label above the arrow
+ax.text(
+    (x_start + x_end) / 2,
+    y * 1.05,   # small vertical offset
+    "250 kb",
+    ha="center",
+    va="bottom",
+    fontsize=7
+)
 # Lines (simple + clean)
 line_case, = ax.plot(
     df["pos"],
     df["case_roh_fraction"],
     linewidth=1.2,
     color=CASE_COLOR,
-    label="Cases"
+    label="Thyroid\nCases"
 )
 
 line_control, = ax.plot(
@@ -101,7 +127,7 @@ ax.set_ylabel("% homozygosed (RoH ≥100 kb)")
 
 
 # X ticks: keep them readable
-xticks = [START, (START + END) // 2, END]
+xticks = [START,(START + END) // 2, END]
 ax.set_xticks(xticks)
 ax.set_xticklabels([f"{x:,}" for x in xticks])
 ax.set_xlabel(f"chr3")

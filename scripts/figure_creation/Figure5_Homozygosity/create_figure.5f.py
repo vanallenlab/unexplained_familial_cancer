@@ -8,23 +8,22 @@ from matplotlib.patches import Patch
 # ------------------------------------------------------------
 # Hardcoded inputs / outputs
 # ------------------------------------------------------------
-IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32100001_32550000.roh_signal.tsv.gz"
-IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32000001_32650000.roh_signal.tsv.gz"
-OUT_PDF = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32100001_32550000.roh_signal.plot.pdf"
-OUT_PNG = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/kidney.chr22_32100001_32550000.roh_signal.plot.png"
+IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/lung_roh_results/lung.chr9_350001_750000.roh_signal.tsv.gz"
+OUT_PDF = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/lung_roh_results/lung.chr9_350001_750000.roh_signal.plot.pdf"
+OUT_PNG = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/lung_roh_results/lung.chr9_350001_750000.roh_signal.plot.png"
 
 # Locus (hardcoded based on your haplotype string)
-CHR = "chr22"
-START = 32000001
-END   = 32660000
+CHR = "chr9"
+START = 350001
+END   = 750000
 
 # Plot settings
 DOWNSAMPLE_BP = 10          # plot every 100 bp (fast + looks identical)
-FIGSIZE = (4.5,3.5)         # inches (wide and short = good for genome tracks)
+FIGSIZE = (3,2)         # inches (wide and short = good for genome tracks)
 DPI = 450
 
 # Colors
-CASE_COLOR = "#98DF8A"       # nice green
+CASE_COLOR = "#2CA02C"       # nice green
 CTRL_COLOR = "#B0B0B0"       # clean gray
 
 FONT_FAMILY = "Arial"
@@ -77,11 +76,11 @@ plt.rcParams.update({
 # ------------------------------------------------------------
 fig, ax = plt.subplots(figsize=FIGSIZE)
 
-ax.axvspan(32200001, 32450000, color='lightblue', alpha=0.4, zorder=0)
+ax.axvspan(450001,550000, color='lightblue', alpha=0.4, zorder=0)
 
-x_start = 32200001
-x_end   = 32450000
-y = 0.025
+x_start = 450001
+x_end   = 550000
+y = 0.1
 
 # double-headed arrow
 ax.annotate(
@@ -100,24 +99,11 @@ ax.annotate(
 ax.text(
     (x_start + x_end) / 2,
     y * 1.05,   # small vertical offset
-    "250 kb",
+    "100 kb",
     ha="center",
     va="bottom",
     fontsize=7
 )
-
-# # Add a right axis
-# ax_r = ax.twinx()
-
-# # keep it visually aligned with the left axis
-# #ax_r.set_ylim(ax.get_ylim())
-
-# # right-axis labels only
-# ax_r.set_yticks([0.1, 0.2, 0.3])
-# #ax_r.set_yticklabels(["0", "2", "4"])
-
-# ax_r.set_ylabel(r"$-\log_{10}(P)$")
-### finish adding right axis
 
 
 # Lines (simple + clean)
@@ -126,7 +112,7 @@ line_case, = ax.plot(
     df["case_roh_fraction"],
     linewidth=1.2,
     color=CASE_COLOR,
-    label="Kidney\nCases"
+    label="Lung\nCases"
 )
 
 line_control, = ax.plot(
@@ -139,14 +125,14 @@ line_control, = ax.plot(
 
 # Axis formatting
 ax.set_xlim(START, END)
-ax.set_ylabel("% homozygosed (RoH ≥100 kb)")
+ax.set_ylabel("% homozygosed (RoH ≥50 kb)")
 
 
 # X ticks: keep them readable
-xticks = [START, START + (32650000 - START) // 4,(START + 32650000) // 2, START + 3 * (32650000 - START) // 4, 32650000]
+xticks = [START, (START + END) // 2, END]
 ax.set_xticks(xticks)
 ax.set_xticklabels([f"{x:,}" for x in xticks])
-ax.set_xlabel(f"chr22")
+ax.set_xlabel(f"chr9")
 
 # Clean look
 ax.spines["top"].set_visible(False)
@@ -167,73 +153,13 @@ ax.legend(handles=[line_case, line_control, sig_patch], frameon=False, loc="uppe
 fig.tight_layout(pad=0.6)
 
 # Plot genes
-import numpy as np
-# BPIFC
-pval = 0.1 + (-np.log10(0.000488006777292993))/4 * 0.2
-plt.plot([32413845, 32464484], [pval, pval], color='blue', lw=3,solid_capstyle='round')
+# DOCK8
+plt.plot([214854,465259], [0.25, 0.25], color='black', lw=3,solid_capstyle='round')
 
-#RTCB
-pval = 0.1 + (-np.log10(0.675322635873349))/4 * 0.2
-plt.plot([32387582,32412248], [pval, pval], color='black', lw=3,solid_capstyle='round')
+# KANK1
+plt.plot([470291,746105], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
 
-#FBOX7 32474676-32498829
-plt.plot([32474676,32498829], [0.075, 0.075], color='darkgray', lw=3,solid_capstyle='round')
 
-#SYN3 32507820-33058381
-# pval = 0.1 + (-np.log10(0.675322635873349))/4 * 0.2
-# plt.plot([332507820,33058381], [pval, pval], color='black', lw=3,solid_capstyle='round')
-
-#RFPL3 22:32354885-32361161
-pval = 0.1 + (-np.log10(0.790594840301569))/4 * 0.2
-plt.plot([32354885,32361161], [pval, pval], color='black', lw=3,solid_capstyle='round')
-
-#SLC5A4 22:32218464-32255347
-pval = 0.1 + (-np.log10(0.299226453279006))/4 * 0.2
-plt.plot([32218464,32255347], [pval, pval], color='black', lw=3,solid_capstyle='round')
-
-#RFPL2 22:32190435-32205073
-pval = 0.1 + (-np.log10(0.221030545692232))/4 * 0.2
-plt.plot([32190435,32205073], [pval, pval], color='black', lw=3,solid_capstyle='round')
-
-# C22orf42 22:32149006-32159322
-pval = 0.1 + (-np.log10(0.839865239796788))/4 * 0.2
-plt.plot([32149006,32159322], [pval, pval], color='black', lw=3,solid_capstyle='round')
-
-# SLC5A1 22:32043261-32113029
-pval = 0.1 + (-np.log10(0.850403772168157))/4 * 0.2
-plt.plot([32043261,32113029], [pval, pval], color='black', lw=3,solid_capstyle='round')
-
-# SYN3 32507820-33058381
-pval = 0.1 + (-np.log10(0.811517764065727))/4 * 0.2
-plt.plot([32507820,32547820], [pval, pval], color='black', lw=3,solid_capstyle='round')
-#plt.plot([32547820,32635000], [0.23, 0.23], color='black', lw=3)
-ax.annotate(
-    "",
-    xy=(32635000, pval),     # arrow tip
-    xytext=(32547820, pval),
-    arrowprops=dict(
-        arrowstyle="-|>",
-        linewidth=3,
-        color="black",
-        shrinkA=0,
-        shrinkB=0
-    ),
-    zorder=3
-)
-
-# Add a right axis
-plt.plot([32640000,32640000], [0.1, 0.3], color='black', lw=1,solid_capstyle='round')
-#ticks
-plt.plot([32640000,32645000], [0.1, 0.1], color='black', lw=1,solid_capstyle='round')
-ax.text(32645000 + 2000, 0.1, "0", va="center", ha="left", fontsize=7)
-
-plt.plot([32640000,32645000], [0.2, 0.2], color='black', lw=1,solid_capstyle='round')
-ax.text(32645000 + 2000, 0.2, "2", va="center", ha="left", fontsize=7)
-
-plt.plot([32640000,32645000], [0.3, 0.3], color='black', lw=1,solid_capstyle='round')
-ax.text(32645000 + 2000, 0.3, "4", va="center", ha="left", fontsize=7)
-ax.text(32660000, 0.2, r"$-\log_{10} P$ Kidney Cancer in the UK Biobank",
-        rotation=90, va="center", ha="left", fontsize=7)
 # ------------------------------------------------------------
 # Save
 # ------------------------------------------------------------
