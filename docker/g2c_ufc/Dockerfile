@@ -8,3 +8,4 @@ RUN pip install qqman
 
 # Copy your utility script to the image
 COPY *.py /opt/
+COPY *.R /opt/
