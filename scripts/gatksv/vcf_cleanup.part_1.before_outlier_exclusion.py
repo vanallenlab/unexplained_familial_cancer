@@ -17,23 +17,15 @@ filters_to_info = [('BOTHSIDES_SUPPORT',
                     'High number of SR splits in background samples indicating messy region'),
                    ('PESR_GT_OVERDISPERSION', 
                     'High PESR dispersion')]
-new_infos = ['##INFO=<ID=HG38_REF_PATCH_LOCUS,Number=0,Type=Flag,Description="This ' + \
-             'variant is at least 20% covered by reference fix patch loci contigs">',
-             '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele frequency">',
+new_infos = ['##INFO=<ID=AF,Number=A,Type=Float,Description="Allele frequency">',
              '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count">',
              '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">',
              '##INFO=<ID=SL_MEAN,Number=1,Type=Float,Description="Mean SL">',
              '##INFO=<ID=SL_MAX,Number=1,Type=Float,Description="Max SL">',
              '##INFO=<ID=NCR_TMP,Number=1,Type=Float,Description="Provisional rate of no-call GTs prior to final polishing">']
-new_filts = ['##FILTER=<ID=HG38_ALT_LOCUS,Description="This variant is at ' + \
-             'least 20% covered by loci with alternate contigs">',
-             '##FILTER=<ID=PREDICTED_GRIP_JXN,Description="This variant is ' + \
+new_filts = ['##FILTER=<ID=PREDICTED_GRIP_JXN,Description="This variant is ' + \
              'predicted to mark a splice junction for a gene retrocopy ' + \
-             'insertion event and should not be evaluated as a canonical deletion.">',
-             '##FILTER=<ID=LOW_SL_MEAN,Description="This variant had an ' + \
-             'abundance of low-quality genotypes prior to any filtering, ' + \
-             'which usually indicates a lower-quality SV locus.">']
-
+             'insertion event and should not be evaluated as a canonical deletion.">']
 
 
 import argparse
@@ -240,13 +232,13 @@ def main():
     parser.add_argument('--gtf', required=True, help='input .gtf')
     parser.add_argument('--alt-loci-bed', help='.bed with coordinates of loci ' +
                         'with alternate contigs; these will be masked as non-PASS')
-    parser.add_argument('--ref-patch-loci-bed', help='.bed with coordinates of loci ' +
-                        'where the reference has been patched; these will be ' + 
-                        'annotated as such in INFO but will not have FILTER changed.')
-    parser.add_argument('--exclude-loci-frac', type=float, default=0.2, 
-                        help='maximum fraction of overlap permitted with ' + 
-                        '--alt-loci-bed or --ref-patch-loci-bed before being ' + 
-                        'marked as overlapping')
+    # parser.add_argument('--ref-patch-loci-bed', help='.bed with coordinates of loci ' +
+    #                     'where the reference has been patched; these will be ' + 
+    #                     'annotated as such in INFO but will not have FILTER changed.')
+    # parser.add_argument('--exclude-loci-frac', type=float, default=0.2, 
+    #                     help='maximum fraction of overlap permitted with ' + 
+    #                     '--alt-loci-bed or --ref-patch-loci-bed before being ' + 
+    #                     'marked as overlapping')
     args = parser.parse_args()
 
     # Open connection to input vcf
@@ -275,17 +267,17 @@ def main():
     # Build map of all introns
     introns = make_intron_bed(args.gtf)
 
-    # Load alt contig bed, if optioned
-    if args.alt_loci_bed is not None:
-        alt_bt = pbt.BedTool(args.alt_loci_bed)
-    else:
-        alt_bt = None
+    # # Load alt contig bed, if optioned
+    # if args.alt_loci_bed is not None:
+    #     alt_bt = pbt.BedTool(args.alt_loci_bed)
+    # else:
+    #     alt_bt = None
 
-    # Load ref fix patch bed, if optioned
-    if args.ref_patch_loci_bed is not None:
-        patch_bt = pbt.BedTool(args.ref_patch_loci_bed)
-    else:
-        patch_bt = None
+    # # Load ref fix patch bed, if optioned
+    # if args.ref_patch_loci_bed is not None:
+    #     patch_bt = pbt.BedTool(args.ref_patch_loci_bed)
+    # else:
+    #     patch_bt = None
 
     # Open connection to output vcf
     if args.vcf_out in '- stdout /dev/stdout':
@@ -310,12 +302,12 @@ def main():
         if is_multiallelic(record) and svlen < 5000:
             record.filter.add('UNRESOLVED')
 
-        # Mask GTs with OGQ = 0 for rare-ish variants that are 
-        # from Manta and/or Wham and sample has single form of evidence
-        if is_manta_andor_wham(record) \
-        and record.info.get('AF', [1])[0] < 0.05 \
-        and not is_multiallelic(record):
-            record = mask_gts_by_ogq(record)
+        # # Mask GTs with OGQ = 0 for rare-ish variants that are 
+        # # from Manta and/or Wham and sample has single form of evidence
+        # if is_manta_andor_wham(record) \
+        # and record.info.get('AF', [1])[0] < 0.05 \
+        # and not is_multiallelic(record):
+        #     record = mask_gts_by_ogq(record)
 
         # Update AC/AN/AF/NCR
         if not is_multiallelic(record):
@@ -343,20 +335,20 @@ def main():
                 if intron_check(record, introns):
                     record.filter.add('PREDICTED_GRIP_JXN')
 
-        # Apply very targeted FILTER based on SL_MEAN + other factors
-        record = update_sl_stats(record)
-        SLMean = record.info.get('SL_MEAN', 100)
-        SLMax = record.info.get('SL_MAX', 100)
-        if SLMean is not None and SLMax is not None:
-            if SLMean < 0 \
-            and is_manta_andor_wham(record) \
-            and record.info.get('SVLEN', 10e10) < 1000 \
-            and not 'BAF' in record.info.get('EVIDENCE', tuple()) \
-            and record.info.get('AF', [1])[0] < 0.05 \
-            and record.info.get('NCR_TMP', 0) > 1 / 1000 \
-            and not record.info.get('PESR_GT_OVERDISPERSION') \
-            and SLMax < 75:
-                record.filter.add('LOW_SL_MEAN')
+        # # Apply very targeted FILTER based on SL_MEAN + other factors
+        # record = update_sl_stats(record)
+        # SLMean = record.info.get('SL_MEAN', 100)
+        # SLMax = record.info.get('SL_MAX', 100)
+        # if SLMean is not None and SLMax is not None:
+        #     if SLMean < 0 \
+        #     and is_manta_andor_wham(record) \
+        #     and record.info.get('SVLEN', 10e10) < 1000 \
+        #     and not 'BAF' in record.info.get('EVIDENCE', tuple()) \
+        #     and record.info.get('AF', [1])[0] < 0.05 \
+        #     and record.info.get('NCR_TMP', 0) > 1 / 1000 \
+        #     and not record.info.get('PESR_GT_OVERDISPERSION') \
+        #     and SLMax < 75:
+        #         record.filter.add('LOW_SL_MEAN')
         
         # Clear all MALE/FEMALE AF annotations
         for key in mf_infos:
@@ -374,19 +366,19 @@ def main():
         for filt in old_filts:
             record.filter.add(filt)
 
-        # Check for alt contig coverage if optioned
-        if alt_bt is not None:
-            cstr = '{}\t{}\t{}\n'.format(record.chrom, record.start, record.stop)
-            cov = pbt.BedTool(cstr, from_string=True).coverage(alt_bt)[0][-1]
-            if float(cov) > args.exclude_loci_frac:
-                record.filter.add('HG38_ALT_LOCUS')
+        # # Check for alt contig coverage if optioned
+        # if alt_bt is not None:
+        #     cstr = '{}\t{}\t{}\n'.format(record.chrom, record.start, record.stop)
+        #     cov = pbt.BedTool(cstr, from_string=True).coverage(alt_bt)[0][-1]
+        #     if float(cov) > args.exclude_loci_frac:
+        #         record.filter.add('HG38_ALT_LOCUS')
 
-        # Check for ref fix patch coverage if optioned
-        if patch_bt is not None:
-            cstr = '{}\t{}\t{}\n'.format(record.chrom, record.start, record.stop)
-            cov = pbt.BedTool(cstr, from_string=True).coverage(patch_bt)[0][-1]
-            if float(cov) > args.exclude_loci_frac:
-                record.info['HG38_REF_PATCH_LOCUS'] = True
+        # # Check for ref fix patch coverage if optioned
+        # if patch_bt is not None:
+        #     cstr = '{}\t{}\t{}\n'.format(record.chrom, record.start, record.stop)
+        #     cov = pbt.BedTool(cstr, from_string=True).coverage(patch_bt)[0][-1]
+        #     if float(cov) > args.exclude_loci_frac:
+        #         record.info['HG38_REF_PATCH_LOCUS'] = True
 
         # Write to outvcf
         outvcf.write(record)

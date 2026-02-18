@@ -13,9 +13,7 @@ Part 2: after outlier sample exclusion
 
 
 new_infos = ['##INFO=<ID=OLD_ID,Number=1,Type=String,Description="Original ' + \
-             'GATK-SV variant ID before polishing">',
-             '##INFO=<ID=FAILED_COHORT_COMPARISONS,Number=.,Type=String,Description=' + \
-             '"Pairs of cohorts with significantly different frequencies">']
+             'GATK-SV variant ID before polishing">']
 new_filts = ['##FILTER=<ID=MANUAL_FAIL,Description="This variant failed ' +
              'post hoc manual review and should not be trusted.">']
 infos_to_rm = ['NCR_TMP']
@@ -76,63 +74,6 @@ def update_af(record):
     return record
 
 
-def cleanup_cpx_ints(record):
-    """
-    Clean up weird edge case records where their complex intervals don't 
-    match the reported CPX TYPE
-    """
-
-    itypes = 'del dup ins inv'.split()
-
-    # First, infer how many intervals there _should_ be
-    cpx_type = record.info.get('CPX_TYPE').lower()
-    if cpx_type is None:
-        return record
-    exp_ints = {itype : cpx_type.count(itype) for itype in itypes}
-
-    # Next, count how many intervals there _actually_ are
-    cpx_ints = record.info.get('CPX_INTERVALS')
-    obs_ints = {itype : sum([x.lower().startswith(itype) for x in cpx_ints]) 
-                for itype in itypes}
-
-    # Don't worry about inverted orientations for dispersed duplications
-    if 'ddup' in cpx_type or 'ins' in cpx_type:
-        exp_ints.pop('inv')
-        obs_ints.pop('inv')
-
-    # If interval types match, do nothing
-    if exp_ints == obs_ints:
-        return record
-
-    # Otherwise, clean up intervals s/t there are no more than expected
-    recbt = pbt.BedTool('{}\t{}\t{}\n'.format(record.chrom, record.pos, record.stop), 
-                        from_string=True)
-    for itype in itypes:
-        # Skip interval types with the same or fewer than expected intervals
-        if obs_ints[itype] <= exp_ints[itype]:
-            continue
-
-        # Blanket prune unexpected interval types
-        if exp_ints[itype] == 0:
-            cpx_ints = [i for i in cpx_ints if not i.startswith(itype.upper())]
-            continue
-
-        # Otherwise, keep the expected number of intervals prioritzed based 
-        # on coverage by overall record coordinates
-        ibt_str = [re.sub('[:-]', '\t', i.split('_')[1]) 
-                   for i in cpx_ints if i.startswith(itype.upper())]
-        ibt = pbt.BedTool('\n'.join(ibt_str), from_string=True)
-        idf = ibt.coverage(recbt).to_dataframe()
-        idf = idf.sort_values(by=idf.columns[-1], ascending=False)
-        keep_ints = ['{}_{}:{}-{}'.format(itype.upper(), *il) 
-                     for il in idf.iloc[0:exp_ints[itype], 0:3].values.tolist()]
-        cpx_ints = [i for i in cpx_ints if not i.startswith(itype.upper())] + keep_ints
-
-    record.info['CPX_INTERVALS'] = tuple(cpx_ints)
-
-    return record
-
-
 def is_artifact_deletion(record):
     """
     Checks whether a record is a deletion in the artifact zone
@@ -180,9 +121,11 @@ def recalibrate_qual(record):
 
     gqs = []
     for sinfo in record.samples.values():
-        a = [a for a in sinfo.get('GT', (None, None)) if a is not None]
+        a = [a for a in sinfo.get('GT', (None, None)) if a is not None] 
         if np.nansum(a) > 0:
-            gqs.append(sinfo.get('GQ', None))
+            gq = sinfo.get('GQ', None)
+            if gq is not None:
+                gqs.append(gq)
 
     if len(gqs) > 0:
         return np.nanmedian(gqs)
@@ -283,12 +226,6 @@ def main():
         and not is_multiallelic(record):
             continue
 
-        # Clean CPX_INTERVALS for complex variants
-        # NOTE: FOR AACR ABSTRACT, WE ARE JUST DROPPING THESE OUTRIGHT
-        if record.info['SVTYPE'] == 'CPX':
-            continue
-            # record = cleanup_cpx_ints(record)
-
         # Recompute NCR
         if not is_multiallelic(record):
             if record.chrom == 'chrX':
@@ -304,10 +241,10 @@ def main():
         for k in original_filters:
             if k not in 'HIGH_NCR HIGH_PCRMINUS_NOCALL_RATE'.split():
                 record.filter.add(k)
-        if is_artifact_deletion(record):
-            if record.info.get('NCR', 0) >= 0.01:
-                record.filter.add('HIGH_NCR')
-        elif record.info.get('NCR', 0) >= 0.04:
+        # if is_artifact_deletion(record):
+        #     if record.info.get('NCR', 0) >= 0.02:
+        #         record.filter.add('HIGH_NCR')
+        if record.info.get('NCR', 0) >= 0.05:
             record.filter.add('HIGH_NCR')
 
         # Recalibrate QUAL score

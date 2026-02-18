@@ -75,6 +75,12 @@ zip -r mingq.dependencies.zip . && \
 mv mingq.dependencies.zip ~/ && \
 cd ~
 
+# Make tarball with SV annotation dependencies
+cd code/wdl/gatk-sv/svannotation_v1.1 && \
+zip svannotation.dependencies.zip *.wdl && \
+mv svannotation.dependencies.zip ~/ && \
+cd ~
+
 # Install necessary packages
 . code/refs/install_packages.sh python R
 
@@ -198,9 +204,14 @@ cat << EOF | python -m json.tool > $staging_dir/Plot$wid_suffix.inputs.json
   "PlotVcfQcMetrics.common_af_cutoff": 0.01,
   "PlotVcfQcMetrics.common_sv_beds": $( collapse_txt $staging_dir/common_svs_bed.uris.list ),
   "PlotVcfQcMetrics.custom_qc_target_metrics": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.sv.qc_targets.tsv",
-  "PlotVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:833a393",
+  "PlotVcfQcMetrics.deduplicate": true,
+  "PlotVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:cd2ca89",
   "PlotVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.$wid_suffix",
   "PlotVcfQcMetrics.peak_ld_stat_tsvs": $( collapse_txt $staging_dir/ld_stats.uris.list ),
+  "PlotVcfQcMetrics.PlotSiteBenchmarking.mem_gb": 32,
+  "PlotVcfQcMetrics.PlotSiteBenchmarking.n_cpu": 8,
+  "PlotVcfQcMetrics.PlotSiteMetrics.mem_gb": 32,
+  "PlotVcfQcMetrics.PlotSiteMetrics.n_cpu": 8,
   "PlotVcfQcMetrics.ref_af_distribution_tsvs": $( collapse_txt $staging_dir/gnomAD_af_distribution.uris.list ),
   "PlotVcfQcMetrics.ref_size_distribution_tsvs": $( collapse_txt $staging_dir/gnomAD_size_distribution.uris.list ),
   "PlotVcfQcMetrics.ref_cohort_prefix": "gnomAD_v4.1_gatksv",
@@ -273,7 +284,7 @@ gsutil -m cp \
   gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_4_RANDOM_FOREST/inputs/ufc_subjects.list \
   $staging_dir/
 zcat $staging_dir/dfci-g2c.sample_meta.posthoc_outliers.ceph_update.tsv.gz \
-| awk -v FS="\t" '{ if ($NF=="True" && $3 == "aou") print }' \
+| awk -v FS="\t" '{ if ($NF=="True" && $3 ~ /aou|ceph|mesa|ufc/) print }' \
 | sort -k2,2 \
 | join -1 2 -2 1 -t $'\t' \
   - <( sort $staging_dir/ufc_subjects.list ) \
@@ -337,13 +348,16 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.inputs.template.json
                                                   "gs://dfci-g2c-refs/giab/\$CONTIG/giab.hg38.broad_callable.hard.\$CONTIG.bed.gz"],
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
   "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.initial_qc.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
+  "CollectVcfQcMetrics.ref_build": "hg38",
+  "CollectVcfQcMetrics.ref_fasta": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "CollectVcfQcMetrics.ref_fasta_idx" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
   "CollectVcfQcMetrics.sample_benchmark_dataset_names": ["external_srwgs", "external_lrwgs"],
   "CollectVcfQcMetrics.sample_benchmark_id_maps": [["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
                                                     "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"],
@@ -364,8 +378,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.inputs.template.json
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz.tbi"]
 }
 EOF
 
@@ -432,6 +446,38 @@ gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotInitialVcfQcMetrics.job
 cleanup_garbage
 
 
+##############################################
+# Fix typo in SV VCF header after imputation #
+##############################################
+
+# This is only necessary because there was a typo in FORMAT/IMP
+
+# Reaffirm staging directory
+staging_dir=staging/sv_gt_cleanup
+if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
+
+# Write template input .json for SV GT refinement
+cat << EOF > $staging_dir/FixHeaderTypo.inputs.template.json
+{
+  "FixHeaderTypo.bcftools_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
+  "FixHeaderTypo.vcf": "$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz",
+  "FixHeaderTypo.vcf_idx": "$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz.tbi"
+}
+EOF
+
+# Submit, monitor, and stage/cleanup SV GT refinement
+code/scripts/manage_chromshards.py \
+  --wdl code/wdl/pancan_germline_wgs/FixHeaderTypo.wdl \
+  --input-json-template $staging_dir/FixHeaderTypo.inputs.template.json \
+  --staging-bucket $WORKSPACE_BUCKET/qc/header_typo_fix \
+  --name FixHeaderTypo \
+  --status-tsv cromshell/progress/dfci-g2c.v1.FixHeaderTypo.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --outer-gate 10 \
+  --submission-gate 0 \
+  --max-attempts 2
+
+
 #########################################
 # APPLY HIGH SENSITIVITY AOU GT FILTERS #
 #########################################
@@ -443,6 +489,7 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 # Write template .json for module 19
 cat << EOF > $staging_dir/FilterGenotypes.inputs.template.json
 {
+  "FilterGenotypes.FilterVcf.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/apply_sl_filter.g2c_imputed.py",
   "FilterGenotypes.gatk_docker": "us.gcr.io/broad-dsde-methods/markw/gatk:mw-tb-form-sv-filter-training-data-899360a",
   "FilterGenotypes.genome_tracks": ["gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38-RepeatMasker.bed.gz",
                                     "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38-Segmental-Dups.bed.gz",
@@ -462,7 +509,7 @@ cat << EOF > $staging_dir/FilterGenotypes.inputs.template.json
   "FilterGenotypes.sl_filter_args": "--small-del-threshold -53 --medium-del-threshold -12 --small-dup-threshold -105 --medium-dup-threshold -81 --ins-threshold -97",
   "FilterGenotypes.sv_base_mini_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
   "FilterGenotypes.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-06-27-v1.0.4-63e6c81e",
-  "FilterGenotypes.vcf": "$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz"
+  "FilterGenotypes.vcf": "$WORKSPACE_BUCKET/qc/header_typo_fix/\$CONTIG/FixTypo/dfci-ufc.gatksv.v1.typo_fixed.vcf.gz"
 }
 EOF
 
@@ -498,13 +545,16 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postFilterGenotypes.inputs.templat
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
-  "CollectVcfQcMetrics.n_for_sample_level_analyses": 4568,
+  "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
   "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_filtergenotypes.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
+  "CollectVcfQcMetrics.ref_build": "hg38",
+  "CollectVcfQcMetrics.ref_fasta": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "CollectVcfQcMetrics.ref_fasta_idx" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
   "CollectVcfQcMetrics.sample_benchmark_dataset_names": ["external_srwgs", "external_lrwgs"],
   "CollectVcfQcMetrics.sample_benchmark_id_maps": [["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
                                                     "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"],
@@ -525,8 +575,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postFilterGenotypes.inputs.templat
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs": ["$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs": ["$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz.tbi"]
 }
 EOF
 
@@ -541,7 +591,7 @@ code/scripts/manage_chromshards.py \
   --workflow-id-log-prefix "dfci-ufc.sv.v1" \
   --outer-gate 30 \
   --submission-gate 0.1 \
-  --max-attempts 4
+  --max-attempts 2
 
 
 #########################################
@@ -598,6 +648,8 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 # Write template .json for minGQ part 1
 cat << EOF > $staging_dir/MinGQPart1.inputs.template.json
 {
+  "Module07FilterGTsPart1.CollectTrioSVdat_PCRMINUS.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/gather_trio_genos.g2c_imputed.py",
+  "Module07FilterGTsPart1.CollectTrioSVdat_PCRPLUS.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/gather_trio_genos.g2c_imputed.py",
   "Module07FilterGTsPart1.contiglist": "gs://dfci-g2c-refs/hg38/contig_fais/\$CONTIG.fai",
   "Module07FilterGTsPart1.filter_metric": "GQ",
   "Module07FilterGTsPart1.gather_trio_geno_options": ["--fill-incomplete", "--default-value-homref 1", "--default-value-other 0"],
@@ -714,6 +766,8 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 # Write template .json for minGQ part 3
 cat << EOF > $staging_dir/MinGQPart3.inputs.template.json
 {
+  "Module07FilterGTsPart3.apply_filter_PCRMINUS.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/gatksv_filter_GTs_by_metric.g2c_imputed.py",
+  "Module07FilterGTsPart3.apply_filter_PCRPLUS.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/gatksv_filter_GTs_by_metric.g2c_imputed.py",
   "Module07FilterGTsPart3.CombineVcfs.generate_index": true,
   "Module07FilterGTsPart3.PCRMINUS_lookup_table": "$WORKSPACE_BUCKET/data/MinGQPart2/dfci-ufc.sv.v1.PCRMINUS.minGQ.filter_lookup_table.txt",
   "Module07FilterGTsPart3.PCRMINUS_vcf_idx_lists": \$CONTIG_VCF_IDXS,
@@ -767,7 +821,8 @@ code/scripts/manage_chromshards.py \
   --status-tsv cromshell/progress/MinGQPart3.progress.tsv \
   --workflow-id-log-prefix "dfci-ufc.sv.v1" \
   --outer-gate 30 \
-  --max-attempts 3
+  --max-attempts 3 \
+  --contig-gate 25
 
 
 ##################################
@@ -789,13 +844,16 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postMinGQ.inputs.template.json
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
-  "CollectVcfQcMetrics.n_for_sample_level_analyses": 4568,
+  "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
   "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_mingq.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
+  "CollectVcfQcMetrics.ref_build": "hg38",
+  "CollectVcfQcMetrics.ref_fasta": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "CollectVcfQcMetrics.ref_fasta_idx" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
   "CollectVcfQcMetrics.sample_benchmark_dataset_names": ["external_srwgs", "external_lrwgs"],
   "CollectVcfQcMetrics.sample_benchmark_id_maps": [["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
                                                     "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"],
@@ -816,8 +874,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postMinGQ.inputs.template.json
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz.tbi"]
 }
 EOF
 
@@ -889,8 +947,6 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 # Write flat list of files needed for posthoc cleanup part 1
 cat << EOF > $staging_dir/script_files.txt
 $WORKSPACE_BUCKET/refs/MANE.GRCh38.v1.2.ensembl_genomic.gtf.gz
-$WORKSPACE_BUCKET/refs/hg38.primary_loci_with_alts.bed.gz
-$WORKSPACE_BUCKET/refs/hg38.primary_loci_with_fix_patches.bed.gz
 EOF
 
 # Write template .json for posthoc cleanup part 1
@@ -901,7 +957,7 @@ cat << EOF > $staging_dir/PosthocCleanupPart1.inputs.template.json
   "ApplyScriptSingleVcf.exec_prefix": "python ",
   "ApplyScriptSingleVcf.script": "$WORKSPACE_BUCKET/code/scripts/vcf_cleanup.part_1.before_outlier_exclusion.py",
   "ApplyScriptSingleVcf.script_files": $( collapse_txt $staging_dir/script_files.txt ),
-  "ApplyScriptSingleVcf.script_options": "--gtf MANE.GRCh38.v1.2.ensembl_genomic.gtf.gz --alt-loci-bed hg38.primary_loci_with_alts.bed.gz --ref-patch-loci-bed hg38.primary_loci_with_fix_patches.bed.gz",
+  "ApplyScriptSingleVcf.script_options": "--gtf MANE.GRCh38.v1.2.ensembl_genomic.gtf.gz",
   "ApplyScriptSingleVcf.vcf": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz",
   "ApplyScriptSingleVcf.vcf_idx": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz.tbi"
 }
@@ -940,13 +996,16 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart1.inputs.template.j
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
-  "CollectVcfQcMetrics.n_for_sample_level_analyses": 4568,
-  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_mingq.\$CONTIG",
+  "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.posthoc_part1.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
+  "CollectVcfQcMetrics.ref_build": "hg38",
+  "CollectVcfQcMetrics.ref_fasta": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "CollectVcfQcMetrics.ref_fasta_idx" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
   "CollectVcfQcMetrics.sample_benchmark_dataset_names": ["external_srwgs", "external_lrwgs"],
   "CollectVcfQcMetrics.sample_benchmark_id_maps": [["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
                                                     "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"],
@@ -967,8 +1026,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart1.inputs.template.j
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz.tbi"]
 }
 EOF
 
@@ -1062,16 +1121,15 @@ gsutil -m cp \
 # Write template .json for batch effect detection
 cat << EOF > $staging_dir/MarkBatchEffects.inputs.template.json
 {
-  "MarkBatchEffects.custom_filter_description": "This record had dramatic discrepancies in frequencies between GATK-SV batches",
-  "MarkBatchEffects.custom_filter_id": "UNSTABLE_BATCH_FREQS",
-  "MarkBatchEffects.flag_failing_records": true,
-  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_pipeline:ff63b1f",
+  "MarkBatchEffects.custom_info_flag_id": "BATCH_EFFECTS_MASKED",
+  "MarkBatchEffects.flag_failing_records": false,
+  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_analysis:9e19555",
   "MarkBatchEffects.group_membership_tsv": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.v1.sv.EUR.batch_assignments.tsv",
-  "MarkBatchEffects.lower_nonref_gt_freq": 0.05,
+  "MarkBatchEffects.lower_nonref_gt_freq": 0.02,
   "MarkBatchEffects.min_samples_per_group": 20,
   "MarkBatchEffects.out_vcf_prefix": "dfci-g2c.sv.v1.\$CONTIG",
   "MarkBatchEffects.ref_fai": "gs://dfci-g2c-refs/hg38/contig_fais/\$CONTIG.fai",
-  "MarkBatchEffects.upper_nonref_gt_freq": 0.25,
+  "MarkBatchEffects.upper_nonref_gt_freq": 0.20,
   "MarkBatchEffects.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz",
   "MarkBatchEffects.vcf_idx": "$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz.tbi"
 }
@@ -1111,14 +1169,15 @@ gsutil -m cp \
 # Write template .json for cohort effect detection
 cat << EOF > $staging_dir/MarkCohortEffects.inputs.template.json
 {
+  "MarkBatchEffects.custom_info_flag_id": "COHORT_EFFECTS_MASKED",
   "MarkBatchEffects.flag_failing_records": false,
-  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_pipeline:ff63b1f",
+  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_analysis:9e19555",
   "MarkBatchEffects.group_membership_tsv": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.v1.sv.EUR.cohort_assignments.tsv",
-  "MarkBatchEffects.lower_nonref_gt_freq": 0.03,
+  "MarkBatchEffects.lower_nonref_gt_freq": 0.02,
   "MarkBatchEffects.min_samples_per_group": 20,
   "MarkBatchEffects.out_vcf_prefix": "dfci-g2c.sv.v1.\$CONTIG",
   "MarkBatchEffects.ref_fai": "gs://dfci-g2c-refs/hg38/contig_fais/\$CONTIG.fai",
-  "MarkBatchEffects.upper_nonref_gt_freq": 0.33,
+  "MarkBatchEffects.upper_nonref_gt_freq": 0.20,
   "MarkBatchEffects.vcf": "$WORKSPACE_BUCKET/data/MarkBatchEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v1.\$CONTIG.vcf.gz",
   "MarkBatchEffects.vcf_idx": "$WORKSPACE_BUCKET/data/MarkBatchEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v1.\$CONTIG.vcf.gz.tbi"
 }
@@ -1159,7 +1218,7 @@ done
 cat << EOF > cromshell/inputs/count_svs_posthoc.inputs.json
 {
   "CountSvsPerSample.bcftools_view_options": "-f PASS,MULTIALLELIC",
-  "CountSvsPerSample.g2c_pipeline_docker": "vanallenlab/g2c_pipeline:05aa88e",
+  "CountSvsPerSample.g2c_pipeline_docker": "vanallenlab/g2c_analysis:9e19555",
   "CountSvsPerSample.output_prefix": "dfci-ufc.v1.postCleanupPart1",
   "CountSvsPerSample.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-01-14-v1.0.1-88dbd052",
   "CountSvsPerSample.vcfs": $( collapse_txt $staging_dir/vcfs.list ),
@@ -1267,13 +1326,16 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postBatchFxOutliers.inputs.templat
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:a4751b7",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
-  "CollectVcfQcMetrics.n_for_sample_level_analyses": 4568,
+  "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
   "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_bfx_outliers.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
+  "CollectVcfQcMetrics.ref_build": "hg38",
+  "CollectVcfQcMetrics.ref_fasta": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "CollectVcfQcMetrics.ref_fasta_idx" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
   "CollectVcfQcMetrics.sample_benchmark_dataset_names": ["external_srwgs", "external_lrwgs"],
   "CollectVcfQcMetrics.sample_benchmark_id_maps": [["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
                                                     "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"],
@@ -1294,8 +1356,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postBatchFxOutliers.inputs.templat
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz.tbi"]
 }
 EOF
 
@@ -1380,11 +1442,11 @@ EOF
 cat << EOF > $staging_dir/PosthocCleanupPart2.inputs.template.json
 {
   "ApplyScriptSingleVcf.ApplyScript.contig": "\$CONTIG",
-  "ApplyScriptSingleVcf.bcftools_docker": "vanallenlab/g2c_pipeline:ff63b1f",
+  "ApplyScriptSingleVcf.bcftools_docker": "vanallenlab/g2c_analysis:1aac84d",
   "ApplyScriptSingleVcf.exec_prefix": "python ",
   "ApplyScriptSingleVcf.script": "$WORKSPACE_BUCKET/code/scripts/vcf_cleanup.part_2.after_outlier_exclusion.py",
   "ApplyScriptSingleVcf.script_files": $( collapse_txt $staging_dir/script_files.txt ),
-  "ApplyScriptSingleVcf.script_options": "--ped-file dfci-g2c.all_samples.ped --version-number 1.0",
+  "ApplyScriptSingleVcf.script_options": "--ped-file dfci-g2c.all_samples.ped --version-number 1.1",
   "ApplyScriptSingleVcf.vcf": "$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz",
   "ApplyScriptSingleVcf.vcf_idx": "$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz.tbi"
 }
@@ -1423,13 +1485,16 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart2.inputs.template.j
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:75e54bf",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
-  "CollectVcfQcMetrics.n_for_sample_level_analyses": 4568,
+  "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
   "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_mingq.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
+  "CollectVcfQcMetrics.ref_build": "hg38",
+  "CollectVcfQcMetrics.ref_fasta": "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "CollectVcfQcMetrics.ref_fasta_idx" : "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
   "CollectVcfQcMetrics.sample_benchmark_dataset_names": ["external_srwgs", "external_lrwgs"],
   "CollectVcfQcMetrics.sample_benchmark_id_maps": [["$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.1KGP_id_map.tsv",
                                                     "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/dfci-g2c.v1.AoU_id_map.tsv"],
@@ -1450,8 +1515,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart2.inputs.template.j
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz.tbi"]
 }
 EOF
 
@@ -1523,28 +1588,28 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 # Write template .json for callset annotation
 cat << EOF > $staging_dir/AnnotateVcf.inputs.template.json
 {
-  "AnnotateVcf.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz",
   "AnnotateVcf.contig_list": "gs://dfci-g2c-refs/hg38/contig_lists/\$CONTIG.list",
-  "AnnotateVcf.prefix": "dfci-ufc.sv.v1.0.\$CONTIG",
-  "AnnotateVcf.protein_coding_gtf": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/gencode.v47.basic.protein_coding.canonical.gtf",
-  "AnnotateVcf.sv_per_shard": 5000,
+  "AnnotateVcf.external_af_population": ["ALL","AFR","AMR","EAS","EUR","MID","FIN","ASJ","RMI","SAS","AMI"],
   "AnnotateVcf.external_af_ref_bed": "gs://gatk-sv-resources-public/gnomad_AF/gnomad_v4_SV.Freq.tsv.gz",
   "AnnotateVcf.external_af_ref_prefix": "gnomad_v4.1_sv",
-  "AnnotateVcf.external_af_population": ["ALL","AFR","AMR","EAS","EUR","MID","FIN","ASJ","RMI","SAS","AMI"],
-  "AnnotateVcf.use_hail": false,
-  "AnnotateVcf.gcs_project": "$GPROJECT",
-  "AnnotateVcf.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-06-27-v1.0.4-63e6c81e",
+  "AnnotateVcf.gatk_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/gatk:2025-05-20-4.6.2.0-4-g1facd911e-NIGHTLY-SNAPSHOT",
+  "AnnotateVcf.par_bed": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/hg38.par.bed",
+  "AnnotateVcf.prefix": "dfci-ufc.sv.v1.1.\$CONTIG",
+  "AnnotateVcf.protein_coding_gtf": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/gencode.v47.basic.protein_coding.canonical.gtf",
+  "AnnotateVcf.runtime_attr_svannotate": {"cpu_cores" : 4, "mem_gb": 7.5},
   "AnnotateVcf.sv_base_mini_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
-  "AnnotateVcf.gatk_docker": "us.gcr.io/broad-dsde-methods/eph/gatk:2024-07-02-4.6.0.0-1-g4af2b49e9-NIGHTLY-SNAPSHOT"
+  "AnnotateVcf.sv_per_shard": 5000,
+  "AnnotateVcf.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-09-02-v1.0.5-631368eb",
+  "AnnotateVcf.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz"
 }
 EOF
 
 # Annotate each chromosome
 code/scripts/manage_chromshards.py \
-  --wdl code/wdl/gatk-sv/AnnotateVcf.wdl \
+  --wdl code/wdl/gatk-sv/svannotation_v1.1/AnnotateVcf.wdl \
   --input-json-template $staging_dir/AnnotateVcf.inputs.template.json \
   --staging-bucket $WORKSPACE_BUCKET/data/AnnotateVcf \
-  --dependencies-zip gatksv.dependencies.zip  \
+  --dependencies-zip svannotation.dependencies.zip \
   --status-tsv cromshell/progress/AnnotateVcf.progress.tsv \
   --workflow-id-log-prefix "dfci-ufc.sv.v1" \
   --outer-gate 30 \
