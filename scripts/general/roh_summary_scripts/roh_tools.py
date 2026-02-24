@@ -31,13 +31,15 @@ CHROM_SIZES = {
     'chr22': 50818468,
 }
 TOTAL_AUTOSOMAL_SIZE = sum(CHROM_SIZES.values())
-roh_thresholds = [1000,10000,50000,100000,250000,500000,1000000,3000000,5000000]
+print("Total Autosomal Size:" + TOTAL_AUTOSOMAL_SIZE)
+roh_thresholds = [10000,50000,100000,250000,500000,1000000,3000000,5000000]
 def build_roh_fraction_table(roh_df,roh_thresholds):
 	# -----------------------
 	# Aggregate ROH length per sample per threshold
 	# -----------------------
 	out = pd.DataFrame({"Sample": roh_df["Sample"].unique()}).set_index("Sample")
 
+    # Find the total length of all RoH greater than ~{threshold} per person
 	for thresh in roh_thresholds:
 	    colname = f"ROH_sum_ge_{thresh}"
 
@@ -49,6 +51,7 @@ def build_roh_fraction_table(roh_df,roh_thresholds):
 
 	    out[colname] = summed
 
+    # Find the fraction of each person's genome that is homozygosed at this threshold
 	for thresh in roh_thresholds:
 	    col_name = f"ROH_frac_ge_{thresh}"
 
@@ -63,7 +66,7 @@ def build_roh_fraction_table(roh_df,roh_thresholds):
 	    
 
 	# Replace NaNs with 0 (no ROH meeting threshold)
-	out = out.fillna(0).reset_index()
+	#out = out.fillna(0).reset_index()
 
 	# -----------------------
 	# Save
@@ -93,17 +96,9 @@ def roh_phenotype_analysis(roh_frac_df, phenotype_df):
         "details": ",".join(excess_ids)
     })
 
-    # ---- Mean ROH fraction at each threshold ----
-    for thresh in roh_thresholds:
-        col = f"ROH_frac_ge_{thresh}"
-        results.append({
-            "metric": f"mean_{col}",
-            "value": df[col].mean(),
-            "details": ""
-        })
-
-    summary_df = pd.DataFrame(results)
-    summary_df.to_csv("roh_summary_metrics.tsv", sep="\t", index=False)
+    with open("roh_stats/excess_ids.txt", "w") as f:
+        for sample_id in excess_ids:
+            f.write(f"{sample_id}\n")
 
     # ---- Log file by ancestry ----
     log_rows = []
@@ -128,7 +123,6 @@ def roh_phenotype_analysis(roh_frac_df, phenotype_df):
         groups = [
             g[col].values
             for _, g in df.groupby("intake_qc_pop")
-            if len(g) >= 5
         ]
 
         if len(groups) >= 2:
@@ -167,47 +161,6 @@ def roh_burden_stats(roh_df):
     out = pd.DataFrame(rows)
     out.to_csv("roh_stats/roh_burden_stats.tsv", sep="\t", index=False)
 
-def drop_roh_overlapping_gaps(roh_df, gap_df):
-    """
-    Remove ROHs that overlap any centromere / heterochromatin gap.
-
-    Parameters
-    ----------
-    roh_df : pd.DataFrame
-        Must contain Chromosome, Start, End
-    gap_df : pd.DataFrame
-        Must contain Chromosome, Start, End (only gap regions)
-
-    Returns
-    -------
-    pd.DataFrame
-        Filtered ROH dataframe
-    """
-
-    keep_mask = []
-
-    for chrom, roh_chr in roh_df.groupby("Chromosome", sort=False):
-        gaps = gap_df[gap_df["Chromosome"] == chrom]
-
-        # If no gaps on this chromosome, keep everything
-        if gaps.empty:
-            keep_mask.append(pd.Series(True, index=roh_chr.index))
-            continue
-
-        # Vectorized overlap check:
-        # For each ROH, check if it overlaps ANY gap
-        overlaps = (
-            (roh_chr["Start"].values[:, None] < gaps["End"].values)
-            &
-            (roh_chr["End"].values[:, None] > gaps["Start"].values)
-        ).any(axis=1)
-
-        keep_mask.append(~pd.Series(overlaps, index=roh_chr.index))
-
-    keep_mask = pd.concat(keep_mask).sort_index()
-    return roh_df.loc[keep_mask].reset_index(drop=True)
-
-
 def main():
     """
     Main block
@@ -230,9 +183,6 @@ def main():
     roh_df["Sample"] = roh_df["Sample"].astype(str)
     roh_df["Length"] = roh_df["Length"].astype(float)
 
-
-    #roh_df = drop_roh_overlapping_gaps(roh_df,gap_df)
-
     # Load samples list (one sample ID per line)
     samples = pd.read_csv(args.samples,header=None,dtype=str)[0].tolist()
 
@@ -243,7 +193,6 @@ def main():
 
     # Filter ROH dataframe
     roh_df = roh_df[roh_df["Sample"].isin(samples)]
-
 
     # Run everything
     roh_frac_df = build_roh_fraction_table(roh_df,roh_thresholds)

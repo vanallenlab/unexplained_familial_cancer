@@ -8,8 +8,8 @@ import os
 # ----------------------------
 # Inputs / outputs
 # ----------------------------
-in_matrix = "/Users/noah/Desktop/ufc_repository/results/Figure_2/lof_heatmap_matrix.tsv"
-out_pdf = "/Users/noah/Desktop/ufc_repository/results/Figure_2/Figure2A.pdf"
+in_matrix = "/Users/noah/Desktop/ufc_repository/results/Figure_2/singleton_intronic_heatmap_matrix.tsv"
+out_pdf = "/Users/noah/Desktop/ufc_repository/results/Figure_2/Figure2C.pdf"
 
 # ----------------------------
 # Load matrix (gene x cancer, binary)
@@ -40,7 +40,7 @@ plt.figure(figsize=(3.5, 1.75))
 
 ax = sns.heatmap(
     heat,
-    cmap=["#f0f0f0", "#0D49E880"],
+    cmap=["#f0f0f0", "#665a91"],
     linewidths=0.25,
     linecolor="gray",
     cbar=False
@@ -51,14 +51,17 @@ ax = sns.heatmap(
 # ----------------------------
 COSMIC_PAIRS = {
     "BRCA1": ["Breast", "Prostate"],
-    "BAP1": ["Kidney", "Melanoma"],
-    "MSH2": ["Colorectal", "Uterus", "Ovary"]
+    "BRCA2": ["Breast", "Ovary"],
+    "MSH2": ["Colorectal", "Uterus", "Ovary"],
+    "EXT2": ["Sarcoma"],
+    "PTEN": ["Prostate"]
 }
 
 LITERATURE_PAIRS = {
     "ATM": ["Breast"],
-    "TINF2": ["Thyroid"],
-    "STK11": ["Breast"]
+    "TP53": ["Breast"],
+    "POT1": ["Melanoma"],
+    "PTEN": ["Breast"]
 }
 
 # ----------------------------
@@ -91,7 +94,7 @@ for gene, cancers in LITERATURE_PAIRS.items():
 # Legend
 # ----------------------------
 legend_elements = [
-    Patch(facecolor="#0D49E880", edgecolor="black", label="≥1 individual"),
+    Patch(facecolor="#665a91", edgecolor="black", label="≥1 individual"),
     Patch(facecolor="none", edgecolor="red", linewidth=1.2, label="COSMIC-associated pair"),
     Patch(facecolor="none", edgecolor="orange", linewidth=1.2, linestyle="--", label="Literature-associated pair")
 ]

@@ -8,14 +8,14 @@ from matplotlib.patches import Patch
 # ------------------------------------------------------------
 # Hardcoded inputs / outputs
 # ------------------------------------------------------------
-IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113500001_113950000.roh_signal.tsv.gz"
-OUT_PDF = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113500001_113950000.roh_signal.plot.pdf"
-OUT_PNG = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113500001_113950000.roh_signal.plot.png"
+IN_TSV = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113400001_114050000.roh_signal.tsv.gz"
+OUT_PDF = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113400001_114050000.roh_signal.plot.pdf"
+OUT_PNG = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/thyroid_roh_results/thyroid.chr3_113400001_114050000.roh_signal.plot.png"
 
 # Locus (hardcoded based on your haplotype string)
 CHR = "chr3"
-START = 113500001
-END   = 113950000
+START = 113400001
+END   = 114050000
 
 # Plot settings
 DOWNSAMPLE_BP = 10          # plot every 100 bp (fast + looks identical)
@@ -123,7 +123,7 @@ line_control, = ax.plot(
 
 # Axis formatting
 ax.set_xlim(START, END)
-ax.set_ylabel("% homozygosed (RoH ≥100 kb)")
+ax.set_ylabel("% homozygosed (RoH≥100 kb)")
 
 
 # X ticks: keep them readable
@@ -153,24 +153,46 @@ fig.tight_layout(pad=0.6)
 # Plot genes
 # SPICE1
 plt.plot([113442718,113515187], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+ax.text(113442718, 0.17, "SPICE1", color="black",fontstyle="italic", fontsize=5)
 
 # SIDT1
 plt.plot([113532555,113629575], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+ax.text(113547000, 0.17, "SIDT1", color="black",fontstyle="italic", fontsize=5)
 
 # ATP6V1A
 plt.plot([113747033,113812056], [0.25, 0.25], color='black', lw=3,solid_capstyle='round')
+ax.text(113747033, 0.22, "ATP6V1A", color="black",fontstyle="italic", fontsize=5)
 
 # USF3 
 plt.plot([113648385,113696646], [0.2, 0.2], color='red', lw=3,solid_capstyle='round')
+ax.text(113648385, 0.17, "USF3", color="black",fontstyle="italic", fontsize=5)
 
 # GRAMD1C
 plt.plot([113828182,113947174], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+ax.text(113828182, 0.17, "GRAMD1C", color="black",fontstyle="italic", fontsize=5)
 
 # ZDHHC23
-plt.plot([113947901,113965401], [0.23, 0.25], color='black', lw=3,solid_capstyle='round')
+plt.plot([113947901,113965401], [0.25, 0.25], color='black', lw=3,solid_capstyle='round')
+ax.text(113907901, 0.22, "ZDHHC23", color="black",fontstyle="italic", fontsize=5)
 
 #NAA50 3:113716458-113746300
 plt.plot([113716458,113746300], [0.15, 0.15], color='black', lw=3,solid_capstyle='round')
+ax.text(113700000, 0.12, "NAA50", color="black",fontstyle="italic", fontsize=5)
+
+#CCDC191 3:113964137-114056594
+plt.plot([113964137,114056594], [0.15, 0.15], color='black', lw=3,solid_capstyle='round')
+ax.text(113950000, 0.12, "CCDC191", color="black",fontstyle="italic", fontsize=5)
+
+#QTRT2 3:114005833-114088422
+plt.plot([114005833,114088422], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+ax.text(113980000, 0.17, "QTRT2", color="black",fontstyle="italic", fontsize=5)
+
+#CFAP4 3:113286930-113441610
+plt.plot([113286930,113441610], [0.15, 0.15], color='black', lw=3,solid_capstyle='round')
+ax.text(113410001, 0.12, "CFAP4", color="black",fontstyle="italic", fontsize=5)
+
+ax.text(113410001, 0.43, "P=3.02e-5", color="black", fontsize=5)
+ax.text(113410001, 0.4, "OR=3.29", color="black", fontsize=5)
 
 # ------------------------------------------------------------
 # Save

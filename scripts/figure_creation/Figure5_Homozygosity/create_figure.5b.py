@@ -105,7 +105,7 @@ def plot_smoothed_genomic_data(filepath,highlight_start,highlight_end,broad_geno
     # 4. Finalize Chart Aesthetics
     ax.set_title(f'{broad_genomic_range.capitalize()}', fontsize=16)
     #ax.set_xlabel(f"Chr{chr_num} Position", fontsize=12)
-    ax.set_ylabel('Percent Homozygosed', fontsize=12)
+    ax.set_ylabel('Percent Homozygosed', fontsize=7)
 
     # Format Y-axis ticks as percentage
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.0%}'))

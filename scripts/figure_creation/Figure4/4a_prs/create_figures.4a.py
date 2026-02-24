@@ -60,7 +60,7 @@ cancer_configs = {
     "thyroid": ["PGS000797"],
     "hematologic":["PGS000788"],
     "lung":["PGS000789"],
-    "ovary":["PGS004249"],
+    "ovary":["PGS000793"],
     "uterus": ["PGS004244"],
     "brain": ["PGS003384"],
     "bladder":["PGS004687"]

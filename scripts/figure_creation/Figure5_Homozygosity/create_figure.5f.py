@@ -125,7 +125,7 @@ line_control, = ax.plot(
 
 # Axis formatting
 ax.set_xlim(START, END)
-ax.set_ylabel("% homozygosed (RoH ≥50 kb)")
+ax.set_ylabel("% homozygosed (RoH≥50kb)")
 
 
 # X ticks: keep them readable
@@ -155,11 +155,14 @@ fig.tight_layout(pad=0.6)
 # Plot genes
 # DOCK8
 plt.plot([214854,465259], [0.25, 0.25], color='black', lw=3,solid_capstyle='round')
+ax.text(375000, 0.22, "DOCK8", color="black",fontstyle="italic", fontsize=5)
 
 # KANK1
 plt.plot([470291,746105], [0.2, 0.2], color='black', lw=3,solid_capstyle='round')
+ax.text(600000, 0.17, "KANK1", color="black",fontstyle="italic", fontsize=5)
 
-
+ax.text(360001, 0.37, "P=9.36e-6", color="black", fontsize=5)
+ax.text(360001, 0.35, f"OR={round(2.718 ** 1.4,2)}", color="black", fontsize=5)
 # ------------------------------------------------------------
 # Save
 # ------------------------------------------------------------

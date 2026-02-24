@@ -35,7 +35,7 @@ or_df = pd.read_csv(
 pgs_keep = [
     "PGS000785","PGS000789","PGS000791","PGS000784",
     "PGS000787","PGS003382","PGS004694","PGS000797","PGS004687",
-    "PGS003384","PGS000788","PGS004249","PGS004244","PGS004688"
+    "PGS003384","PGS000788","PGS000793","PGS004244","PGS004688"
 ]
 
 def filter_pgs(df):
@@ -116,7 +116,7 @@ sig = (df["p_value"] <= 0.05) & (df["OR"] > 1)
 # -----------------------
 # Plot
 # -----------------------
-fig, ax = plt.subplots(figsize=(4, 2))
+fig, ax = plt.subplots(figsize=(3.5, 2.3))
 
 sc = ax.scatter(
     df["x_pos"],
@@ -187,7 +187,8 @@ ax.set_xticks(range(len(x_order)))
 ax.set_xticklabels(x_order, rotation=45, ha="right")
 
 ax.set_yticks(range(len(y_order)))
-ax.set_yticklabels(y_order)
+#ax.set_yticklabels(y_order)
+ax.set_yticklabels([{"Neuroendocrine":"NETs","Basal Cell":"BCC","Squamous Cell":"SCC","Non-Hodgkin":"NHL"}.get(l,l) for l in y_order])
 
 #ax.set_xlabel("PRS Model", labelpad=6)
 ax.set_ylabel("Patient Cancer", labelpad=4)

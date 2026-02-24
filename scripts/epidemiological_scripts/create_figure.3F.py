@@ -23,9 +23,9 @@ file_no_prs = "/Users/noah/Desktop/ufc_repository/results/epidemiological_result
 file_with_prs = "/Users/noah/Desktop/ufc_repository/results/epidemiological_results/patient_family_logistic_with_prs.tsv"
 
 df_no_prs = pd.read_csv(file_no_prs, sep="\t")
-df_no_prs = df_no_prs[df_no_prs['n_intersection'] >= 5]
+df_no_prs = df_no_prs[df_no_prs['n_intersection'] >= 4]
 df_with_prs = pd.read_csv(file_with_prs, sep="\t")
-df_with_prs = df_with_prs[df_with_prs['n_intersection'] >= 5]
+df_with_prs = df_with_prs[df_with_prs['n_intersection'] >= 4]
 
 # -------------------------------
 # 2. Case-insensitive matching
@@ -94,9 +94,9 @@ def plot_volcano(
     green = "#2ca02c"
 
     for _, row in merged.iterrows():
-        x0 = np.log2(row["odds_ratio_no_prs"])
+        x0 = row["odds_ratio_no_prs"] #np.log2(row["odds_ratio_no_prs"])
         y0 = -np.log10(row["p_value_no_prs"])
-        x1 = np.log2(row["odds_ratio_with_prs"])
+        x1 = row["odds_ratio_with_prs"] #np.log2(row["odds_ratio_with_prs"])
         y1 = -np.log10(row["p_value_with_prs"])
 
         if show_arrows:
@@ -105,25 +105,25 @@ def plot_volcano(
                 xy=(x1, y1),
                 xytext=(x0, y0),
                 arrowprops=dict(
-                    arrowstyle="->",
-                    linewidth=0.4,
-                    color=blue,
+                    arrowstyle="-",
+                    linewidth=3,
+                    color="lightgray",
                 ),
                 zorder=3,
             )
 
         ax.scatter(
             x0, y0,
-            s=14,
-            color=blue,
+            s=20,
+            color="gray",
             linewidth=0.4,
             zorder=4,
         )
 
         ax.scatter(
             x1, y1,
-            s=14,
-            color=green,
+            s=20,
+            color=blue,
             linewidth=0.4,
             zorder=5,
         )
@@ -139,28 +139,32 @@ def plot_volcano(
             )
 
     # Reference lines
-    ax.axhline(-np.log10(0.05), linestyle="--", linewidth=0.4, color="black")
-    ax.axhline(
-        -np.log10(0.05 / len(merged)),
-        linestyle="--",
-        linewidth=0.4,
-        color="black",
-    )
-    ax.axvline(0, linestyle="--", linewidth=0.4, color="black")
+    #ax.axhline(-np.log10(0.05), linestyle="--", linewidth=1, color="black")
+    # ax.axhline(
+    #     -np.log10(0.05 / len(merged)),
+    #     linestyle="--",
+    #     linewidth=1,
+    #     color="black",
+    # )
+    ax.axvline(1, linestyle="-", linewidth=0.5, color="lightgray")
 
     # Labels
-    ax.set_xlabel(r"$\log_2(\mathrm{OR})$ ", labelpad=2)
-    ax.set_ylabel(r"$-\log_{10}P$", labelpad=2)
+    ax.set_xlabel(r"OR (Cancer Dx given Family History)", labelpad=2)
+    ax.set_ylabel(r"$-\log_{10}(P)$", labelpad=2)
     
+    ax.tick_params(axis='x',width=1,length=4)
+    ax.tick_params(axis='y',width=1,length=4)
+
+    ax.set_xticks(np.arange(1,4.01,0.5))
 
     # Legend
     legend_elements = [
         Line2D([0], [0], marker="o", color="none",
-               markerfacecolor=blue, markersize=4,
-               label="Without PRS"),
+               markerfacecolor="gray", markersize=6,
+               label="No genetics"),
         Line2D([0], [0], marker="o", color="none",
-               markerfacecolor=green, markersize=4,
-               label="With PRS"),
+               markerfacecolor=blue, markersize=6,
+               label="Including PRS"),
     ]
 
     ax.legend(
@@ -169,6 +173,35 @@ def plot_volcano(
         loc="upper right",
         fontsize=6,
     )
+
+    # Insert Text
+    ax.text(3.6, 2.3, "Kidney",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(1.93, 5.2, "Breast",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(1.71, 7.39, "BCC",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(2.51, 4.93, "Prostate",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(2.29, 1, "Ovary (negligable change)",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(3, 5.6, "Lung",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(2.34, 1.57, "Thyroid",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(2.51, 3.4, "Colorectal",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(1.97, 2.73, "Melanoma",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(1.6, 2.33, "SCC",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(1.38, 1.7, "Hematologic",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(1.72, 0.2, "Cervix",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(1.03, 0.45, "Bladder",fontfamily="Arial",fontsize=7,color="gray")
+
+    ax.text(2.32, 2.28, "NHL",fontfamily="Arial",fontsize=7,color="gray")
 
     # Spine cleanup
     ax.spines["top"].set_visible(False)
@@ -199,6 +232,6 @@ plot_volcano(
 plot_volcano(
     merged,
     outfile="/Users/noah/Desktop/ufc_repository/results/epidemiological_results/Figure_3E_no_labels.pdf",
-    show_arrows=False,
+    show_arrows=True,
     show_labels=False,
 )

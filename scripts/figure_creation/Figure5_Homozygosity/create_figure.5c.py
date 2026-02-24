@@ -171,13 +171,16 @@ import numpy as np
 # BPIFC
 pval = 0.1 + (-np.log10(0.000488006777292993))/4 * 0.2
 plt.plot([32413845, 32464484], [pval, pval], color='blue', lw=3,solid_capstyle='round')
+ax.text(32412582, pval - 0.02, "BPIFC", color="black",fontstyle="italic", fontsize=7)
 
 #RTCB
 pval = 0.1 + (-np.log10(0.675322635873349))/4 * 0.2
 plt.plot([32387582,32412248], [pval, pval], color='black', lw=3,solid_capstyle='round')
+ax.text(32377582, pval - 0.02, "RTCB", color="black",fontstyle="italic", fontsize=7)
 
 #FBOX7 32474676-32498829
 plt.plot([32474676,32498829], [0.075, 0.075], color='darkgray', lw=3,solid_capstyle='round')
+ax.text(32459676, 0.075 - 0.02, "FBOX7", color="black",fontstyle="italic", fontsize=7)
 
 #SYN3 32507820-33058381
 # pval = 0.1 + (-np.log10(0.675322635873349))/4 * 0.2
@@ -186,27 +189,36 @@ plt.plot([32474676,32498829], [0.075, 0.075], color='darkgray', lw=3,solid_capst
 #RFPL3 22:32354885-32361161
 pval = 0.1 + (-np.log10(0.790594840301569))/4 * 0.2
 plt.plot([32354885,32361161], [pval, pval], color='black', lw=3,solid_capstyle='round')
+ax.text(32321885, pval - 0.02, "RFPL3", color="black",fontstyle="italic", fontsize=7)
 
 #SLC5A4 22:32218464-32255347
 pval = 0.1 + (-np.log10(0.299226453279006))/4 * 0.2
 plt.plot([32218464,32255347], [pval, pval], color='black', lw=3,solid_capstyle='round')
+ax.text(32208464, pval - 0.02, "SLC5A4", color="black",fontstyle="italic", fontsize=7)
 
 #RFPL2 22:32190435-32205073
 pval = 0.1 + (-np.log10(0.221030545692232))/4 * 0.2
 plt.plot([32190435,32205073], [pval, pval], color='black', lw=3,solid_capstyle='round')
+ax.text(32155435, pval - 0.02, "RFPL2", color="black",fontstyle="italic", fontsize=7)
 
 # C22orf42 22:32149006-32159322
 pval = 0.1 + (-np.log10(0.839865239796788))/4 * 0.2
 plt.plot([32149006,32159322], [pval, pval], color='black', lw=3,solid_capstyle='round')
+ax.text(32120000, pval - 0.02, "C22orf42", color="black",fontstyle="italic", fontsize=7)
 
 # SLC5A1 22:32043261-32113029
 pval = 0.1 + (-np.log10(0.850403772168157))/4 * 0.2
 plt.plot([32043261,32113029], [pval, pval], color='black', lw=3,solid_capstyle='round')
+ax.text(32043261, pval - 0.02, "SLC5A1", color="black",fontstyle="italic", fontsize=7)
 
 # SYN3 32507820-33058381
 pval = 0.1 + (-np.log10(0.811517764065727))/4 * 0.2
 plt.plot([32507820,32547820], [pval, pval], color='black', lw=3,solid_capstyle='round')
-#plt.plot([32547820,32635000], [0.23, 0.23], color='black', lw=3)
+ax.text(32537820, pval - 0.02, "SYN3", color="black",fontstyle="italic", fontsize=7)
+
+ax.text(32010001, 0.42, "P=1.02e-6", color="black", fontsize=7)
+ax.text(32010001, 0.4, "OR=9.63", color="black", fontsize=7)
+
 ax.annotate(
     "",
     xy=(32635000, pval),     # arrow tip
@@ -232,7 +244,7 @@ ax.text(32645000 + 2000, 0.2, "2", va="center", ha="left", fontsize=7)
 
 plt.plot([32640000,32645000], [0.3, 0.3], color='black', lw=1,solid_capstyle='round')
 ax.text(32645000 + 2000, 0.3, "4", va="center", ha="left", fontsize=7)
-ax.text(32660000, 0.2, r"$-\log_{10} P$ Kidney Cancer in the UK Biobank",
+ax.text(32660000, 0.2, r"$-\log_{10} (P)$ Kidney Cancer in the UK Biobank",
         rotation=90, va="center", ha="left", fontsize=7)
 # ------------------------------------------------------------
 # Save

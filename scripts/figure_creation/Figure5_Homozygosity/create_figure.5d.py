@@ -73,8 +73,8 @@ def main():
     # axis formatting
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
-    ax.set_xlabel("False positive rate")
-    ax.set_ylabel("True positive rate")
+    ax.set_xlabel("False positive rate",fontsize=7,fontfamily="Arial")
+    ax.set_ylabel("True positive rate",fontsize=7,fontfamily="Arial")
 
     # clean spines
     ax.spines["top"].set_visible(False)
@@ -88,6 +88,7 @@ def main():
     ax.text(
         0.60, 0.08,
         f"AUROC = {auc:.2f}",
+        fontfamily="Arial",
         transform=ax.transAxes,
         ha="center",
         va="bottom",

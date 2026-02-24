@@ -7,7 +7,7 @@ import numpy as np
 # -----------------------------
 results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 #cancer_order = ['Ovary','Sarcoma','Hematologic','Uterus','Colorectal','Non-Hodgkin','Thyroid','Melanoma','Lung','Cervix','Basal_Cell','Squamous_Cell','Bladder','Breast','Prostate','Neuroendocrine','Kidney']
-cancer_order = ["Breast_Isolated","Breast","Breast_Patient_and_Family"]
+cancer_order = ["Lung_Isolated","Lung","Lung_Patient_and_Family"]
 
 def prepare_data(tsv_path):
     df = pd.read_csv(tsv_path, sep="\t")
@@ -109,7 +109,7 @@ for i, cancer in enumerate(cancer_order):
         # Add label if purple
         if previous_r2 is not None and row["color"] == "plum" and (row['R2_full'] - previous_r2 > 0.01):
             ax.text(
-                left + row["increment"] / 2 + 0.0007,  # center of segment
+                left + row["increment"] / 2,  # center of segment
                 y_pos,
                 row["added_predictor"].split('_')[0],
                 ha="center",
@@ -152,10 +152,9 @@ for i, cancer in enumerate(cancer_order):
 # -----------------------------
 # Formatting
 # -----------------------------
-ax.set_xlim(0, 0.35)
-ax.set_xticks(np.arange(0, 0.351, 0.1))
+ax.set_xlim(0, 0.26)
 # Full-height grid lines (0 → 0.10)
-for x in np.arange(0, 0.21, 0.05):
+for x in np.arange(0, 0.2501, 0.05):
     ax.axvline(
         x,
         color="gray",
@@ -167,21 +166,21 @@ for x in np.arange(0, 0.21, 0.05):
     )
 
 # Half-height grid lines (0.15 → 0.30)
-for x in np.arange(0.25, 0.301, 0.05):
-    ax.axvline(
-        x,
-        color="gray",
-        linestyle=":",
-        linewidth=0.8,
-        zorder=0,
-        ymin=0.24,   # start halfway up
-        ymax=1
-    )
+# for x in np.arange(0.25, 0.301, 0.05):
+#     ax.axvline(
+#         x,
+#         color="gray",
+#         linestyle=":",
+#         linewidth=0.8,
+#         zorder=0,
+#         ymin=0.24,   # start halfway up
+#         ymax=1
+#     )
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
 ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=5)
 ax.set_yticklabels(
-    [ {"Breast_Patient_and_Family":"Concordant\nFHx",
-       "Breast_Isolated":"Discordant\nFHx",
+    [ {"Lung_Patient_and_Family":"Concordant\nFHx",
+       "Lung_Isolated":"Discordant\nFHx",
        "Basal_Cell":"BCC",
        "Non-Hodgkin":"NHL"}.get(k, k)
       for k in reversed(list(plot_data.keys())) ],
@@ -193,16 +192,16 @@ ax.set_xlabel("Proportion of Variance Explained by Genetics",fontsize=7)
 # Make a legend
 from matplotlib.patches import Patch
 
-# legend_elements = [
-#     Patch(facecolor='gray', edgecolor='black',
-#           label='Sex & Genetic Ancestry',linewidth=1.5),
-#     Patch(facecolor='plum', edgecolor='black',
-#           label='Damaging Variants in CPGs',linewidth=1.5),
-#     Patch(facecolor='yellow', edgecolor='black',
-#           label='Polygenic Risk',linewidth=1.5),
-#     Patch(facecolor='lightgreen', edgecolor='black',
-#           label='Nominated CPGs',linewidth=1.5)
-# ]
+legend_elements = [
+    Patch(facecolor='gray', edgecolor='black',
+          label='Sex & Genetic Ancestry',linewidth=1.5),
+    Patch(facecolor='plum', edgecolor='black',
+          label='Damaging Variants in CPGs',linewidth=1.5),
+    Patch(facecolor='yellow', edgecolor='black',
+          label='Polygenic Risk',linewidth=1.5),
+    Patch(facecolor='lightgreen', edgecolor='black',
+          label='Nominated CPGs',linewidth=1.5)
+]
 
 # ax.legend(
 #     handles=legend_elements,
@@ -216,7 +215,7 @@ ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
 
-output_path = os.path.join(results_dir, "combined_attributable_fraction_breast.pdf")
+output_path = os.path.join(results_dir, "combined_attributable_fraction_lung.pdf")
 plt.savefig(output_path, dpi=300,bbox_inches="tight",pad_inches=0,edgecolor="none")
 plt.close()
 

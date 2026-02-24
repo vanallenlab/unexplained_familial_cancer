@@ -52,6 +52,7 @@ MATCH_MAP = {
     "Melanoma": ["Skin"],
     "Non-Hodgkin": ["Blood_Soft_Tissue"],
     "Hematologic": ["Blood_Soft_Tissue"],
+    "Sarcoma":["Bone"]
 }
 
 # Default: exact name match if present
@@ -141,7 +142,7 @@ for pc in PATIENT_CANCERS:
 # Axis labels with n
 # -----------------------
 y_labels = [
-    f"{pc.replace('_',' ').replace('Non-Hodgkin','NHL').replace('Basal Cell Carcinoma','BCC').replace('Squamous Cell Carcinoma','SCC')}\n"
+    f"{pc.replace('_',' ').replace('Non-Hodgkin','NHL').replace('Basal Cell Carcinoma','BCC').replace('Squamous Cell Carcinoma','SCC').replace('Neuroendocrine','NETs')}\n"
     f"(n={patient_sizes[pc]})"
     for pc in PATIENT_CANCERS
 ]
@@ -249,7 +250,7 @@ plt.savefig(
 )
 plt.savefig(
     "/Users/noah/Desktop/ufc_repository/results/epidemiological_results/family_patient_cancer_matrix.pdf",
-    dpi=300, facecolor="white"
+    dpi=300, facecolor="white",bbox_inches=0,pad_inches=0
 )
 
 plt.close()

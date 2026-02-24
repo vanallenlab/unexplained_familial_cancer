@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # 1. Load results
 # ------------------------------------------------------------
 df = pd.read_csv("/Users/noah/Desktop/ufc_repository/results/epidemiological_results/patient_family_logistic_results.tsv", sep="\t")
-df = df[df['n_intersection'] >= 5]
+df = df[df['n_intersection'] >= 4]
 
 # ------------------------------------------------------------
 # 2. Prepare volcano plot values
@@ -100,36 +100,40 @@ plt.scatter(
 # ------------------------------------------------------------
 label_df = df[df["patient_cancer_norm"] == df["family_cancer_norm"]]
 
-for _, row in label_df.iterrows():
-    label = f"{row['patient_cancer']}"
-    plt.text(
-        row["log2_odds_ratio"],
-        row["neg_log10_p"],
-        label,
-        fontsize=5,
-        ha="left",
-        va="bottom",
-        color="black",
-        alpha=0.9
-    )
+# for _, row in label_df.iterrows():
+#     label = f"{row['patient_cancer']}"
+#     plt.text(
+#         row["log2_odds_ratio"],
+#         row["neg_log10_p"],
+#         label,
+#         fontsize=5,
+#         ha="left",
+#         va="bottom",
+#         color="black",
+#         alpha=0.9
+#     )
     
 # ------------------------------------------------------------
 # 5. Reference lines (optional but helpful)
 # ------------------------------------------------------------
 # Bonferroni or nominal line (example: p = 0.05)
 plt.axhline(-np.log10(0.05), linestyle="--", color="black", linewidth=1)
+
 plt.axhline(-np.log10(0.05/175), linestyle="--", color="black", linewidth=1)
+
 plt.axvline(0, linestyle="--", color="black", linewidth=0.8)
 
 # ------------------------------------------------------------
 # 6. Labels & aesthetics
 # ------------------------------------------------------------
 plt.xlabel(r"$log_{2}(OR)$", fontsize=5)
-plt.ylabel(r"$-\log_{10}{P}$", fontsize=5)
+plt.ylabel(r"$-\log_{10}({P})$", fontsize=5)
 plt.title("Patient Cancer ~ Family Cancer + Sex ", fontsize=7)
 #plt.legend(loc="upper left")
 
 ax = plt.gca()
+ax.text(-1.6,-np.log10(0.05)-0.3,"Nominal Significance",fontsize=5,fontfamily="Arial")
+ax.text(-1.6,-np.log10(0.05/175)-0.3,"Bonferroni Significance",fontsize=5,fontfamily="Arial")
 
 ##### Remove top and right spines
 ax.spines["top"].set_visible(False)
@@ -148,8 +152,23 @@ ax.yaxis.set_ticks_position("left")
 ax.xaxis.set_ticks_position("bottom")
 #####
 
+ax.text(1.12,7.5,"Breast",fontsize=5,fontfamily="Arial")
+ax.text(0.98,7,"BCC",fontsize=5,fontfamily="Arial")
+ax.text(0.87,6,"Prostate",fontsize=5,fontfamily="Arial")
+ax.text(1.5,5.6,"Lung",fontsize=5,fontfamily="Arial")
+ax.text(1.3,3.8,"Colorectal",fontsize=5,fontfamily="Arial")
+ax.text(1.03,3.2,"Melanoma",fontsize=5,fontfamily="Arial")
+ax.text(0.85,2.6,"SCC",fontsize=5,fontfamily="Arial")
+ax.text(1.65,2.3,"Kidney",fontsize=5,fontfamily="Arial")
+ax.text(1.1,2.25,"NHL",fontsize=5,fontfamily="Arial")
+ax.text(0.34,1.9,"Hematologic",fontsize=5,fontfamily="Arial")
+ax.text(1.22,1.03,"Ovary",fontsize=5,fontfamily="Arial")
+ax.text(0.82,0.4,"Cervix",fontsize=5,fontfamily="Arial")
+ax.text(0.53,0.07,"Bladder",fontsize=5,fontfamily="Arial")
+ax.text(1.32,1.85,"Thyroid",fontsize=5,fontfamily="Arial")
 
-plt.tight_layout(pad=0.2)
+ax.text(-1.1,3.83,"Breast-Skin",fontsize=5,fontfamily="Arial",color="gray")
+plt.tight_layout(pad=0.0)
 
 # ------------------------------------------------------------
 # 7. Save

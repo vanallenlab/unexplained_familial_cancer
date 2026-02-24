@@ -47,11 +47,12 @@ df["neglog10p"] = -np.log10(df["p_value"])
 # -------------------------
 # Styling
 # -------------------------
-sns.set_style("white")
+#sns.set_style("white")
+sns.set_style("ticks")
 sns.set_context("paper", font_scale=1.2)
 
 fig, ax = plt.subplots(figsize=(4, 4.25))
-
+ax.tick_params(axis='both', direction='out', length=6, width=1.2)
 # -------------------------
 # Aesthetic mappings
 # -------------------------
@@ -110,14 +111,14 @@ ax.axvline(0, color="#555555", lw=1, zorder=2)
 # -------------------------
 # Axes limits
 # -------------------------
-xlim = max(abs(df["logOR"].quantile(0.01)), abs(df["logOR"].quantile(0.99)))
-xlim = min(max(xlim, 2), 6)
-ax.set_xlim(-xlim, xlim)
-ax.set_ylim(0, df["neglog10p"].max() + 2)
+ax.set_xlim(-4, 6)
+ax.set_ylim(0, 3.5)
 
-ax.set_ylim(bottom=0)
-ax.yaxis.set_major_locator(mticker.MultipleLocator(1.5))
-# -------------------------
+ax.set_xticks(np.arange(-4, 6.1, 2))
+ax.set_xticklabels(ax.get_xticks(), fontsize=7, fontfamily="Arial")
+ax.set_yticks(np.arange(0, 3.6, 1))
+ax.set_yticklabels(ax.get_yticks(), fontsize=7, fontfamily="Arial")
+# # -------------------------
 # Axes appearance
 # -------------------------
 for spine in ["top", "right"]:
@@ -127,9 +128,9 @@ for spine in ["left", "bottom"]:
     ax.spines[spine].set_color("black")
 
 ax.set_xlabel(r"$log_{2}(OR)$ (cases vs. matched controls)", fontsize=7, fontweight="bold")
-ax.set_ylabel(r"$-\log_{10} P$", fontsize=7)
+ax.set_ylabel(r"$-\log_{10}(P)$", fontsize=7)
 ax.set_title(
-    "Enrichment of rare non-synonymous variants in CPGs across 17 cancers",
+    "Enrichment of rare damaging variants in cancer type specific CPGs",
     fontsize=7,
     fontweight="bold"
 )
@@ -223,6 +224,22 @@ legend3 = ax.legend(
     title_fontsize=5
 )
 
+# Insert Text
+ax.text(-3.3, 1.5, "Sarcoma",fontfamily="Arial",fontsize=5)
+ax.text(3.15, 2.35, "Uterus",fontfamily="Arial",fontsize=5)
+ax.text(0.42, 1.57, "Familial\nColorectal",fontfamily="Arial",fontsize=5)
+ax.text(1.38, 1.8, "NETs",fontfamily="Arial",fontsize=5)
+ax.text(3.8, 1.76, "Familial\nProstate",fontfamily="Arial",fontsize=5)
+ax.text(2.55, 1.37, "Prostate",fontfamily="Arial",fontsize=5)
+ax.text(2.98, 1.6, "Hematologic",fontfamily="Arial",fontsize=5)
+ax.text(4.8, 1.5, "Kidney",fontfamily="Arial",fontsize=5)
+
+ax.text(-3.9, -np.log10(0.05) - 0.1, "Nominal Significance",fontfamily="Arial",fontsize=5)
+ax.text(-3.9, -np.log10(0.05/136) - 0.1, "Bonferonni Significance",fontfamily="Arial",fontsize=5)
+
+#Add some arrows
+ax.annotate("", xy=(1.2, 1.5), xytext=(0.51,0.73), arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=-0.3", linewidth=1.5, color="black"))
+ax.annotate("", xy=(3.6, 2), xytext=(2.2,1.45), arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=-0.35", linewidth=1.5, color="black"))
 # Attach both legends
 ax.add_artist(legend1)
 ax.add_artist(legend2)
@@ -231,8 +248,9 @@ ax.add_artist(legend3)
 # -------------------------
 # Tight layout
 # -------------------------
-plt.xlim(-4,6)
-plt.ylim(0,3.5)
+# plt.xlim(-3.5,6)
+# plt.ylim(0,3.5)
+# ax.tick_params(axis='both', direction='out', length=6, width=1.2, which='major')
 plt.tight_layout(rect=[0, 0, 1, 1])
 
 # -------------------------
