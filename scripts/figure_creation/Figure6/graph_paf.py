@@ -11,6 +11,27 @@ cancer_order = ['Kidney','Neuroendocrine','Prostate','Breast','Bladder','Squamou
 
 def prepare_data(tsv_path):
     df = pd.read_csv(tsv_path, sep="\t")
+    df = df[df['prevalence_model'] == "observed"]
+
+    # Make sure column is string to avoid errors
+    df["added_predictor"] = df["added_predictor"].astype(str)
+
+    conditions = [
+        df["added_predictor"] == "PGS",
+        df["added_predictor"] == "has_SV_LOF",
+        df["added_predictor"].str.contains("Tier", na=False),
+        df["added_predictor"].str.startswith("chr", na=False),
+    ]
+
+    choices = [
+        "yellow",       # PGS
+        "orange",       # has_SV_LOF
+        "plum",         # contains 'Tier'
+        "lightblue",    # starts with chr
+    ]
+
+    df["color"] = np.select(conditions, choices, default="lightgreen")
+
     df = df.sort_values("R2_full")
 
     baseline = df["R2_reduced"].iloc[0]
@@ -37,7 +58,7 @@ global_max = 0
 for cancer in cancer_order:
     path = os.path.join(
         results_dir,
-        f"{cancer.lower()}.attributable_fraction_results.tsv"
+        f"{cancer.lower()}.attributable_fraction_results.adjusted.tsv"
     )
 
     if os.path.exists(path):
@@ -154,7 +175,7 @@ for i, cancer in enumerate(cancer_order):
 # -----------------------------
 ax.set_xlim(0, 0.3)
 # Full-height grid lines (0 → 0.10)
-for x in np.arange(0, 0.21, 0.05):
+for x in np.arange(0, 0.151, 0.05):
     ax.axvline(
         x,
         color="gray",
@@ -166,16 +187,17 @@ for x in np.arange(0, 0.21, 0.05):
     )
 
 # Half-height grid lines (0.15 → 0.30)
-for x in np.arange(0.25, 0.301, 0.05):
+for x in np.arange(0.20, 0.301, 0.05):
     ax.axvline(
         x,
         color="gray",
         linestyle=":",
         linewidth=0.8,
         zorder=0,
-        ymin=0.24,   # start halfway up
+        ymin=0.29,   # start halfway up
         ymax=1
     )
+
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
 ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=7)
 ax.set_yticklabels(
@@ -194,7 +216,9 @@ from matplotlib.patches import Patch
 
 legend_elements = [
     Patch(facecolor='gray', edgecolor='black',
-          label='Sex & Genetic Ancestry',linewidth=1.5),
+          label='Sex, Genetic Ancestry, & SV QC',linewidth=1.5),
+    Patch(facecolor='orange', edgecolor='black',
+          label='Rare (AF<0.1%) LoF SVs in CPGs',linewidth=1.5),
     Patch(facecolor='plum', edgecolor='black',
           label='Damaging Variants in CPGs',linewidth=1.5),
     Patch(facecolor='yellow', edgecolor='black',
@@ -202,7 +226,7 @@ legend_elements = [
     Patch(facecolor='lightgreen', edgecolor='black',
           label='Nominated CPGs',linewidth=1.5),
     Patch(facecolor='lightblue', edgecolor='black',
-          label='Runs of Homozygosity',linewidth=1.5),
+          label='Runs of Homozygosity',linewidth=1.5)
 ]
 
 ax.legend(
