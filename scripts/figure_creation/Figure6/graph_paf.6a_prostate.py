@@ -18,7 +18,7 @@ def prepare_data(tsv_path):
 
     conditions = [
         df["added_predictor"] == "PGS",
-        df["added_predictor"] == "has_SV_LOF",
+        df["added_predictor"].str.contains("SV",na=False),
         df["added_predictor"].str.contains("Tier", na=False),
         df["added_predictor"].str.startswith("chr", na=False),
     ]
@@ -72,9 +72,8 @@ for cancer in cancer_order:
 # Plot combined figure
 # -----------------------------
 fig_height = 2 #0.5 * len(plot_data)
-print(fig_height)
 fig, ax = plt.subplots(figsize=(3.5, fig_height))
-
+ax.set_xticks(np.arange(0, 0.201, 0.1))
 bar_height = 0.07
 
 for i, cancer in enumerate(cancer_order):
@@ -113,7 +112,22 @@ for i, cancer in enumerate(cancer_order):
         )
 
         # Add label if lightgreen
-        if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.01) or (row['added_predictor'] == "ZBP1") :
+        if previous_r2 is not None and row["color"] == "orange" and (row['R2_full'] - previous_r2 > 0.01):
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos,
+                row["added_predictor"].split('_')[0],
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial",
+                rotation=90
+            )
+
+        # Add label if lightgreen
+        if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.01):
             ax.text(
                 left + row["increment"] / 2,  # center of segment
                 y_pos,
@@ -199,7 +213,7 @@ for x in np.arange(0, 0.2501, 0.05):
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
 ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=5)
 ax.set_yticklabels(
-    [ {"Prostate_Patient_and_Family":"Concordant\nFHx",
+    [ {"Prostate_Patient_and_Family":"Concordant\nFHx\n(2+ FDRs)",
        "Prostate_Isolated":"Discordant\nFHx",
        "Prostate":"All Prostate"}.get(k, k)
       for k in reversed(list(plot_data.keys())) ],

@@ -18,7 +18,7 @@ def prepare_data(tsv_path):
 
     conditions = [
         df["added_predictor"] == "PGS",
-        df["added_predictor"] == "has_SV_LOF",
+        df["added_predictor"].str.contains("SV",na=False),
         df["added_predictor"].str.contains("Tier", na=False),
         df["added_predictor"].str.startswith("chr", na=False),
     ]
@@ -112,6 +112,21 @@ for i, cancer in enumerate(cancer_order):
             edgecolor="black"
         )
 
+       # Add label if orange
+        if previous_r2 is not None and row["color"] == "orange" and (row['R2_full'] - previous_r2 > 0.01) or (row['added_predictor'] == "ZBP1") :
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos,
+                row["added_predictor"],
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial",
+                rotation=90
+            )
+
         # Add label if lightgreen
         if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.01) or (row['added_predictor'] == "ZBP1") :
             ax.text(
@@ -200,7 +215,7 @@ for x in np.arange(0.25, 0.301, 0.05):
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
 ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=5)
 ax.set_yticklabels(
-    [ {"Breast_Patient_and_Family":"Concordant\nFHx",
+    [ {"Breast_Patient_and_Family":"Concordant\nFHx\n(2+ FDRs)",
        "Breast_Isolated":"Discordant\nFHx",
        "Breast":"All Breast",
        "Non-Hodgkin":"NHL"}.get(k, k)

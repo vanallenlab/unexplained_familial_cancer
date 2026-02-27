@@ -18,7 +18,7 @@ def prepare_data(tsv_path):
 
     conditions = [
         df["added_predictor"] == "PGS",
-        df["added_predictor"] == "has_SV_LOF",
+        df["added_predictor"].str.contains("SV",na=False),
         df["added_predictor"].str.contains("Tier", na=False),
         df["added_predictor"].str.startswith("chr", na=False),
     ]
@@ -111,6 +111,21 @@ for i, cancer in enumerate(cancer_order):
             edgecolor="black"
         )
 
+        # Add label if orange
+        if previous_r2 is not None and row["color"] == "orange" and (row['R2_full'] - previous_r2 > 0.01):
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos,
+                row["added_predictor"].split('_')[0],
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial",
+                rotation=90
+            )
+
         # Add label if lightgreen
         if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.01) or (row['added_predictor'] == "ZBP1") :
             ax.text(
@@ -171,7 +186,7 @@ for i, cancer in enumerate(cancer_order):
 # -----------------------------
 # Formatting
 # -----------------------------
-ax.set_xlim(0, 0.125)
+ax.set_xlim(0, 0.15)
 ax.set_xticks(np.arange(0, 0.12, 0.05))
 # Full-height grid lines (0 → 0.10)
 for x in np.arange(0, 0.121, 0.05):
@@ -199,7 +214,7 @@ for x in np.arange(0, 0.121, 0.05):
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
 ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=5)
 ax.set_yticklabels(
-    [ {"Colorectal_Patient_and_Family":"Concordant\nFHx",
+    [ {"Colorectal_Patient_and_Family":"Concordant\nFHx\n(1+ FDRs)",
        "Colorectal_Isolated":"Discordant\nFHx",
        "Colorectal":"All Colorectal",
        "Non-Hodgkin":"NHL"}.get(k, k)

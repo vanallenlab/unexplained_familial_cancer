@@ -7,7 +7,7 @@ import numpy as np
 # -----------------------------
 results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 #cancer_order = ['Ovary','Sarcoma','Hematologic','Uterus','Colorectal','Non-Hodgkin','Thyroid','Melanoma','Lung','Cervix','Basal_Cell','Squamous_Cell','Bladder','Breast','Prostate','Neuroendocrine','Kidney']
-cancer_order = ['Kidney','Neuroendocrine','Prostate','Breast','Bladder','Squamous_Cell','Basal_Cell','Cervix','Lung','Melanoma','Thyroid','Non-Hodgkin','Colorectal','Uterus','Hematologic','Sarcoma','Ovary']
+cancer_order = ['Kidney','Neuroendocrine','Breast','Prostate','Bladder','Squamous_Cell','Basal_Cell','Cervix','Lung','Thyroid','Melanoma','Uterus','Colorectal','Non-Hodgkin','Hematologic','Ovary','Sarcoma','Brain']
 
 def prepare_data(tsv_path):
     df = pd.read_csv(tsv_path, sep="\t")
@@ -18,7 +18,7 @@ def prepare_data(tsv_path):
 
     conditions = [
         df["added_predictor"] == "PGS",
-        df["added_predictor"] == "has_SV_LOF",
+        df["added_predictor"].str.contains("SV",na=False),
         df["added_predictor"].str.contains("Tier", na=False),
         df["added_predictor"].str.startswith("chr", na=False),
     ]
@@ -113,6 +113,35 @@ for i, cancer in enumerate(cancer_order):
             edgecolor="black"
         )
 
+        # Add label if orange
+        if previous_r2 is not None and row["color"] == "lightblue" and (row['R2_full'] - previous_r2 > 0.015):
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos - 0.02,
+                row["added_predictor"].replace('_','-'),
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial"
+            )
+
+
+        # Add label if orange
+        if previous_r2 is not None and row["color"] == "orange" and (row['R2_full'] - previous_r2 > 0.015):
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos - 0.02,
+                row["added_predictor"].split('_')[0],
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial"
+            )
+
         # Add label if lightgreen
         if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.015) or (row['added_predictor'] == "ZBP1") :
             ax.text(
@@ -173,9 +202,9 @@ for i, cancer in enumerate(cancer_order):
 # -----------------------------
 # Formatting
 # -----------------------------
-ax.set_xlim(0, 0.3)
+ax.set_xlim(0, 0.31)
 # Full-height grid lines (0 → 0.10)
-for x in np.arange(0, 0.151, 0.05):
+for x in np.arange(0, 0.201, 0.05):
     ax.axvline(
         x,
         color="gray",
@@ -187,7 +216,7 @@ for x in np.arange(0, 0.151, 0.05):
     )
 
 # Half-height grid lines (0.15 → 0.30)
-for x in np.arange(0.20, 0.301, 0.05):
+for x in np.arange(0.25, 0.301, 0.05):
     ax.axvline(
         x,
         color="gray",
@@ -218,7 +247,7 @@ legend_elements = [
     Patch(facecolor='gray', edgecolor='black',
           label='Sex, Genetic Ancestry, & SV QC',linewidth=1.5),
     Patch(facecolor='orange', edgecolor='black',
-          label='Rare (AF<0.1%) LoF SVs in CPGs',linewidth=1.5),
+          label='LoF SVs in matched CPGs',linewidth=1.5),
     Patch(facecolor='plum', edgecolor='black',
           label='Damaging Variants in CPGs',linewidth=1.5),
     Patch(facecolor='yellow', edgecolor='black',

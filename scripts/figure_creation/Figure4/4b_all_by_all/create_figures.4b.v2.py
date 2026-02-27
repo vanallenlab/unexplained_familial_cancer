@@ -185,6 +185,7 @@ plt.legend(
 # -----------------------
 ax.set_xticks(range(len(x_order)))
 ax.set_xticklabels(x_order, rotation=45, ha="right")
+ax.set_xticklabels(["Hematologic PRS" if x == "Leukemia PRS" else x for x in x_order], rotation=45, ha="right")
 
 ax.set_yticks(range(len(y_order)))
 #ax.set_yticklabels(y_order)

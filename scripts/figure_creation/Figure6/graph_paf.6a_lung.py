@@ -199,7 +199,7 @@ for x in np.arange(0, 0.2501, 0.05):
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
 ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=5)
 ax.set_yticklabels(
-    [ {"Lung_Patient_and_Family":"Concordant\nFHx",
+    [ {"Lung_Patient_and_Family":"Concordant\nFHx\n(1+ FDRs)",
        "Lung_Isolated":"Discordant\nFHx",
        "Lung":"All Lung",
        "Non-Hodgkin":"NHL"}.get(k, k)
@@ -229,7 +229,7 @@ legend_elements = [
 #     frameon=False,
 #     fontsize=5
 # )
-
+ax.set_xticks(np.arange(0, 0.2501, 0.1))
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 

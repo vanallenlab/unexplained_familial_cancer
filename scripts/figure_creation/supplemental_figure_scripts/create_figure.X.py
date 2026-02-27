@@ -9,13 +9,12 @@ import os
 # Inputs / outputs
 # ----------------------------
 in_matrix = "/Users/noah/Desktop/ufc_repository/results/Figure_2/fig2A_data.tsv"
-out_pdf = "/Users/noah/Desktop/ufc_repository/results/Figure_2/Figure2A.pdf"
+out_pdf = "/Users/noah/Desktop/ufc_repository/results/Figure_2/SuppX.2A.pdf"
 
 # ----------------------------
 # Load matrix (gene x cancer, binary)
 # ----------------------------
 heat = pd.read_csv(in_matrix, sep="\t", index_col=0)
-heat = heat.loc[heat.index.isin(["BRCA1","ATM","BAP1","MSH2","TINF2"])]
 heat["Cervix"] = 0
 # ----------------------------
 # Rename cancers
@@ -34,7 +33,7 @@ heat.columns = [c.replace("_", " ") for c in heat.columns]
 # ----------------------------
 # Reorder x-axis
 # ----------------------------
-priority_order = ["Breast", "Prostate", "Colorect", "Colorectal", "Uterus", "Ovary", "Kidney", "Melanoma", "Thyroid"]
+priority_order = ["BCC"]
 # Keep only columns present in heat
 existing_cols = [c for c in priority_order if c in heat.columns]
 
@@ -52,10 +51,7 @@ heat = heat[final_order]
 # ----------------------------
 # Plot heatmap
 # ----------------------------
-fig_width = max(4.5, len(heat.columns) * 0.18)  # slightly narrower
-fig_height = max(1.8, len(heat) * 0.35)
-
-plt.figure(figsize=(2.8, 1.75))
+plt.figure(figsize=(5.5, 3))
 
 ax = sns.heatmap(
     heat,
@@ -137,7 +133,6 @@ legend_elements = [
 # )
 ax.legend(
     handles=legend_elements,
-    bbox_to_anchor=(0.25, -0.4),
     frameon=False,
     fontsize=5
 )
