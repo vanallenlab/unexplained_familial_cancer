@@ -226,7 +226,7 @@ legend3 = ax.legend(
 
 # Insert Text
 ax.text(-3.3, 1.5, "Sarcoma",fontfamily="Arial",fontsize=5)
-ax.text(3.15, 2.35, "Uterus",fontfamily="Arial",fontsize=5)
+ax.text(3.15, 2.4, "Uterus",fontfamily="Arial",fontsize=5)
 ax.text(0.42, 1.57, "Familial\nColorectal",fontfamily="Arial",fontsize=5)
 ax.text(1.38, 1.8, "NETs",fontfamily="Arial",fontsize=5)
 ax.text(3.8, 1.76, "Familial\nProstate",fontfamily="Arial",fontsize=5)
@@ -258,6 +258,11 @@ plt.tight_layout(rect=[0, 0, 1, 1])
 # -------------------------
 plt.savefig(
     "/Users/noah/Desktop/ufc_repository/results/analysis_5_gsea_results/Figure_2D.pdf",
+    dpi=700,
+    bbox_inches="tight",pad_inches=0
+)
+plt.savefig(
+    "/Users/noah/Desktop/ufc_repository/results/analysis_5_gsea_results/Figure_2D.png",
     dpi=700,
     bbox_inches="tight",pad_inches=0
 )

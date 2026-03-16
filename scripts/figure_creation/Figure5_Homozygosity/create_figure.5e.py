@@ -142,7 +142,7 @@ ax.set_axisbelow(True)
 
 # Legend (no box)
 # Create a light blue patch for the legend
-sig_patch = Patch(facecolor='lightblue', alpha=0.4, label='Significant\nregion')
+sig_patch = Patch(facecolor='lightblue', alpha=0.4, label='Region\nof\nInterest')
 
 #ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(0.8, 1.00))
 ax.legend(handles=[line_case, line_control, sig_patch], frameon=False, loc="upper left", bbox_to_anchor=(0.8, 1.0))
@@ -164,7 +164,7 @@ plt.plot([113747033,113812056], [0.25, 0.25], color='black', lw=3,solid_capstyle
 ax.text(113747033, 0.22, "ATP6V1A", color="black",fontstyle="italic", fontsize=5)
 
 # USF3 
-plt.plot([113648385,113696646], [0.2, 0.2], color='red', lw=3,solid_capstyle='round')
+plt.plot([113648385,113696646], [0.2, 0.2], color='blue', lw=3,solid_capstyle='round')
 ax.text(113648385, 0.17, "USF3", color="black",fontstyle="italic", fontsize=5)
 
 # GRAMD1C
@@ -191,8 +191,8 @@ ax.text(113980000, 0.17, "QTRT2", color="black",fontstyle="italic", fontsize=5)
 plt.plot([113286930,113441610], [0.15, 0.15], color='black', lw=3,solid_capstyle='round')
 ax.text(113410001, 0.12, "CFAP4", color="black",fontstyle="italic", fontsize=5)
 
-ax.text(113410001, 0.43, "P=3.02e-5", color="black", fontsize=5)
-ax.text(113410001, 0.4, "OR=3.29", color="black", fontsize=5)
+ax.text(113410001, 0.43, "P = 3.30 x 10$^{-5}$", color="black", fontsize=7)
+ax.text(113410001, 0.4, "OR = 3.26", color="black", fontsize=7)
 
 # ------------------------------------------------------------
 # Save

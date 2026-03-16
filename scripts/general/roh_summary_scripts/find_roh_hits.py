@@ -8,7 +8,7 @@ import glob
 # ============================================================
 # Configuration
 # ============================================================
-ROH_DIR = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/results"
+ROH_DIR = "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/roh_results_short"
 PVALUE_THRESHOLD = 1e-5
 OUTFILE = "roh_significant_hits.tsv"
 

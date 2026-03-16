@@ -42,7 +42,7 @@ df["label"] = df["intake_qc_pop"].map(label_map)
 # --- Compute population percentages ---
 pop_counts = df["intake_qc_pop"].value_counts(normalize=True) * 100
 df["pct_label"] = df["intake_qc_pop"].apply(
-    lambda x: f"{label_map.get(x, x)} ({pop_counts[x]:.0f}%)"
+    lambda x: f"{label_map.get(x, x)} ({pop_counts[x]:.1f}%)"
     if x in pop_counts else x
 )
 

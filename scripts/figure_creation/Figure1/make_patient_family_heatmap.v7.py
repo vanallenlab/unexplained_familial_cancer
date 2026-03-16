@@ -24,7 +24,7 @@ mpl.rcParams.update({
 PATIENT_CANCERS = [
     "Basal_Cell_Carcinoma","Breast","Prostate","Squamous_Cell_Carcinoma","Melanoma",
     "Lung","Colorectal","Thyroid","Hematologic","Non-Hodgkin","Uterus","Bladder","Sarcoma",
-    "Cervix","Ovary","Kidney","Brain","Neuroendocrine","Control"
+    "Ovary","Kidney","Cervix","Neuroendocrine","Brain","Control"
 ]
 
 FAMILY_CANCERS = [
@@ -239,7 +239,7 @@ ax.set_xticklabels(x_labels, rotation=45, ha="right", fontsize=5)
 ax.set_yticklabels(y_labels, rotation=0, fontsize=5)
 ax.tick_params(axis="x", pad=0)
 
-ax.set_xlabel("Family Cancer History", fontsize=7, fontweight="bold", labelpad=-1)
+ax.set_xlabel("First-Degree Relative Cancer History", fontsize=7, fontweight="bold", labelpad=-1)
 ax.set_ylabel("Patient Cancer", fontsize=7, fontweight="bold", labelpad=1)
 
 plt.subplots_adjust(left=0.15, right=1.01, bottom=0.12, top=0.99)

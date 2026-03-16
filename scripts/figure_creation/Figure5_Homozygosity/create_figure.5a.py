@@ -35,8 +35,8 @@ def open_textmaybe_gz(path: Path):
 
 cancer_color = parse_color_file("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml")
 
-input_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/results/")
-output_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/plots/")
+input_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_roh_results/")
+output_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/kidney_plots/")
 output_dir.mkdir(parents=True, exist_ok=True)
 FDR_Q = 0.1
 
@@ -51,7 +51,7 @@ def compute_bh_threshold(pvals, q=0.05):
 
 
 # === Process each HWAS file ===
-for file_path in input_dir.glob("*.tsv.gz"):
+for file_path in input_dir.glob("*kidney.sw_250000.roh_100000.tsv.gz"):
     print("hello")
     if not file_path.name.endswith((".tsv", ".tsv.gz")):
         continue
@@ -156,9 +156,9 @@ for file_path in input_dir.glob("*.tsv.gz"):
             sig_level_lead=bh_cutoff,
             colors=[color1],
             build="38",
-            fontsize=7,          # x/y tick labels
-            anno_fontsize=7,     # gene/haplotype annotations
-            title_fontsize=7,    # plot title
+            fontsize=5,          # x/y tick labels
+            anno_fontsize=5,     # gene/haplotype annotations
+            title_fontsize=5,    # plot title
             font_family="Arial",
             marker_size=(7,7.6),
             fig_kwargs={"figsize": (1.6,1.6)},  # exact width x height in inches

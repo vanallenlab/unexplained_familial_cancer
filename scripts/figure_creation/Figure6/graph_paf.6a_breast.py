@@ -222,7 +222,7 @@ ax.set_yticklabels(
       for k in reversed(list(plot_data.keys())) ],
     fontsize=5
 )
-ax.set_xlabel("Proportion of Variance Explained by Genetics",fontsize=7)
+ax.set_xlabel("Proportion of Observed Variance Explained by Genetics",fontsize=7)
 #ax.set_title("Variance Explained by Genetic Predictors")
 
 # Make a legend

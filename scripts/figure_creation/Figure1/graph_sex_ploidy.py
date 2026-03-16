@@ -14,6 +14,7 @@ with open("/Users/noah/Desktop/ufc_repository/yamls/color_scheme.yaml", "r") as 
 fallback_color = colors.get("Control", "#B0B0B0")
 
 df["inferred_sex"] = df["inferred_sex"].str.capitalize()
+df = df[df['inferred_sex'] != "Other"]
 
 # --- Map inferred_sex → color with fallback ---
 df["color"] = df["inferred_sex"].map(colors).fillna(fallback_color)
@@ -65,5 +66,5 @@ leg = ax.legend(
 )
 
 plt.tight_layout()
-plt.savefig("/Users/noah/Desktop/ufc_repository/results/demographics/sex_ploidy.png",dpi=400)
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/demographics/sex_ploidy.pdf",dpi=400)
 #plt.show()

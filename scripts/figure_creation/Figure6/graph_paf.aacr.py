@@ -9,9 +9,9 @@ import numpy as np
 results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 
 cancer_order = [
-    'Prostate','Squamous_Cell','Basal_Cell','Breast','Uterus','Melanoma','Kidney','Thyroid',
+    'Prostate','Breast','Uterus','Melanoma','Kidney','Thyroid',
     'Colorectal','Ovary','Neuroendocrine','Non-Hodgkin','Hematologic','Cervix',
-    'Lung','Sarcoma','Brain','Bladder'
+    'Lung','Sarcoma'
 ]
 
 # -----------------------------
@@ -290,7 +290,7 @@ ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
 
-output_path = os.path.join(results_dir, "combined_attributable_fraction.pdf")
+output_path = os.path.join(results_dir, "combined_attributable_fraction_aacr.pdf")
 
 plt.savefig(
     output_path,

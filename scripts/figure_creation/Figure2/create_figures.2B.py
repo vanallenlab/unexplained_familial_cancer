@@ -8,7 +8,7 @@ from matplotlib import font_manager as fm
 # -----------------------------
 # Load data
 # -----------------------------
-file_path = Path("/Users/noah/Desktop/ufc_repository/results/Figure_2/sv_lof_fisher_summary.tsv")
+file_path = Path("/Users/noah/Desktop/ufc_repository/results/Figure_2/sv_lof_fisher_summary.offline.tsv")
 df = pd.read_csv(file_path, sep="\t")
 
 # -----------------------------
@@ -16,7 +16,7 @@ df = pd.read_csv(file_path, sep="\t")
 # -----------------------------
 df = df[
     ~df["cohort"].str.contains("isolated", case=False, na=False) &
-    ~df["cohort"].str.contains("patient_and_family", case=False, na=False)
+    ~df["cohort"].str.contains("family", case=False, na=False)
 ].copy()
 
 # -----------------------------

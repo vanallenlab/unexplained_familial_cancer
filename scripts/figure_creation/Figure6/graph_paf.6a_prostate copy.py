@@ -7,7 +7,7 @@ import numpy as np
 # -----------------------------
 results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 #cancer_order = ['Ovary','Sarcoma','Hematologic','Uterus','Colorectal','Non-Hodgkin','Thyroid','Melanoma','Lung','Cervix','Basal_Cell','Squamous_Cell','Bladder','Breast','Prostate','Neuroendocrine','Kidney']
-cancer_order = ["Lung_Isolated","Lung","Lung_Patient_and_Family"]
+cancer_order = ["Prostate_Isolated","Prostate","Prostate_Patient_and_Family"]
 
 def prepare_data(tsv_path):
     df = pd.read_csv(tsv_path, sep="\t")
@@ -18,7 +18,7 @@ def prepare_data(tsv_path):
 
     conditions = [
         df["added_predictor"] == "PGS",
-        df["added_predictor"] == "has_SV_LOF",
+        df["added_predictor"].str.contains("SV",na=False),
         df["added_predictor"].str.contains("Tier", na=False),
         df["added_predictor"].str.startswith("chr", na=False),
     ]
@@ -72,9 +72,8 @@ for cancer in cancer_order:
 # Plot combined figure
 # -----------------------------
 fig_height = 2 #0.5 * len(plot_data)
-print(fig_height)
 fig, ax = plt.subplots(figsize=(3.5, fig_height))
-
+ax.set_xticks(np.arange(0, 0.201, 0.1))
 bar_height = 0.07
 
 for i, cancer in enumerate(cancer_order):
@@ -113,7 +112,22 @@ for i, cancer in enumerate(cancer_order):
         )
 
         # Add label if lightgreen
-        if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.01) or (row['added_predictor'] == "ZBP1") :
+        if previous_r2 is not None and row["color"] == "orange" and (row['R2_full'] - previous_r2 > 0.01):
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos,
+                row["added_predictor"].split('_')[0],
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial",
+                rotation=90
+            )
+
+        # Add label if lightgreen
+        if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.01):
             ax.text(
                 left + row["increment"] / 2,  # center of segment
                 y_pos,
@@ -172,7 +186,7 @@ for i, cancer in enumerate(cancer_order):
 # -----------------------------
 # Formatting
 # -----------------------------
-ax.set_xlim(0, 0.26)
+ax.set_xlim(0, 0.22)
 # Full-height grid lines (0 → 0.10)
 for x in np.arange(0, 0.2501, 0.05):
     ax.axvline(
@@ -199,10 +213,9 @@ for x in np.arange(0, 0.2501, 0.05):
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
 ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=5)
 ax.set_yticklabels(
-    [ {"Lung_Patient_and_Family":"Concordant\nFHx\n(1+ FDRs)",
-       "Lung_Isolated":"Discordant\nFHx",
-       "Lung":"All Lung",
-       "Non-Hodgkin":"NHL"}.get(k, k)
+    [ {"Prostate_Patient_and_Family":"Concordant\nFHx\n(2+ FDRs)",
+       "Prostate_Isolated":"Discordant\nFHx",
+       "Prostate":"All Prostate"}.get(k, k)
       for k in reversed(list(plot_data.keys())) ],
     fontsize=5
 )
@@ -229,13 +242,13 @@ legend_elements = [
 #     frameon=False,
 #     fontsize=5
 # )
-ax.set_xticks(np.arange(0, 0.2501, 0.1))
+
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
 
-output_path = os.path.join(results_dir, "combined_attributable_fraction_lung.pdf")
+output_path = os.path.join(results_dir, "combined_attributable_fraction_prostate.pdf")
 plt.savefig(output_path, dpi=300,bbox_inches="tight",pad_inches=0,edgecolor="none")
 plt.close()
 

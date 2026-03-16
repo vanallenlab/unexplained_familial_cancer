@@ -55,9 +55,7 @@ def significance_text(p):
         return "*"
     elif p > 1e-5:
         return "**"
-    elif p > 1e-10:
-        return "***"
-    return "****"
+    return "***"
 
 def cohen_d(x1, x2):
     n1, n2 = len(x1), len(x2)

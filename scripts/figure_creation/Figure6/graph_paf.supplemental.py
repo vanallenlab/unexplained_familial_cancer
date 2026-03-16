@@ -7,7 +7,7 @@ import numpy as np
 # -----------------------------
 results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 #cancer_order = ['Ovary','Sarcoma','Hematologic','Uterus','Colorectal','Non-Hodgkin','Thyroid','Melanoma','Lung','Cervix','Basal_Cell','Squamous_Cell','Bladder','Breast','Prostate','Neuroendocrine','Kidney']
-cancer_order = ["Lung_Isolated","Lung","Lung_Patient_and_Family"]
+cancer_order = ['Kidney','Neuroendocrine','Breast','Prostate','Bladder','Squamous_Cell','Basal_Cell','Cervix','Lung','Thyroid','Melanoma','Uterus','Colorectal','Non-Hodgkin','Hematologic','Ovary','Sarcoma','Brain']
 
 def prepare_data(tsv_path):
     df = pd.read_csv(tsv_path, sep="\t")
@@ -18,7 +18,7 @@ def prepare_data(tsv_path):
 
     conditions = [
         df["added_predictor"] == "PGS",
-        df["added_predictor"] == "has_SV_LOF",
+        df["added_predictor"].str.contains("SV",na=False),
         df["added_predictor"].str.contains("Tier", na=False),
         df["added_predictor"].str.startswith("chr", na=False),
     ]
@@ -31,6 +31,7 @@ def prepare_data(tsv_path):
     ]
 
     df["color"] = np.select(conditions, choices, default="lightgreen")
+
     df = df.sort_values("R2_full")
 
     baseline = df["R2_reduced"].iloc[0]
@@ -71,11 +72,11 @@ for cancer in cancer_order:
 # -----------------------------
 # Plot combined figure
 # -----------------------------
-fig_height = 2 #0.5 * len(plot_data)
+fig_height = 4 #0.5 * len(plot_data)
 print(fig_height)
-fig, ax = plt.subplots(figsize=(3.5, fig_height))
+fig, ax = plt.subplots(figsize=(7, fig_height))
 
-bar_height = 0.07
+bar_height = 0.3
 
 for i, cancer in enumerate(cancer_order):
 
@@ -84,7 +85,7 @@ for i, cancer in enumerate(cancer_order):
 
     df, baseline, total_r2 = plot_data[cancer]
 
-    spacing = 0.1
+    spacing = 0.5
     y_pos = (len(plot_data) - i - 1) * spacing  # Top-to-bottom order
 
     # Baseline (black)
@@ -112,33 +113,62 @@ for i, cancer in enumerate(cancer_order):
             edgecolor="black"
         )
 
-        # Add label if lightgreen
-        if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.01) or (row['added_predictor'] == "ZBP1") :
+        # Add label if orange
+        if previous_r2 is not None and row["color"] == "lightblue" and (row['R2_full'] - previous_r2 > 0.015):
             ax.text(
                 left + row["increment"] / 2,  # center of segment
-                y_pos,
-                row["added_predictor"],
+                y_pos - 0.02,
+                row["added_predictor"].replace('_','-'),
                 ha="center",
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
                 fontsize=5,
-                fontfamily="Arial",
-                rotation=90
+                fontfamily="Arial"
             )
-        # Add label if purple
-        if previous_r2 is not None and row["color"] == "plum" and (row['R2_full'] - previous_r2 > 0.01):
+
+
+        # Add label if orange
+        if previous_r2 is not None and row["color"] == "orange" and (row['R2_full'] - previous_r2 > 0.015):
             ax.text(
                 left + row["increment"] / 2,  # center of segment
-                y_pos,
+                y_pos - 0.02,
                 row["added_predictor"].split('_')[0],
                 ha="center",
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
                 fontsize=5,
-                fontfamily="Arial",
-                rotation=90
+                fontfamily="Arial"
+            )
+
+        # Add label if lightgreen
+        if previous_r2 is not None and row["color"] == "lightgreen" and (row['R2_full'] - previous_r2 > 0.015) or (row['added_predictor'] == "ZBP1") :
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos - 0.02,
+                row["added_predictor"],
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial"
+            )
+        # Add label if purple
+        if row['added_predictor'] == "FH_Tier2_001":
+            print(row['R2_full'] - previous_r2)
+        if previous_r2 is not None and row["color"] == "plum" and (row['R2_full'] - previous_r2 > 0.012):
+            ax.text(
+                left + row["increment"] / 2,  # center of segment
+                y_pos - 0.02,
+                row["added_predictor"].split('_')[0],
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
+                fontfamily="Arial"
             )
 
         # Divider
@@ -172,9 +202,9 @@ for i, cancer in enumerate(cancer_order):
 # -----------------------------
 # Formatting
 # -----------------------------
-ax.set_xlim(0, 0.26)
+ax.set_xlim(0, 0.31)
 # Full-height grid lines (0 → 0.10)
-for x in np.arange(0, 0.2501, 0.05):
+for x in np.arange(0, 0.201, 0.05):
     ax.axvline(
         x,
         color="gray",
@@ -186,25 +216,26 @@ for x in np.arange(0, 0.2501, 0.05):
     )
 
 # Half-height grid lines (0.15 → 0.30)
-# for x in np.arange(0.25, 0.301, 0.05):
-#     ax.axvline(
-#         x,
-#         color="gray",
-#         linestyle=":",
-#         linewidth=0.8,
-#         zorder=0,
-#         ymin=0.24,   # start halfway up
-#         ymax=1
-#     )
+for x in np.arange(0.25, 0.301, 0.05):
+    ax.axvline(
+        x,
+        color="gray",
+        linestyle=":",
+        linewidth=0.8,
+        zorder=0,
+        ymin=0.29,   # start halfway up
+        ymax=1
+    )
+
 ax.set_yticks([i * spacing for i in range(len(plot_data))])
-ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=5)
+ax.set_yticklabels(reversed(list(plot_data.keys())),fontsize=7)
 ax.set_yticklabels(
-    [ {"Lung_Patient_and_Family":"Concordant\nFHx\n(1+ FDRs)",
-       "Lung_Isolated":"Discordant\nFHx",
-       "Lung":"All Lung",
+    [ {"Neuroendocrine":"NETs",
+       "Squamous_Cell":"SCC",
+       "Basal_Cell":"BCC",
        "Non-Hodgkin":"NHL"}.get(k, k)
       for k in reversed(list(plot_data.keys())) ],
-    fontsize=5
+    fontsize=7
 )
 ax.set_xlabel("Proportion of Observed Variance Explained by Genetics",fontsize=7)
 #ax.set_title("Variance Explained by Genetic Predictors")
@@ -214,28 +245,32 @@ from matplotlib.patches import Patch
 
 legend_elements = [
     Patch(facecolor='gray', edgecolor='black',
-          label='Sex & Genetic Ancestry',linewidth=1.5),
+          label='Sex, Genetic Ancestry, & SV QC',linewidth=1.5),
+    Patch(facecolor='orange', edgecolor='black',
+          label='LoF SVs in matched CPGs',linewidth=1.5),
     Patch(facecolor='plum', edgecolor='black',
           label='Damaging Variants in CPGs',linewidth=1.5),
     Patch(facecolor='yellow', edgecolor='black',
           label='Polygenic Risk',linewidth=1.5),
     Patch(facecolor='lightgreen', edgecolor='black',
-          label='Nominated CPGs',linewidth=1.5)
+          label='Nominated CPGs',linewidth=1.5),
+    Patch(facecolor='lightblue', edgecolor='black',
+          label='Runs of Homozygosity',linewidth=1.5)
 ]
 
-# ax.legend(
-#     handles=legend_elements,
-#     loc='upper right',
-#     frameon=False,
-#     fontsize=5
-# )
-ax.set_xticks(np.arange(0, 0.2501, 0.1))
+ax.legend(
+    handles=legend_elements,
+    loc='lower right',
+    frameon=False,
+    fontsize=7
+)
+
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
 
-output_path = os.path.join(results_dir, "combined_attributable_fraction_lung.pdf")
+output_path = os.path.join(results_dir, "combined_attributable_fraction.pdf")
 plt.savefig(output_path, dpi=300,bbox_inches="tight",pad_inches=0,edgecolor="none")
 plt.close()
 

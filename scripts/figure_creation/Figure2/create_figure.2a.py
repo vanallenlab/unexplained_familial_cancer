@@ -10,7 +10,7 @@ import os
 # ----------------------------
 in_matrix = "/Users/noah/Desktop/ufc_repository/results/Figure_2/fig2A_data.tsv"
 out_pdf = "/Users/noah/Desktop/ufc_repository/results/Figure_2/Figure2A.pdf"
-
+out_png = "/Users/noah/Desktop/ufc_repository/results/Figure_2/Figure2A.png"
 # ----------------------------
 # Load matrix (gene x cancer, binary)
 # ----------------------------
@@ -155,6 +155,7 @@ plt.tight_layout(rect=[0,0,1.3,1.3])
 # ----------------------------
 #os.makedirs(os.path.dirname(out_pdf), exist_ok=True)
 plt.savefig(out_pdf, format="pdf", bbox_inches="tight",pad_inches=0)
+plt.savefig(out_png,bbox_inches="tight",pad_inches=0.02)
 
 
 print("Saved heatmap PDF to:", out_pdf)

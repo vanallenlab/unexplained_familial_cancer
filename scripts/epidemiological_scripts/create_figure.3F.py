@@ -175,29 +175,29 @@ def plot_volcano(
     )
 
     # Insert Text
-    ax.text(3.6, 2.3, "Kidney",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(3.6, 2.25, "Kidney",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(1.93, 5.2, "Breast",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(1.87, 4.5, "Breast",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(1.71, 7.39, "BCC",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(1.51, 6, "BCC",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(2.51, 4.93, "Prostate",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(2.4, 4.3, "Prostate",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(2.29, 1, "Ovary (negligable change)",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(2.26, 1, "Ovary (negligable change)",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(3, 5.6, "Lung",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(2.93, 5.45, "Lung",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(2.34, 1.57, "Thyroid",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(2.31, 1.53, "Thyroid",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(2.51, 3.4, "Colorectal",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(2.48, 3.3, "Colorectal",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(1.97, 2.73, "Melanoma",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(1.92, 2.63, "Melanoma",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(1.6, 2.33, "SCC",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(1.35, 2.25, "SCC",fontfamily="Arial",fontsize=7,color="gray")
 
     ax.text(1.38, 1.7, "Hematologic",fontfamily="Arial",fontsize=7,color="gray")
 
-    ax.text(1.72, 0.2, "Cervix",fontfamily="Arial",fontsize=7,color="gray")
+    ax.text(2.1, 0.7, "Cervix",fontfamily="Arial",fontsize=7,color="gray")
 
     ax.text(1.03, 0.45, "Bladder",fontfamily="Arial",fontsize=7,color="gray")
 
@@ -207,7 +207,7 @@ def plot_volcano(
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    plt.title("Patient Cancer ~ Family Cancer + Sex + PRS (Cancer Specific)", fontsize=7)
+    plt.title("Patient Cancer ~ FDR Cancer + Sex + PRS (Cancer Specific)", fontsize=7)
     plt.tight_layout(pad=0.6)
     plt.savefig(outfile, dpi=300)
     plt.close()
