@@ -126,7 +126,7 @@ plt.axvline(0, linestyle="--", color="black", linewidth=0.8)
 # ------------------------------------------------------------
 # 6. Labels & aesthetics
 # ------------------------------------------------------------
-plt.xlabel(r"$log_{2}(OR)$", fontsize=5)
+plt.xlabel(r"$log_{2}$(Cancer Dx given Family History)", fontsize=5)
 plt.ylabel(r"$-\log_{10}({P})$", fontsize=5)
 plt.title("Patient Cancer ~ FDR Cancer + Sex ", fontsize=7)
 #plt.legend(loc="upper left")

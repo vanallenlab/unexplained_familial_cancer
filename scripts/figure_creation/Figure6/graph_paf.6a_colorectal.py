@@ -232,7 +232,7 @@ ax.set_yticklabels(
         {
             "Colorectal_Patient_and_Family":"Concordant\nFHx\n(1+ FDRs)",
             "Colorectal_Isolated":"Discordant\nFHx",
-            "Colorectal":"All Colorectal"
+            "Colorectal":"All\nColorectal"
         }.get(k, k)
         for k in reversed(list(plot_data.keys()))
     ],

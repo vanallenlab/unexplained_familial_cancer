@@ -10,7 +10,7 @@ results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 
 cancer_order = [
     'Prostate','Squamous_Cell','Basal_Cell','Breast','Uterus','Melanoma','Kidney','Thyroid',
-    'Colorectal','Ovary','Neuroendocrine','Non-Hodgkin','Hematologic','Cervix',
+    'Colorectal','Ovary','Non-Hodgkin','Neuroendocrine','Hematologic','Cervix',
     'Lung','Sarcoma','Brain','Bladder'
 ]
 

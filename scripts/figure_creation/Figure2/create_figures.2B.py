@@ -126,7 +126,7 @@ ax.legend(
     prop=fm.FontProperties(family="Arial", size=5)
 )
 
-ax.text(15.5, 7, '* p ≤ 0.05', fontsize=5, ha='center', va='bottom', fontfamily="Arial")
+ax.text(15.5, 7, '* P < 0.05', fontsize=5, ha='center', va='bottom', fontfamily="Arial")
 ax.text(8, 9, 'Odds Ratios of LoF SVs in 148 CPGs by Cancer', fontsize=5, ha='center', va='bottom', fontfamily="Arial")
 plt.tight_layout(pad=0)
 

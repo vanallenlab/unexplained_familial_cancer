@@ -9,8 +9,7 @@ import numpy as np
 results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 
 cancer_order = [
-    'Prostate','Breast','Uterus','Melanoma','Kidney','Thyroid',
-    'Colorectal','Ovary','Neuroendocrine','Non-Hodgkin','Hematologic','Cervix',
+'Kidney','Neuroendocrine','Breast_Patient_and_Family_one','Breast','Cervix','Bladder','Thyroid'
 ]
 
 # -----------------------------
@@ -21,12 +20,12 @@ def prepare_data(tsv_path):
     df = pd.read_csv(tsv_path, sep="\t")
 
     df = df[df['prevalence_model'] == "observed"]
-    df = df[~df['added_predictor'].str.contains("chr")]
-    df = df[
-        df['added_predictor'].str.contains("SV") |
-        df['added_predictor'].str.contains("PGS") |
-        df['added_predictor'].str.contains("Tier")
-    ]
+    #df = df[~df['added_predictor'].str.contains("chr")]
+    # df = df[
+    #     df['added_predictor'].str.contains("SV") |
+    #     df['added_predictor'].str.contains("PGS") |
+    #     df['added_predictor'].str.contains("Tier")
+    # ]
 
     df["added_predictor"] = df["added_predictor"].astype(str)
 
@@ -34,13 +33,15 @@ def prepare_data(tsv_path):
     conditions = [
         df["added_predictor"] == "PGS",
         df["added_predictor"].str.contains("SV", na=False),
-        df["added_predictor"].str.contains("Tier", na=False)
+        df["added_predictor"].str.contains("Tier", na=False),
+        df["added_predictor"].str.contains("chr", na=False)
     ]
 
     choices = [
         "yellow",   # PGS
         "orange",   # SV LoF
-        "plum"      # damaging variants
+        "plum",      # damaging variants
+        "lightblue"
     ]
 
     df["color"] = np.select(conditions, choices, default="lightgreen")
@@ -138,11 +139,11 @@ for i, cancer in enumerate(cancer_order):
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
-                fontsize=6,
+                fontsize=5,
                 fontfamily="Arial"
             )
 
-        if row["color"] == "plum" and (width > 0.006 or row["added_predictor"] == "RB1_Tier4_001"):
+        if row["color"] == "plum" and width > 0.008:
 
             label = row["added_predictor"].split("_")[0]
 
@@ -154,7 +155,21 @@ for i, cancer in enumerate(cancer_order):
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
-                fontsize=6,
+                fontsize=5,
+                fontfamily="Arial"
+            )
+
+        if row["color"] == "lightblue" and width > 0.015:
+            roh_region = row["added_predictor"].split('_')[0] + ":" + row["added_predictor"].split('_')[1] + "-" + row["added_predictor"].split('_')[2]
+            ax.text(
+                left + width/2,
+                y_pos - 0.02,
+                roh_region,
+                ha="center",
+                va="center",
+                fontweight="bold",
+                fontstyle="italic",
+                fontsize=5,
                 fontfamily="Arial"
             )
 
@@ -213,10 +228,10 @@ for i, cancer in enumerate(cancer_order):
 # -----------------------------
 # Formatting
 # -----------------------------
-ax.set_xlim(0, 0.20)
+ax.set_xlim(0, 0.251)
 # Set x-ticks every 0.1
-ax.set_xticks(np.arange(0, 0.201, 0.05))
-for x in np.arange(0, 0.101, 0.05):
+ax.set_xticks(np.arange(0, 0.251, 0.05))
+for x in np.arange(0, 0.151, 0.05):
     ax.axvline(
         x,
         color="gray",
@@ -224,18 +239,18 @@ for x in np.arange(0, 0.101, 0.05):
         linewidth=0.8,
         zorder=0
     )
-for x in np.arange(0.15, 0.151, 0.05):
+for x in np.arange(0.15, 0.201, 0.05):
     ax.axvline(
         x,
         color="gray",
         linestyle=":",
         linewidth=0.8,
         zorder=0,
-        ymin=0.2,
+        ymin=0.25,
         ymax=1
     )
 
-for x in np.arange(0.2, 0.201, 0.05):
+for x in np.arange(0.25, 0.251, 0.05):
     ax.axvline(
         x,
         color="gray",
@@ -247,16 +262,16 @@ ax.set_yticks([i * spacing for i in range(len(plot_data))])
 
 ax.set_yticklabels(
     [ {"Neuroendocrine":"NETs",
-       "Squamous_Cell":"SCC",
+       "Breast_Patient_and_Family_one":"Familial\nBreast",
        "Basal_Cell":"BCC",
        "Non-Hodgkin":"NHL"}.get(k, k)
       for k in reversed(list(plot_data.keys())) ],
-    fontsize=9
+    fontsize=7
 )
 
 ax.set_xlabel(
     "Proportion of Observed Variance Explained by Genetics",
-    fontsize=11
+    fontsize=7
 )
 
 # -----------------------------
@@ -273,15 +288,18 @@ legend_elements = [
           label='Damaging Variants in matched CPGs', linewidth=1.5),
 
     Patch(facecolor='yellow', edgecolor='black',
-          label='Polygenic Risk', linewidth=1.5)
-
+          label='Polygenic Risk', linewidth=1.5),
+    Patch(facecolor='lightgreen', edgecolor='black',
+          label='Nominated candidate CPGs', linewidth=1.5),
+    Patch(facecolor='lightblue', edgecolor='black',
+          label='Nominated candidate RoH loci', linewidth=1.5)
 ]
 
 ax.legend(
     handles=legend_elements,
     loc='lower right',
     frameon=False,
-    fontsize=9
+    fontsize=7
 )
 
 ax.spines['top'].set_visible(False)
@@ -289,7 +307,7 @@ ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
 
-output_path = os.path.join(results_dir, "combined_attributable_fraction_aacr.pdf")
+output_path = os.path.join(results_dir, "combined_attributable_fraction.novel_risk.pdf")
 
 plt.savefig(
     output_path,

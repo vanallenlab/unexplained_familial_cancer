@@ -1,7 +1,7 @@
 python3 saige_gene_supplemental.py --cancer breast --criteria "T1;T2" --max_AF 001 --genes BRAT1 --color "#FF6F61" --out breast.qq.pdf
 python3 saige_gene_supplemental.py --cancer thyroid --criteria "T1;T2;T3;T4" --max_AF 0001 --genes TSTD2 --color "#9EDAE5" --out null
 python3 saige_gene_supplemental.py --cancer lung --criteria "T1;T2;T3;T4" --max_AF 0001 --genes GSK3B --color "#2CA02C" --out null
-python3 saige_gene_supplemental.py --cancer lung_patient_and_family_prs --criteria "T1;T2;T3;T4;T5" --max_AF 001 --genes USP53,EVI2B --color "#2CA02C" --out null
+python3 saige_gene_supplemental.py --cancer lung_patient_and_family_prs --criteria "T1;T2;T3;T4;T5" --max_AF 001 --genes USP53 --color "#2CA02C" --out null
 python3 saige_gene_supplemental.py --cancer kidney --criteria "T1;T2" --max_AF 001 --genes ZNF346 --color "#98DF8A" --out null
 python3 saige_gene_supplemental.py --cancer kidney --criteria "T1;T2;T3" --max_AF 001 --genes ZNF346,OLFML2B --color "#98DF8A" --out null
 python3 saige_gene_supplemental.py --cancer breast_patient_and_family_prs --criteria "T1" --max_AF 0001 --genes CCDC27 --color "#FF6F61" --out null
@@ -12,3 +12,4 @@ python3 saige_gene_supplemental.py --cancer basal_cell --criteria "T1;T2;T3;T4;T
 python3 saige_gene_supplemental.py --cancer squamous_cell --criteria "T1" --max_AF 001 --genes FBXW8 --color "#A0522D" --out null
 python3 saige_gene_supplemental.py --cancer colorectal_patient_and_family_prs --criteria "T1;T2;T3" --max_AF 0001 --genes MYO1E,MLH3 --color "#17BECF" --out null
 python3 saige_gene_supplemental.py --cancer uterus --criteria "T1;T2;T3;T4;T5" --max_AF 001 --genes SERBP1 --color "#FFB6C1" --out null
+python3 saige_gene_supplemental.py --cancer neuroendocrine --criteria "T1" --max_AF 0001 --genes FBXO42 --color "#8CA252" --out null

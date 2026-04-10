@@ -130,7 +130,7 @@ for spine in ["left", "bottom"]:
 ax.set_xlabel(r"$log_{2}(OR)$ (cases vs. matched controls)", fontsize=7, fontweight="bold")
 ax.set_ylabel(r"$-\log_{10}(P)$", fontsize=7)
 ax.set_title(
-    "Enrichment of rare damaging variants in cancer type specific CPGs",
+    "Modest enrichment of rare variants in cancer-matched CPGs",
     fontsize=7,
     fontweight="bold"
 )
@@ -152,7 +152,8 @@ tier_handles = [
     )
     for t, a in tier_alpha.items()
 ]
-tier_labels = [t.replace("Tier0", "VUS") for t in tier_alpha.keys()]
+tier_labels = [t.replace("Tier0", "ClinVar VUS").replace("Tier2", "Splice-Disruptive").replace("Tier3", "pDMV").replace("Tier4", "pWDMV") for t in tier_alpha.keys()]
+
 tier_labels = [t for t in tier_labels if t != "VUS"] + ["VUS"]
 
 # legend1 = ax.legend(
@@ -166,12 +167,12 @@ tier_labels = [t for t in tier_labels if t != "VUS"] + ["VUS"]
 
 legend1 = ax.legend(
     tier_handles, tier_labels,
-    title="Tier Shade",
+    title="Variant Classification Shade",
     frameon=False,
     fontsize=7,
     title_fontsize=7,
     loc="upper left",                 # anchor point of the legend box
-    bbox_to_anchor=(0.8, 0.98)       # (x, y) in axes fraction coords
+    bbox_to_anchor=(0.6, 0.98)       # (x, y) in axes fraction coords
 )
 
 # 2) AF (size)
@@ -225,9 +226,10 @@ legend3 = ax.legend(
 )
 
 # Insert Text
-ax.text(-3.3, 1.5, "Sarcoma",fontfamily="Arial",fontsize=5)
+ax.text(-3.25, 1.4, "Sarcoma",fontfamily="Arial",fontsize=5)
 ax.text(3.15, 2.4, "Uterus",fontfamily="Arial",fontsize=5)
 ax.text(0.42, 1.57, "Familial\nColorectal",fontfamily="Arial",fontsize=5)
+ax.text(-0.6, 0.7, "Colorectal",fontfamily="Arial",fontsize=5)
 ax.text(1.38, 1.8, "NETs",fontfamily="Arial",fontsize=5)
 ax.text(3.8, 1.76, "Familial\nProstate",fontfamily="Arial",fontsize=5)
 ax.text(2.55, 1.37, "Prostate",fontfamily="Arial",fontsize=5)

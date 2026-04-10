@@ -182,7 +182,7 @@ for i in range(plot_idx, len(axes)):
 # -----------------------
 # Axis labels (one for all)
 # -----------------------
-fig.text(0.5, 0, "PGS (Z-score)", ha='center', fontsize=6, fontweight='bold')
+fig.text(0.5, 0, "PRS (Z-score)", ha='center', fontsize=6, fontweight='bold')
 fig.text(0.02, 0.55, "Density", va='center', rotation='vertical', fontsize=6, fontweight='bold')
 
 # -----------------------

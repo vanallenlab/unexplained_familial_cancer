@@ -160,7 +160,7 @@ sig_handle = plt.scatter(
     c="white",            # fill color (matches non-significant points if needed)
     edgecolor="blue",    # green edge indicates significance
     linewidth=1,        # thickness of green edge
-    label="P ≤ 0.05"
+    label="P < 0.05"
 )
 
 all_handles = size_handles + [sig_handle]

@@ -24,7 +24,8 @@ rename_map = {
     "Basal_Cell_Carcinoma": "BCC",
     "Squamous_Cell_Carcinoma": "SCC",
     "Non-Hodgkin": "NHL",
-    "control": "Control"
+    "control": "Control",
+    "Neuroendocrine": "NETs"
 }
 heat = heat.rename(columns=rename_map)
 
@@ -55,7 +56,7 @@ heat = heat[final_order]
 fig_width = max(4.5, len(heat.columns) * 0.18)  # slightly narrower
 fig_height = max(1.8, len(heat) * 0.35)
 
-plt.figure(figsize=(2.8, 1.75))
+plt.figure(figsize=(2.6, 1.6))
 
 ax = sns.heatmap(
     heat,
@@ -123,7 +124,7 @@ for gene, cancers in LITERATURE_PAIRS.items():
 # Legend
 # ----------------------------
 legend_elements = [
-    Patch(facecolor="#0D49E880", edgecolor="black", label="≥1 individual"),
+    Patch(facecolor="#0D49E880", edgecolor="black", label="≥1 individual carried a germline LoF SV impacting this gene"),
     Patch(facecolor="none", edgecolor="red", linewidth=1.2, label="COSMIC-associated pair"),
     Patch(facecolor="none", edgecolor="orange", linewidth=1.2, linestyle="--", label="Literature-associated pair")
 ]
@@ -135,12 +136,13 @@ legend_elements = [
 #     frameon=False,
 #     fontsize=5
 # )
-ax.legend(
-    handles=legend_elements,
-    bbox_to_anchor=(0.25, -0.4),
-    frameon=False,
-    fontsize=5
-)
+# ax.legend(
+#     handles=legend_elements,
+#     bbox_to_anchor=(0.25, -0.4),
+#     frameon=False,
+#     fontsize=5
+# )
+
 # ----------------------------
 # Axis formatting
 # ----------------------------

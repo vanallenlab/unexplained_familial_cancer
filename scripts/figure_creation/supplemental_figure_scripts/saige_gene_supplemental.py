@@ -63,14 +63,15 @@ def make_qq(df, highlight_genes, color, out, cancer, criteria, af):
             rank = (pvals <= p).sum()
             exp = -np.log10(rank/len(pvals))
 
-            ax.scatter(exp, obs, s=25)
+            ax.scatter(exp, obs, s=25,color="royalblue")
 
             ax.annotate(
                 row["#gene"],
                 xy=(exp, obs),
                 xytext=(exp+0.2, obs+0.2),
                 arrowprops=dict(arrowstyle="->", lw=0.8),
-                fontsize=7
+                fontsize=7,
+                fontstyle='italic'
             )
 
     ax.set_xlabel("Expected -log10(P)",fontsize=5)

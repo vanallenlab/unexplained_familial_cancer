@@ -192,7 +192,7 @@ for i, (g1, g2) in enumerate(pairs):
 # -------------------------------
 # Axes / labels
 # -------------------------------
-plt.ylabel(f"{cancer_type.replace('_'," ").title()} PGS", fontsize=BASE_FONTSIZE, labelpad=-1.3)
+plt.ylabel(f"{cancer_type.replace('_'," ").title()} PRS", fontsize=BASE_FONTSIZE, labelpad=-1.3)
 
 xtick_labels = [
     f"{groups[0]}\n(n={counts.get(groups[0],0)})",

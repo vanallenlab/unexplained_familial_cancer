@@ -220,6 +220,8 @@ for i, pc in enumerate(PATIENT_CANCERS):
         elif val <= 20:
             txt = "·"
             color = "black"
+        elif fc.lower() == "cervix" and val > 20:
+            txt = ">20"
         else:
             txt = str(val)
             color = "white" if val > 190 else "black"
