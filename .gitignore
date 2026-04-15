@@ -6,5 +6,7 @@ results/*
 
 # Ignore all images
 *.png
+**.png
 *.jpeg
 *.pdf
+**.pdf

@@ -7,54 +7,80 @@ version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 workflow ANALYSIS_1C_LOGISTIC_REGRESSION {
   input {
-    Array[String] cancer_type = ["basal_cell","bladder","breast","cervix","colorectal","lung","uterus","ovary","kidney","squamous_cell","melanoma","prostate","brain","neuroendocrine","sarcoma","non-hodgkin","hematologic","thyroid"]
-    Int ROH_length_threshold = 0
-    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/results/" 
+    Array[String] cancer_types = ["basal_cell","bladder","breast","cervix","colorectal","lung","uterus","ovary","kidney","squamous_cell","melanoma","prostate","brain","neuroendocrine","sarcoma","non-hodgkin","hematologic","thyroid"]
+    String sw_size = 100000
+    String roh_size = 100000
+    String output_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/results_apr14/" 
   }
-  File step_12_data = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
+  File analysis_1b_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/1B_ALL_BY_ALL/analysis_1b_output.jan9.sw_" + sw_size + ".roh_" + roh_size + "kb.tsv.gz.tsv.gz"
+
   Int negative_shards = 0
-  File analysis_1b_output = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_1_ROH/analysis_1b_output." + ~{ROH_length_threshold} + ".tsv.gz"
+
   call T1_split_file {
     input:
       file_to_split = analysis_1b_output,
       max_lines_per_chunk = 5000
   }
-  scatter (cancer_type in cancer_types){
+  scatter(cancer_type in cancer_types){
+    File step_12_data = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/analysis/" + cancer_type + "/" + cancer_type + ".metadata"
     scatter(i in range(length(T1_split_file.out1) - 0)){
-      call T2_RunLogisticRegression as T2 {
+      call T2_RunLogisticRegression {
         input:
           raw_roh_hwas = T1_split_file.out1[i],
           cancer_type = cancer_type,
           sample_data = step_12_data
       }
-      call T2_RunLogisticRegression as T2_euro{
-        input:
-          raw_roh_hwas = T1_split_file.out1[i],
-          cancer_type = cancer_type,
-          eur_only = "True",
-          sample_data = step_12_data
-      }
     }
-    call Tasks.concatenateFiles_noheader as concat1_euro {
+    call concatenateFiles_noheader {
       input:
-        files = T2_euro.out1,
-        callset_name = cancer_type + ".euro_roh_analysis"
+        files = T2_RunLogisticRegression.out1,
+        callset_name = cancer_type + ".sw_" + sw_size + ".roh_" + roh_size,
+        short_file_name = cancer_type + ".sw_" + sw_size + ".roh_" + roh_size + ".short"
     }
-    call Tasks.concatenateFiles_noheader as concat1 {
+    call Tasks.copy_file_to_storage as copy1{
       input:
-        files = T2.out1,
-        callset_name = cancer_type + ".roh_analysis"
-    }
-    call Tasks.copy_file_to_storage as copy{
-      input:
-        text_file = concat1.out1,
-        output_dir = output_dir
-    }
-    call Tasks.copy_file_to_storage as copy_euro{
-      input:
-        text_file = concat1_euro.out1,
+        text_file = concatenateFiles_noheader.out1,
         output_dir = output_dir 
     }
+    call Tasks.copy_file_to_storage as copy2{
+      input:
+        text_file = concatenateFiles_noheader.out2,
+        output_dir = output_dir
+    }
+  }
+}
+
+task concatenateFiles_noheader {
+  input {
+    Array[File] files
+    String callset_name = "out"
+    String short_file_name = "out"
+  }
+
+  command <<<
+  # Put Header Down
+  head -n 1 ~{files[0]} > ~{callset_name}.tsv
+  head -n 1 ~{files[0]} > ~{short_file_name}.tsv
+
+  # Add files
+  for f in ~{sep=" " files}; do
+    tail -n +2 "$f"
+  done >> tmp.tsv
+  sort -k4,4g tmp.tsv >>  ~{callset_name}.tsv
+  gzip -c ~{callset_name}.tsv > ~{callset_name}.tsv.gz
+
+  sort -k4,4g tmp.tsv | awk '$8 > 0' | head -n 50 >>  ~{short_file_name}.tsv
+  gzip -c ~{short_file_name}.tsv > ~{short_file_name}.tsv.gz
+  >>>
+
+  runtime {
+    docker: "ubuntu:latest"
+    preemptible: 3
+  }
+
+  output {
+    File out1 = "~{callset_name}.tsv.gz"
+    File out2 = "~{short_file_name}.tsv.gz"
   }
 }
 
@@ -105,7 +131,6 @@ task T1_split_file {
 task T2_RunLogisticRegression {
   input {
     File raw_roh_hwas
-    String eur_only = "False"
     String cancer_type
     File sample_data
   }
@@ -123,8 +148,7 @@ task T2_RunLogisticRegression {
   # ------------------------------------------------------------
   haplotype_df = pd.read_csv("~{raw_roh_hwas}", sep="\t", index_col=False)
   df = pd.read_csv("~{sample_data}", sep="\t")
-  if "~{eur_only}" == "True":
-      df = df[df['intake_qc_pop'] == "EUR"]
+  #df = df[df['intake_qc_pop'] == "EUR"]
 
   # Ensure original_id is string and stripped
   df["original_id"] = df["original_id"].astype(str).str.strip()
@@ -134,21 +158,42 @@ task T2_RunLogisticRegression {
   df["sex_binary"] = (df["inferred_sex"] != "female").astype(int)
 
   # ------------------------------------------------------------
-  # Prepare haplotype matrix
+  # Prepare haplotype matrix (DEDUPLICATE GENES PROPERLY)
   # ------------------------------------------------------------
-  hap_matrix = haplotype_df.drop(columns=['Genomic_Region'])
-  hap_matrix = hap_matrix.set_index('GeneName').T  # patients as rows, genes as columns
-  hap_matrix.index.name = 'original_id'
-  hap_matrix = hap_matrix.reset_index()  # make original_id a column
+
+  # Drop genomic region
+  hap_df = haplotype_df.drop(columns=["Genomic_Region"])
+
+  # Clean GeneName
+  hap_df["GeneName"] = hap_df["GeneName"].astype(str).str.strip()
+
+  # Convert all sample columns to numeric (everything except GeneName)
+  sample_cols = hap_df.columns.difference(["GeneName"])
+  hap_df[sample_cols] = hap_df[sample_cols].apply(pd.to_numeric, errors="coerce")
+
+  # Collapse multiple windows per gene (first ROH per gene. same but just some repeats)
+  hap_df = (
+      hap_df
+      .groupby("GeneName", as_index=False)
+      .first()
+  )
+
+  # Transpose: samples as rows, genes as columns
+  hap_matrix = hap_df.set_index("GeneName").T
+  hap_matrix.index.name = "original_id"
+
+  # Reset index so original_id is a column
+  hap_matrix = hap_matrix.reset_index()
   hap_matrix.columns.name = None
 
-  # Convert all gene columns to numeric
-  gene_cols = [c for c in hap_matrix.columns if c != 'original_id']
-  print(hap_matrix.shape)
-  hap_matrix[gene_cols] = hap_matrix[gene_cols].apply(pd.to_numeric, errors='coerce')
+  # Identify gene columns ONCE
+  gene_cols = hap_matrix.columns.difference(["original_id"])
 
-  # Strip whitespace from original_id
-  hap_matrix['original_id'] = hap_matrix['original_id'].astype(str).str.strip()
+  # Ensure gene columns are numeric (safe, no fragmentation)
+  hap_matrix[gene_cols] = hap_matrix[gene_cols].astype(float)
+
+  # Strip whitespace from IDs
+  hap_matrix["original_id"] = hap_matrix["original_id"].astype(str).str.strip()
 
   # ------------------------------------------------------------
   # Merge metadata with haplotypes
@@ -167,11 +212,12 @@ task T2_RunLogisticRegression {
 
   # Drop rows with missing covariates
   merged_df = merged_df.dropna(subset=covariates)
+  euro_merged_df = merged_df[merged_df['intake_qc_pop'] == "EUR"]
   # ------------------------------------------------------------
   # Logistic regression per haplotype (gene)
   # ------------------------------------------------------------
   results = []
-
+  """
   for gene in gene_cols:
       hap_values = merged_df[gene].astype(float)
 
@@ -181,7 +227,7 @@ task T2_RunLogisticRegression {
 
       # Build design matrix
       X = merged_df[covariates].copy()
-      X["roh_score"] = hap_values.values #(np.exp(5 * np.clip(hap_values.values, 0, 1)) - 1) / (np.exp(5) - 1)
+      X["roh_score"] = hap_values.values
       X = sm.add_constant(X)
       y = merged_df["is_case"]
 
@@ -204,7 +250,135 @@ task T2_RunLogisticRegression {
       except Exception:
           print(gene)
           continue
+  """
+  for gene in gene_cols:
+      hap_values = merged_df[gene].astype(float)
 
+      # Skip invariant haplotypes
+      if hap_values.nunique() <= 1:
+          continue
+
+      # Create binary RoH indicator (>0 = 1)
+      roh_binary = (hap_values > 0).astype(int)
+
+      # Skip if binary is invariant
+      if roh_binary.nunique() <= 1:
+          continue
+
+      y = merged_df["is_case"]
+
+      # =========================
+      # Model 1: Continuous RoH
+      # =========================
+      X_cont = merged_df[covariates].copy()
+      #X_cont["roh_score"] = hap_values.values
+      X_cont["roh_score"] = hap_values.values #(hap_values - hap_values.mean()) / hap_values.std()
+      X_cont = sm.add_constant(X_cont)
+
+      if X_cont.isnull().any().any() or np.isinf(X_cont.values).any():
+          continue
+
+      try:
+          model_cont = sm.Logit(y, X_cont)
+          result_cont = model_cont.fit(disp=0)
+
+          beta_roh_score = result_cont.params["roh_score"]
+          se_roh_score = result_cont.bse["roh_score"]
+          pval_roh_score = result_cont.pvalues["roh_score"]
+      except Exception:
+          print(f"Continuous failed: {gene}")
+          continue
+
+      # =========================
+      # Model 1A: Continuous RoH (EUR)
+      # =========================
+      X_cont = euro_merged_df[covariates].copy()
+      #X_cont["roh_score"] = hap_values.values
+      X_cont["roh_score"] = hap_values.values #(hap_values - hap_values.mean()) / hap_values.std()
+      X_cont = sm.add_constant(X_cont)
+
+      if X_cont.isnull().any().any() or np.isinf(X_cont.values).any():
+          continue
+
+      try:
+          model_cont = sm.Logit(y, X_cont)
+          result_cont = model_cont.fit(disp=0)
+
+          beta_roh_score_euro = result_cont.params["roh_score"]
+          se_roh_score_euro = result_cont.bse["roh_score"]
+          pval_roh_score_euro = result_cont.pvalues["roh_score"]
+      except Exception:
+          print(f"Continuous failed: {gene}")
+          continue
+
+      # =========================
+      # Model 2: Binary RoH
+      # =========================
+      X_bin = merged_df[covariates].copy()
+      X_bin["roh_binary"] = roh_binary.values
+      X_bin = sm.add_constant(X_bin)
+
+      if X_bin.isnull().any().any() or np.isinf(X_bin.values).any():
+          continue
+
+      try:
+          model_bin = sm.Logit(y, X_bin)
+          result_bin = model_bin.fit(disp=0)
+
+          beta_roh_binary = result_bin.params["roh_binary"]
+          se_roh_binary = result_bin.bse["roh_binary"]
+          pval_roh_binary = result_bin.pvalues["roh_binary"]
+      except Exception:
+          print(f"Binary failed: {gene}")
+          continue
+
+      # =========================
+      # Model 2A: Binary RoH (Euro)
+      # =========================
+      X_bin = merged_df_euro[covariates].copy()
+      X_bin["roh_binary"] = roh_binary.values
+      X_bin = sm.add_constant(X_bin)
+
+      if X_bin.isnull().any().any() or np.isinf(X_bin.values).any():
+          continue
+
+      try:
+          model_bin = sm.Logit(y, X_bin)
+          result_bin = model_bin.fit(disp=0)
+
+          beta_roh_binary_euro = result_bin.params["roh_binary"]
+          se_roh_binary_euro = result_bin.bse["roh_binary"]
+          pval_roh_binary_euro = result_bin.pvalues["roh_binary"]
+      except Exception:
+          print(f"Binary failed: {gene}")
+          continue
+
+      # =========================
+      # Store results
+      # =========================
+      results.append({
+          "haplotype": gene,
+
+          # Continuous
+          "beta_roh_score": beta_roh_score,
+          "se_beta_roh_score": se_roh_score,
+          "pvalue_roh_score": pval_roh_score,
+          "beta_roh_score_euro": beta_roh_score_euro,
+          "se_beta_roh_score_euro": se_roh_score_euro,
+          "pvalue_roh_score_euro": pval_roh_score_euro,
+          "mean_case_value": hap_values[y==1].mean(),
+          "mean_control_value": hap_values[y==0].mean(),
+
+          # Binary
+          "beta_roh_binary": beta_roh_binary,
+          "se_beta_roh_binary": se_roh_binary,
+          "pvalue_roh_binary": pval_roh_binary,
+          "beta_roh_binary_euro": beta_roh_binary_euro,
+          "se_beta_roh_binary_euro": se_roh_binary_euro,
+          "pvalue_roh_binary_euro": pval_roh_binary_euro,
+          "mean_case_binary": roh_binary[y==1].mean(),
+          "mean_control_binary": roh_binary[y==0].mean()
+      })
   # ------------------------------------------------------------
   # Save results
   # ------------------------------------------------------------

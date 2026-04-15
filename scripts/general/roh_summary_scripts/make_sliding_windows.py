@@ -155,8 +155,8 @@ def generate_sliding_windows(
 # Run if script called directly
 # =========================================================
 if __name__ == "__main__":
-    WINDOW_SIZE = 100_000   # 100 kb
+    WINDOW_SIZE = 1_000_000   # 100 kb
     STEP_SIZE = 50_000      # 50 kb
-    REGION_FILE = "reference_files/centromeres.txt"
+    REGION_FILE = "../reference_files/centromeres.txt"
 
     generate_sliding_windows(WINDOW_SIZE, STEP_SIZE, REGION_FILE, output_filename=f"genome_windows.{WINDOW_SIZE}bp.txt")

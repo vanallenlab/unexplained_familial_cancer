@@ -111,12 +111,12 @@ df["y_pos"] = df["Cancer"].cat.codes
 # -----------------------
 # Significance
 # -----------------------
-sig = (df["p_value"] <= 0.05) & (df["OR"] > 1)
+sig = (df["p_value"] < 0.05) & (df["OR"] > 1.39)
 
 # -----------------------
 # Plot
 # -----------------------
-fig, ax = plt.subplots(figsize=(3.5, 2.3))
+fig, ax = plt.subplots(figsize=(3.6, 2.5))
 
 sc = ax.scatter(
     df["x_pos"],
@@ -160,10 +160,20 @@ sig_handle = plt.scatter(
     c="white",            # fill color (matches non-significant points if needed)
     edgecolor="blue",    # green edge indicates significance
     linewidth=1,        # thickness of green edge
-    label="P < 0.05"
+    label=" "
+    #label="P < 0.05 & OR > 1.39"
 )
 
-all_handles = size_handles + [sig_handle]
+sig_handle2 = plt.scatter(
+    [], [], 
+    s=0,
+    c="white",
+    edgecolor="none",    
+    linewidth=0,
+    label="P < 2 x 10$^{-4}$"
+)
+
+all_handles = size_handles + [sig_handle2,sig_handle]
 
 plt.legend(
     handles=all_handles,

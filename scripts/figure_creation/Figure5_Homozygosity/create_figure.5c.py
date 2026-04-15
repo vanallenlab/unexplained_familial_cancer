@@ -216,8 +216,8 @@ pval = 0.1 + (-np.log10(0.811517764065727))/4 * 0.2
 plt.plot([32507820,32547820], [pval, pval], color='black', lw=3,solid_capstyle='round')
 ax.text(32537820, pval - 0.02, "SYN3", color="black",fontstyle="italic", fontsize=7)
 
-ax.text(32010001, 0.42, "P = 1.38 x 10 $^{-6}$", color="black", fontsize=7)
-ax.text(32010001, 0.4, "OR = 9.29", color="black", fontsize=7)
+ax.text(32010001, 0.42, "P = 1.12 x 10 $^{-6}$", color="black", fontsize=7)
+ax.text(32010001, 0.4, "OR = 9.22", color="black", fontsize=7)
 
 ax.annotate(
     "",

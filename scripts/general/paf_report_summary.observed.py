@@ -22,7 +22,7 @@ novel_variance = []  # final - PGS/Tier
 tier_cancers = ["sarcoma", "neuroendocrine"]
 
 # cancers for "novel variance"
-novel_cancers = ["neuroendocrine", "thyroid", "kidney", "breast", "bladder", "cervix", "lung"]
+novel_cancers = ["neuroendocrine", "thyroid", "kidney", "breast", "bladder", "cervix"]
 
 # ----------------------------
 # Helper

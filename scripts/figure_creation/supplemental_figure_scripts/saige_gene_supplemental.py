@@ -49,7 +49,8 @@ def make_qq(df, highlight_genes, color, out, cancer, criteria, af):
 
     maxv = max(expected.max(), observed.max())
     ax.plot([0, maxv], [0, maxv], linestyle="--", linewidth=1)
-
+    ax.axhline(y=-np.log10(2.69e-6), linestyle="--", linewidth=1, color="red")
+    ax.text(-0.25, -np.log10(2.69e-6) - 0.4, "Genome-wide significance", color="red", fontsize=5, va="bottom")
     # Highlight genes
     if highlight_genes:
         sub = df[df["#gene"].isin(highlight_genes)]
@@ -77,14 +78,14 @@ def make_qq(df, highlight_genes, color, out, cancer, criteria, af):
     ax.set_xlabel("Expected -log10(P)",fontsize=5)
     ax.set_ylabel("Observed -log10(P)",fontsize=5)
     ax.tick_params(axis='both', labelsize=5)
-    ax.set_title(f"{cancer.capitalize().replace("_patient_and_family_prs", " Familial").replace("_cell", " Cell")} {criteria.split(';')[0]}-{criteria.split(';')[-1].replace("T1-T1","T1")} (AF<{float(af) * 100}%)",fontsize=7)
+    ax.set_title(f"{cancer.capitalize().replace("_patient_and_family_prs", " wtih 2+ FDRs").replace("_cell", " Cell")} {criteria.split(';')[0]}-{criteria.split(';')[-1].replace("T1-T1","T1")} (AF<{float(af) * 100}%)",fontsize=7)
 
     # Remove top/right spines
     plt.gca().spines["top"].set_visible(False)
     plt.gca().spines["right"].set_visible(False)
 
     plt.tight_layout()
-    plt.savefig(f"/Users/noah/Desktop/ufc_repository/results/supplementary_figures/saige_supplement/{cancer}.{criteria.split(';')[-1]}.{af}.png",dpi=300,pad_inches=0,bbox_inches="tight")
+    plt.savefig(f"/Users/noah/Desktop/ufc_repository/results/supplementary_figures/saige_supplement/{cancer}.{criteria.split(';')[-1]}.{af}.pdf",dpi=300,pad_inches=0,bbox_inches="tight")
     plt.close()
 
 
