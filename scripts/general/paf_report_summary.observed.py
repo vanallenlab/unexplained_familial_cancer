@@ -22,7 +22,7 @@ novel_variance = []  # final - PGS/Tier
 tier_cancers = ["sarcoma", "neuroendocrine"]
 
 # cancers for "novel variance"
-novel_cancers = ["neuroendocrine", "thyroid", "kidney", "breast", "bladder", "cervix"]
+novel_cancers = ["thyroid", "kidney", "breast", "bladder"]
 
 # ----------------------------
 # Helper
@@ -60,7 +60,7 @@ for f in glob.glob(pattern):
         continue
     
     df = pd.read_csv(f, sep="\t")
-    df = df[df["prevalence_model"] == "observed"].reset_index(drop=True)
+    df = df[df["prevalence_model"] == "seer_fh_adjusted"].reset_index(drop=True)
     
     if df.empty:
         continue
@@ -111,7 +111,7 @@ for f in glob.glob(pattern):
 # Reporting
 # ----------------------------
 report(baseline_r2, "Baseline R2_reduced")
-report(selected_r2_full, "Added variance explained by PGS and ")
+report(selected_r2_full, "Added variance explained by PGS and rare coding variants in CPGs")
 report_mean(delta_prev_model, "Delta vs previous model (PGS only)")
 report(novel_variance, "Added variance from novel risk factors")
 
@@ -136,10 +136,10 @@ def add_summary(values, name):
             "median": np.median(values)
         })
 
-# add_summary(baseline_r2, "Baseline R2_reduced")
-# add_summary(selected_r2_full, "Selected R2_full (PGS/Tier)")
-# add_summary(delta_prev_model, "Delta vs previous model (PGS only)")
-# add_summary(novel_variance, "Novel variance explained")
+add_summary(baseline_r2, "Baseline R2_reduced")
+add_summary(selected_r2_full, "Selected R2_full (PGS/Tier)")
+add_summary(delta_prev_model, "Delta vs previous model (PGS only)")
+add_summary(novel_variance, "Novel variance explained")
 
 # summary_df = pd.DataFrame(summary_rows)
 

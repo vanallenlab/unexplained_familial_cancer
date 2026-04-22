@@ -45,10 +45,8 @@ FDR_Q = 0.1
 
 # ----- Files to process -----
 roh_files = [
-    "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/roh_results/bladder.sw_100000.roh_50000.tsv.gz",
-    "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/roh_results/cervix.sw_250000.roh_10000.tsv.gz",
-    "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/roh_results/neuroendocrine.sw_500000.roh_100000.tsv.gz",
-    "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/roh_results/neuroendocrine.sw_250000.roh_100000.tsv.gz",
+    "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/roh_results/bladder.sw_100000.roh_500000.tsv.gz",
+    "/Users/noah/Desktop/ufc_repository/results/analysis_1_roh/roh_results/thyroid.sw_250000.roh_500000.tsv.gz",
 ]
 
 # ----- Process each file -----

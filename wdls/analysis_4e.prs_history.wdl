@@ -7,13 +7,13 @@ version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 workflow ANALYSIS_4E_PRS_HISTORY {
   input {
-    Array[String] ufc_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","leukemia","lung","lung","lung","lung","melanoma","melanoma","melanoma","non-hodgkins","non-hodgkins","ovary","ovary","ovary","ovary","pancreas","pancreas","pancreas","prostate","prostate","prostate","prostate","thyroid","brain"]
-    Array[String] aou_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","blood_soft_tissue","lung","lung","lung","lung","skin","skin","skin","blood_soft_tissue","blood_soft_tissue","ovary","ovary","ovary","ovary","pancreas","pancreas","pancreas","prostate","prostate","prostate","prostate","thyroid","brain"]
-    Array[String] PGS_IDS = ["PGS000783","PGS003380","PGS004242","PGS004688","PGS004241","PGS000782","PGS004687","PGS000784","PGS003389","PGS000785","PGS003386","PGS004243","PGS004689","PGS000786","PGS003381","PGS004244","PGS000787","PGS004690","PGS004245","PGS000788","PGS000789","PGS003391","PGS004246","PGS004691","PGS000790","PGS003382","PGS004247","PGS000791","PGS004248","PGS000793","PGS003385","PGS004249","PGS004692","PGS000794","PGS004250","PGS004693","PGS000795","PGS003383","PGS004251","PGS004694","PGS000797","PGS003384"]
+    Array[String] ufc_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","hematologic","lung","lung","lung","lung","melanoma","melanoma","melanoma","non-hodgkin","non-hodgkin","ovary","ovary","ovary","ovary","prostate","prostate","prostate","prostate","thyroid","brain","basal_cell","basal_cell","basal_cell","squamous_cell","squamous_cell","squamous_cell"]
+    Array[String] aou_cancer_type = ["breast","breast","breast","breast","bladder","bladder","bladder","cervix","cervix","colorectal","colorectal","colorectal","colorectal","uterus","uterus","uterus","kidney","kidney","kidney","blood_soft_tissue","lung","lung","lung","lung","skin","skin","skin","blood_soft_tissue","blood_soft_tissue","ovary","ovary","ovary","ovary","prostate","prostate","prostate","prostate","thyroid","brain","skin","skin","skin","skin","skin","skin"]
+    Array[String] PGS_IDS = ["PGS000783","PGS003380","PGS004242","PGS004688","PGS004241","PGS000782","PGS004687","PGS000784","PGS003389","PGS000785","PGS003386","PGS004243","PGS004689","PGS000786","PGS003381","PGS004244","PGS000787","PGS004690","PGS004245","PGS000788","PGS000789","PGS003391","PGS004246","PGS004691","PGS000790","PGS003382","PGS004247","PGS000791","PGS004248","PGS000793","PGS003385","PGS004249","PGS004692","PGS000795","PGS003383","PGS004251","PGS004694","PGS000797","PGS003384","PGS000790","PGS003382","PGS004247","PGS000790","PGS003382","PGS004247"]
     File analysis_4_dir = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/ANALYSIS_4_PRS/"
     File google_bucket = "gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/"
   }
-  Int negative_shards = 41
+  Int negative_shards = 0
   scatter(i in range(length(PGS_IDS) - negative_shards)){
     File metadata = google_bucket + "UFC_REFERENCE_FILES/analysis/" + aou_cancer_type[i] + "_family/" + aou_cancer_type[i] + "_family.metadata" 
     File prs_file = analysis_4_dir  + PGS_IDS[i] + ".raw.pgs"
@@ -29,7 +29,7 @@ workflow ANALYSIS_4E_PRS_HISTORY {
     call Tasks.copy_file_to_storage {
       input:
         text_file = T1_analyze_history_and_regress.out1,
-        output_dir = analysis_4_dir + "FAMILIAL_4E/"
+        output_dir = analysis_4_dir + "4e_prs_results/"
     }
   }
 

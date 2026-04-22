@@ -10,3 +10,16 @@ results/*
 *.jpeg
 *.pdf
 **.pdf
+
+# Cancer Ontology Drafts
+yamls/anti_cancer_ontology.v6.yaml
+yamls/cancer_ontology.v2.yaml
+yamls/cancer_ontology.v3.yaml
+yamls/cancer_ontology.v4.yaml
+yamls/cancer_ontology.v5.yaml
+yamls/cancer_ontology.v6.yaml
+yamls/cancer_ontology.yaml
+yamls/cosmic_ufc.tsv
+yamls/cosmic_ufc.v2.tsv
+yamls/cosmic_ufc.v3.tsv
+yamls/cosmic_ufc.v4.tsv

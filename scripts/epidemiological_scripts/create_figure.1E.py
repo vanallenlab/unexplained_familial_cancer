@@ -152,22 +152,22 @@ ax.yaxis.set_ticks_position("left")
 ax.xaxis.set_ticks_position("bottom")
 #####
 
-ax.text(1.1,6.45,"Breast",fontsize=5,fontfamily="Arial")
+ax.text(1.1,6.45,"Breast Dx & FHx\n(Breast)",fontsize=5,fontfamily="Arial")
 ax.text(0.95,5.95,"BCC",fontsize=5,fontfamily="Arial")
-ax.text(1.0,5.25,"Prostate",fontsize=5,fontfamily="Arial")
+ax.text(0.25,5.3,"Prostate",fontsize=5,fontfamily="Arial")
 ax.text(1.5,5.35,"Lung",fontsize=5,fontfamily="Arial")
 ax.text(1.3,3.3,"Colorectal",fontsize=5,fontfamily="Arial")
 ax.text(0.98,2.7,"Melanoma",fontsize=5,fontfamily="Arial")
 ax.text(0.40,2.25,"SCC",fontsize=5,fontfamily="Arial")
 ax.text(1.65,2.3,"Kidney",fontsize=5,fontfamily="Arial")
 ax.text(1.1,2.22,"NHL",fontsize=5,fontfamily="Arial")
-ax.text(0.34,1.8,"Hematologic",fontsize=5,fontfamily="Arial")
+ax.text(0.27,1.8,"Hematologic",fontsize=5,fontfamily="Arial")
 ax.text(1.22,1.03,"Ovary",fontsize=5,fontfamily="Arial")
 ax.text(0.82,0.4,"Cervix",fontsize=5,fontfamily="Arial")
 ax.text(0.53,0.07,"Bladder",fontsize=5,fontfamily="Arial")
 ax.text(1.28,1.85,"Thyroid",fontsize=5,fontfamily="Arial")
 
-ax.text(-1.1,5,"Breast-Skin",fontsize=5,fontfamily="Arial",color="gray")
+ax.text(-1.1,4.7,"Breast Dx &\nSkin FHx",fontsize=5,fontfamily="Arial",color="gray")
 plt.tight_layout(pad=0.0)
 
 # ------------------------------------------------------------

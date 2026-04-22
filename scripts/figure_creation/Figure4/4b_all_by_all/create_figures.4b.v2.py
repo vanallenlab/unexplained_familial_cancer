@@ -111,7 +111,7 @@ df["y_pos"] = df["Cancer"].cat.codes
 # -----------------------
 # Significance
 # -----------------------
-sig = (df["p_value"] < 0.05) & (df["OR"] > 1.39)
+sig = (df["p_value"] < 0.05) & (df["OR"] > 1.4)
 
 # -----------------------
 # Plot
