@@ -188,7 +188,7 @@ af_handles = [
     )
     for af, s in af_sizes.items()
 ]
-af_labels = [f"AF ≤ {af * 100}%" for af in af_sizes.keys()]
+af_labels = [f"AF < {af * 100}%" for af in af_sizes.keys()]
 # legend2 = ax.legend(
 #     af_handles, af_labels,
 #     title="Allele Frequency",

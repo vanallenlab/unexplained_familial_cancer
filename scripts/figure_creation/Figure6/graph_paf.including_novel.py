@@ -9,7 +9,7 @@ import numpy as np
 results_dir = "/Users/noah/Desktop/ufc_repository/results/paf_results"
 
 cancer_order = [
-'Kidney','Neuroendocrine','Breast_Patient_and_Family_one','Breast','Cervix','Bladder','Thyroid'
+'Kidney','Breast_Patient_and_Family_one','Thyroid','Breast','Bladder'
 ]
 
 # -----------------------------
@@ -127,7 +127,7 @@ for i, cancer in enumerate(cancer_order):
         # -----------------------------
         # Labeling
         # -----------------------------
-        if row["color"] == "orange" and width > 0.008:
+        if row["color"] == "orange" and width > 0.011:
 
             label = row["added_predictor"].split("_")[0]
 
@@ -139,7 +139,7 @@ for i, cancer in enumerate(cancer_order):
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
-                fontsize=5,
+                fontsize=7,
                 fontfamily="Arial"
             )
 
@@ -155,11 +155,11 @@ for i, cancer in enumerate(cancer_order):
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
-                fontsize=5,
+                fontsize=7,
                 fontfamily="Arial"
             )
 
-        if row["color"] == "lightblue" and width > 0.015:
+        if row["color"] == "lightblue" and width > 0.04:
             roh_region = row["added_predictor"].split('_')[0] + ":" + row["added_predictor"].split('_')[1] + "-" + row["added_predictor"].split('_')[2]
             ax.text(
                 left + width/2,
@@ -169,7 +169,7 @@ for i, cancer in enumerate(cancer_order):
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
-                fontsize=5,
+                fontsize=7,
                 fontfamily="Arial"
             )
 
@@ -183,7 +183,7 @@ for i, cancer in enumerate(cancer_order):
                 va="center",
                 fontweight="bold",
                 fontstyle="italic",
-                fontsize=5,
+                fontsize=8,
                 fontfamily="Arial"
             )
 

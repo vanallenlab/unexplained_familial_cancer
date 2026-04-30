@@ -100,14 +100,26 @@ pairs = [
 ]
 
 p_values, or_values = {}, {}
+# for g1, g2 in pairs:
+#     x1 = df.loc[df.group == g1, "PGS"]
+#     x2 = df.loc[df.group == g2, "PGS"]
+#     stat, p2 = ttest_ind(x1, x2, equal_var=False)
+#     p1 = p2 / 2 if x1.mean() < x2.mean() else 1 - p2 / 2
+#     p_values[(g1, g2)] = p1
+#     d = cohen_d(x1, x2)
+#     or_values[(g1, g2)] = np.exp(d * np.pi / np.sqrt(3))
+
+from scipy.stats import ttest_ind, t
+
 for g1, g2 in pairs:
+    #print(g1,g2)
     x1 = df.loc[df.group == g1, "PGS"]
     x2 = df.loc[df.group == g2, "PGS"]
-    stat, p2 = ttest_ind(x1, x2, equal_var=False)
-    p1 = p2 / 2 if x1.mean() < x2.mean() else 1 - p2 / 2
-    p_values[(g1, g2)] = p1
-    d = cohen_d(x1, x2)
-    or_values[(g1, g2)] = np.exp(d * np.pi / np.sqrt(3))
+
+    stat, pval = ttest_ind(x1, x2, equal_var=True,alternative='less')
+
+    p_values[(g1, g2)] = pval
+    or_values[(g1, g2)] = 1
 
 # -------------------------------
 # Plot
@@ -230,4 +242,4 @@ with open(stats_file, "w") as f:
     f.write(summary.to_string() + "\n\n")
     f.write("# Pairwise comparisons\n")
     for (g1, g2), p in p_values.items():
-        f.write(f"{g1} vs {g2}:\tp={p:.3e}\tOR≈{or_values[(g1,g2)]:.3f}\n")
+        f.write(f"{g1} vs {g2}:\tp={p:.3e}\n")

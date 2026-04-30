@@ -71,7 +71,6 @@ def cohen_d(x1, x2):
 # -------------------------------
 input_file = sys.argv[1]
 base = os.path.splitext(os.path.basename(input_file))[0]
-
 out_root = "/Users/noah/Desktop/ufc_repository/results/analysis_4e_results"
 png_file = f"{out_root}/pngs/{base}.results.png"
 pdf_file = f"{out_root}/pngs/{base}.results.pdf"
@@ -113,12 +112,13 @@ for g1, g2 in pairs:
     x1 = df.loc[df.group == g1, "PGS"]
     x2 = df.loc[df.group == g2, "PGS"]
 
-    _, p2 = ttest_ind(x1, x2, equal_var=False)
-    p1 = p2 / 2 if x1.mean() < x2.mean() else 1 - p2 / 2
-    p_values[(g1, g2)] = p1
+    # _, p2 = ttest_ind(x1, x2, equal_var=False)
+    # p1 = p2 / 2 if x1.mean() < x2.mean() else 1 - p2 / 2
+    stat, pval = ttest_ind(x1, x2, equal_var=True,alternative='less')
+    p_values[(g1, g2)] = pval
 
-    d = cohen_d(x1, x2)
-    or_values[(g1, g2)] = np.exp(d * np.pi / np.sqrt(3))
+    #d = cohen_d(x1, x2)
+    #or_values[(g1, g2)] = np.exp(d * np.pi / np.sqrt(3))
 
 # -------------------------------
 # Plot
@@ -238,7 +238,7 @@ ax.set_ylim(
 
 # Save
 plt.savefig(pdf_file, facecolor="white", edgecolor="white")
-plt.savefig(png_file, facecolor="white", edgecolor="white", dpi=300)
+#plt.savefig(png_file, facecolor="white", edgecolor="white", dpi=300)
 plt.close()
 
 # -------------------------------
@@ -250,4 +250,4 @@ with open(stats_file, "w") as f:
     f.write(summary.to_string() + "\n\n")
     f.write("# Pairwise comparisons\n")
     for (g1, g2), p in p_values.items():
-        f.write(f"{g1} vs {g2}:\tp={p:.3e}\tOR≈{or_values[(g1,g2)]:.3f}\n")
+        f.write(f"{g1} vs {g2}:\tp={p:.3e}\n")

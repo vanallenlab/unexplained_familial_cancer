@@ -63,19 +63,20 @@ y_i = tail(mu_i, sd_i)
 fig, ax = plt.subplots(figsize=(3.2, 2.5))
 
 # curves
-ax.plot(x, y_f, color="#b24e44", lw=1.6)
-ax.plot(x, y_c, color="#B0B0B0", lw=1.6)
-ax.plot(x, y_i, color="#FF6F61", lw=1.6)
+ax.plot(x, y_f, color="#b24e44", lw=1.6, label="Breast Dx, Breast FHx +")
+ax.plot(x, y_i, color="#FF6F61", lw=1.6, label="Breast Dx, Breast FHx -")
+ax.plot(x, y_c, color="#B0B0B0", lw=1.6, label="Control")
 
-# points
-ax.scatter(df_brca["SD_for_gene"], df_brca["familial_pct"],
-           label="Breast Dx, Breast FHx +", s=12, color="#b24e44", zorder=3)
 
-ax.scatter(df_brca["SD_for_gene"], df_brca["isolated_pct"],
-           label="Breast Dx, Breast FHx -", s=12, color="#FF6F61", zorder=3)
+# poincts
+# ax.scatter(df_brca["SD_for_gene"], df_brca["familial_pct"],
+#            label="Breast Dx, Breast FHx +", s=12, color="#b24e44", zorder=3)
 
-ax.scatter(df_brca["SD_for_gene"], df_brca["control_pct"],
-           label="Control", s=12, color="#B0B0B0", zorder=3)
+# ax.scatter(df_brca["SD_for_gene"], df_brca["isolated_pct"],
+#            label="Breast Dx, Breast FHx -", s=12, color="#FF6F61", zorder=3)
+
+# ax.scatter(df_brca["SD_for_gene"], df_brca["control_pct"],
+#            label="Control", s=12, color="#B0B0B0", zorder=3)
 
 # -----------------------
 # Axes
