@@ -52,18 +52,18 @@ pgs_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_4a_prs/")
 cancer_configs = {
     "breast": ["PGS004688"],
     "cervix": ["PGS000784"],
-    "colorectal": ["PGS000785"],
-    "kidney": ["PGS000787"],
-    "melanoma": ["PGS003382"],
-    "non-hodgkin": ["PGS000791"],
     "prostate": ["PGS004694"],
-    "thyroid": ["PGS000797"],
     "hematologic":["PGS000788"],
+    "melanoma": ["PGS003382"],
     "lung":["PGS000789"],
-    "ovary":["PGS000793"],
-    "uterus": ["PGS004244"],
+    "thyroid": ["PGS000797"],
     "brain": ["PGS003384"],
-    "bladder":["PGS004687"]
+    "colorectal": ["PGS000785"],
+    "uterus": ["PGS004244"],
+    "non-hodgkin": ["PGS000791"],
+    "bladder":["PGS004687"],
+    "kidney": ["PGS000787"],
+    "ovary":["PGS000793"]   
 }
 
 # -----------------------
