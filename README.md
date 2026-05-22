@@ -2,7 +2,7 @@
 
 ## Variant Calling from germline whole-genome sequencing (WGS) across cancer types
 
-Copyright (c) 2023-Present, Noah Fields, Ryan L. Collins, and the ['Van Allen'](https://labs.dana-farber.org/vanallenlab/) and ['Collins Genomics'](https://labs.dana-farber.org/collins-genomics/) laboratories at Dana-Farber Cancer Institute.
+Copyright (c) 2023-Present, Noah Fields, Ryan L. Collins, and the [Van Allen](https://labs.dana-farber.org/vanallenlab/) and [Collins Genomics](https://labs.dana-farber.org/collins-genomics/) laboratories at Dana-Farber Cancer Institute.
 Distributed under terms of the GNU GPL v2.0 License (see LICENSE).
 
 **Note: this repository is under active development. More documentation will be added as the project evolves.**
