@@ -15,7 +15,7 @@ runs = [
 sv_file = "ufc.rare_svs.tsv.gz"
 riaz_genes_file = "riaz_genes.list"
 pheno_file = "dfci-ufc.aou.phenos.v2.tsv.gz"
-exclude_file = "samples_to_exclude.jan29.list"
+exclude_file = "samples_to_exclude.march4.list"
 qc_file = "all_samples_in_ufc_sv.qc_pass.list"
 
 # Load gene list
@@ -74,7 +74,7 @@ def process_sv(df, AF, AC=None):
     return final
 
 # -----------------------------
-# Function to merge and do Fisher
+# Function to merge and do Fisher on pancancer UFC-cohort
 # -----------------------------
 def fisher_analysis(sv_final, pheno):
     sv_final["original_id"] = sv_final["original_id"].astype(str)

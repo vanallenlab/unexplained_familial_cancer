@@ -24,5 +24,6 @@ yamls/cosmic_ufc.v2.tsv
 yamls/cosmic_ufc.v3.tsv
 yamls/cosmic_ufc.v4.tsv
 
-#All medRxiv drafts
+#Remove certain folders
 zxiv_submission/
+scripts/reference_files/

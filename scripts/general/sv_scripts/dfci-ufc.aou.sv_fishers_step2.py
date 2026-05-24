@@ -11,9 +11,11 @@ sv_files = {
     "singleton": "dfci-ufc.aou.sv_lof.singleton.tsv"
 }
 
+# Go into each individual metadata (already filtered to the 2,726 samples in use)
 metadata_dir = Path("metadatas/")
 metadata_files = list(metadata_dir.glob("*.metadata"))
 
+# Planning to filter down to the 2,695 individuls with SV calls
 qc_file = "all_samples_in_ufc_sv.qc_pass.list"
 qc_pass = pd.read_csv(qc_file, header=None)[0].astype(str)
 
