@@ -25,5 +25,6 @@ yamls/cosmic_ufc.v3.tsv
 yamls/cosmic_ufc.v4.tsv
 
 #Remove certain folders
-zxiv_submission/
+might_need_scripts/
 scripts/reference_files/
+jupyter

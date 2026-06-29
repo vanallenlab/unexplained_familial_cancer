@@ -45,6 +45,7 @@ def fisher_stats(df, cohort_name, sv_type):
     table = [[a, b], [c, d]]
     odds_ratio, p_value = fisher_exact(table)
 
+    ### CI is not being reported at the moment, so this continuity correction for CI is not a problem (at the moment)###
     # Add 0.5 continuity correction if any cell is zero
     if 0 in [a, b, c, d]:
         a += 0.5
