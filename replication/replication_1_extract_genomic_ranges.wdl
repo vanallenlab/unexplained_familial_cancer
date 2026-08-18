@@ -50,6 +50,9 @@ task T1_Find_Gene_Ranges {
 		Int? SNP_buffer
 	}
 	String output_file = "~{project_name}.genomic_intervals.bed"
+	Array[String] SNPs_to_use = select_first([SNPs, []])
+	Array[String] SNP_names_to_use = select_first([SNP_names, []])
+	Array[String] SNP_buffer_to_use = select_first([SNP_buffer, 0])
 
 	command <<<
 	set -euxo pipefail
@@ -75,17 +78,17 @@ task T1_Find_Gene_Ranges {
 	done
 
 	# Loop through all SNPs in a list
-	if [[ ~{length(SNPs)} -gt 0 ]]; then
+	if [[ ~{length(SNPs_to_use)} -gt 0 ]]; then
 
 		i=0
-		for snp in ~{sep=' ' SNPs}; do
+		for snp in ~{sep=' ' SNPs_to_use}; do
 			chrom=$(echo "$snp" | cut -d: -f1)
 			pos=$(echo "$snp" | cut -d: -f2)
 
-			min=$((pos - SNP_buffer))
-			max=$((pos + SNP_buffer))
+			min=$((pos - SNP_buffer_to_use))
+			max=$((pos + SNP_buffer_to_use))
 
-			name=$(echo "~{sep=' ' SNP_names}" | cut -d' ' -f$((i + 1)))
+			name=$(echo "~{sep=' ' SNP_names_to_use}" | cut -d' ' -f$((i + 1)))
 
 			echo -e "$chrom\t$min\t$max\t$name" >> ~{output_file}
 
