@@ -52,7 +52,7 @@ task T1_Find_Gene_Ranges {
 	String output_file = "~{project_name}.genomic_intervals.bed"
 	Array[String] SNPs_to_use = select_first([SNPs, []])
 	Array[String] SNP_names_to_use = select_first([SNP_names, []])
-	Array[String] SNP_buffer_to_use = select_first([SNP_buffer, 0])
+	Int SNP_buffer_to_use = select_first([SNP_buffer, 0])
 
 	command <<<
 	set -euxo pipefail
