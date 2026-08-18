@@ -62,7 +62,7 @@ task T1_Find_Gene_Ranges {
 			$3 == "gene" {
 				n = split($9, attrs, ";")
 				for (i = 1; i <= n; i++) {
-		            if (attrs[i] ~ /^[[:space:]]*gene_name[[:space:]]/) {
+					if (attrs[i] ~ /^[[:space:]]*gene_name[[:space:]]/) {
 						gsub(/^[[:space:]]*gene_name[[:space:]]*"/, "", attrs[i])
 						gsub(/"[[:space:]]*$/, "", attrs[i])
 						if (attrs[i] == gene) {
@@ -71,7 +71,7 @@ task T1_Find_Gene_Ranges {
 					}
 				}
 			}
-		' MANE.GRCh38.gtf >> ~{output_file}
+	' MANE.GRCh38.gtf >> ~{output_file}
 	done
 
 	# Loop through all SNPs in a list
