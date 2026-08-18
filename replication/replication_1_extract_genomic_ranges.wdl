@@ -16,7 +16,7 @@ workflow REPLICATION_1_EXTRACT_GENOMIC_RANGES {
 		Array[String] Genes
 		Int Gene_Buffer
 		Array[String] SNPs
-		Array[String] SNP_name
+		Array[String] SNP_names
 		String SNP_buffer
 
 		String project_name
