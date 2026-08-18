@@ -58,39 +58,39 @@ task T1_Find_Gene_Ranges {
 
 	# Loop through all of the genes in a list to find relevant genomic ranges
 	for gene in ~{sep=' ' Genes}; do
-	    awk -v gene="$gene" '
-	        $3 == "gene" {
-	            n = split($9, attrs, ";")
-	            for (i = 1; i <= n; i++) {
-	                if (attrs[i] ~ /^[[:space:]]*gene_name[[:space:]]/) {
-	                    gsub(/^[[:space:]]*gene_name[[:space:]]*"/, "", attrs[i])
-	                    gsub(/"[[:space:]]*$/, "", attrs[i])
-	                    if (attrs[i] == gene) {
-	                        print $1 "\t" ($4 - 1) "\t" $5 "\t" gene
-	                    }
-	                }
-	            }
-	        }
-	    ' MANE.GRCh38.gtf >> ~{output_file}
+		awk -v gene="$gene" '
+			$3 == "gene" {
+				n = split($9, attrs, ";")
+				for (i = 1; i <= n; i++) {
+		            if (attrs[i] ~ /^[[:space:]]*gene_name[[:space:]]/) {
+						gsub(/^[[:space:]]*gene_name[[:space:]]*"/, "", attrs[i])
+						gsub(/"[[:space:]]*$/, "", attrs[i])
+						if (attrs[i] == gene) {
+							print $1 "\t" ($4 - 1) "\t" $5 "\t" gene
+						}
+					}
+				}
+			}
+		' MANE.GRCh38.gtf >> ~{output_file}
 	done
 
 	# Loop through all SNPs in a list
 	if [[ ~{length(SNPs)} -gt 0 ]]; then
 
-	    i=0
-	    for snp in ~{sep=' ' SNPs}; do
-	        chrom=$(echo "$snp" | cut -d: -f1)
-	        pos=$(echo "$snp" | cut -d: -f2)
+		i=0
+		for snp in ~{sep=' ' SNPs}; do
+			chrom=$(echo "$snp" | cut -d: -f1)
+			pos=$(echo "$snp" | cut -d: -f2)
 
-	        min=$((pos - SNP_buffer))
-	        max=$((pos + SNP_buffer))
+			min=$((pos - SNP_buffer))
+			max=$((pos + SNP_buffer))
 
-	        name=$(echo "~{sep=' ' SNP_names}" | cut -d' ' -f$((i + 1)))
+			name=$(echo "~{sep=' ' SNP_names}" | cut -d' ' -f$((i + 1)))
 
-	        echo -e "$chrom\t$min\t$max\t$name" >> ~{output_file}
+			echo -e "$chrom\t$min\t$max\t$name" >> ~{output_file}
 
-	        i=$((i + 1))
-	    done
+			i=$((i + 1))
+		done
 	fi
 	>>>
 	runtime {
