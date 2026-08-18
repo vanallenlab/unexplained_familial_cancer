@@ -97,6 +97,6 @@ task T1_Find_Gene_Ranges {
 		docker: "vanallenlab/g2c_pipeline"
 	}
 	output {
-		File out1 = ~{output_file}
+		File out1 = "~{output_file}"
 	}
 }
