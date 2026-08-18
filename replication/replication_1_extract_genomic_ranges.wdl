@@ -15,9 +15,9 @@ workflow REPLICATION_1_EXTRACT_GENOMIC_RANGES {
 
 		Array[String] Genes
 		Int Gene_Buffer
-		Array[String] SNPs
-		Array[String] SNP_names
-		String SNP_buffer
+		Array[String]? SNPs
+		Array[String]? SNP_names
+		String? SNP_buffer
 
 		String project_name
 	}
@@ -45,9 +45,9 @@ task T1_Find_Gene_Ranges {
 
 		Array[String] Genes
 		Int Gene_Buffer
-		Array[String] SNPs
-		Array[String] SNP_names
-		Int SNP_buffer
+		Array[String]? SNPs
+		Array[String]? SNP_names
+		Int? SNP_buffer
 	}
 	String output_file = "~{project_name}.genomic_intervals.bed"
 
