@@ -4,7 +4,7 @@
 # Distributed under the terms of the GNU GPL v2.0g
 
 version 1.0
-import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
+#import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow REPLICATION_1_EXTRACT_GENOMIC_RANGES {
 	input {
