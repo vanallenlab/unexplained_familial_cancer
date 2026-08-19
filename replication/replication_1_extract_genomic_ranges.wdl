@@ -59,42 +59,64 @@ task T1_Find_Gene_Ranges {
 
 	gunzip -c ~{MANE_GENCODE} > MANE.GRCh38.gtf
 
-	# Loop through all of the genes in a list to find relevant genomic ranges
-	for gene in ~{sep=' ' Genes}; do
-		awk -v gene="$gene" '
-			$3 == "gene" {
-				n = split($9, attrs, ";")
-				for (i = 1; i <= n; i++) {
-					if (attrs[i] ~ /^[[:space:]]*gene_name[[:space:]]/) {
-						gsub(/^[[:space:]]*gene_name[[:space:]]*"/, "", attrs[i])
-						gsub(/"[[:space:]]*$/, "", attrs[i])
-						if (attrs[i] == gene) {
-							print $1 "\t" ($4 - 1) "\t" $5 "\t" gene
-						}
-					}
-				}
-			}
-	' MANE.GRCh38.gtf >> ~{output_file}
-	done
+	python3 <<CODE
+	import pandas as pd
 
-	# Loop through all SNPs in a list
-	if [[ ~{length(SNPs_to_use)} -gt 0 ]]; then
+	f.open("~{output_file}","w")
 
-		i=0
-		for snp in ~{sep=' ' SNPs_to_use}; do
-			chrom=$(echo "$snp" | cut -d: -f1)
-			pos=$(echo "$snp" | cut -d: -f2)
+	mane_df = pd.read_csv("MANE.GRCh38.gtf",
+		sep='\t',
+		index_col=False,
+		comment='#',
+		header=None,
+		names = ["chrom","source","feature","start","end","score","strand","frame","attributes"])
 
-			min=$((pos - SNP_buffer_to_use))
-			max=$((pos + SNP_buffer_to_use))
+	genes = "~{sep=' ' Genes}".split()
+	
+	# Loop through genes
+	for gene in genes:
+		gene_df = mane_df[mane_df["attributes"].str.contains(f"gene_name \"{gene}\"", na=False)]
+		gene_df = gene_df[gene_df['feature'] == "gene"]
+		f.write((gene_df['chrom']) + "\t" + str(int(gene_df['start']) - ~{Gene_Buffer}) + "\t" + str(int(gene_df['end']) + ~{Gene_Buffer}) + "\t" + gene)
 
-			name=$(echo "~{sep=' ' SNP_names_to_use}" | cut -d' ' -f$((i + 1)))
 
-			echo -e "$chrom\t$min\t$max\t$name" >> ~{output_file}
+	CODE
+	# # Loop through all of the genes in a list to find relevant genomic ranges
+	# for gene in ~{sep=' ' Genes}; do
+	# 	awk -v gene="$gene" '
+	# 		$3 == "gene" {
+	# 			n = split($9, attrs, ";")
+	# 			for (i = 1; i <= n; i++) {
+	# 				if (attrs[i] ~ /^[[:space:]]*gene_name[[:space:]]/) {
+	# 					gsub(/^[[:space:]]*gene_name[[:space:]]*"/, "", attrs[i])
+	# 					gsub(/"[[:space:]]*$/, "", attrs[i])
+	# 					if (attrs[i] == gene) {
+	# 						print $1 "\t" ($4 - 1) "\t" $5 "\t" gene
+	# 					}
+	# 				}
+	# 			}
+	# 		}
+	# ' MANE.GRCh38.gtf >> ~{output_file}
+	# done
 
-			i=$((i + 1))
-		done
-	fi
+	# # Loop through all SNPs in a list
+	# if [[ ~{length(SNPs_to_use)} -gt 0 ]]; then
+
+	# 	i=0
+	# 	for snp in ~{sep=' ' SNPs_to_use}; do
+	# 		chrom=$(echo "$snp" | cut -d: -f1)
+	# 		pos=$(echo "$snp" | cut -d: -f2)
+
+	# 		min=$((pos - SNP_buffer_to_use))
+	# 		max=$((pos + SNP_buffer_to_use))
+
+	# 		name=$(echo "~{sep=' ' SNP_names_to_use}" | cut -d' ' -f$((i + 1)))
+
+	# 		echo -e "$chrom\t$min\t$max\t$name" >> ~{output_file}
+
+	# 		i=$((i + 1))
+	# 	done
+	# fi
 	>>>
 	runtime {
 		docker: "vanallenlab/g2c_pipeline"
