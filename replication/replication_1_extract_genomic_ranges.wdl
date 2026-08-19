@@ -62,7 +62,7 @@ task T1_Find_Gene_Ranges {
 	python3 <<CODE
 	import pandas as pd
 
-	f.open("~{output_file}","w")
+	f = open("~{output_file}","w")
 
 	mane_df = pd.read_csv("MANE.GRCh38.gtf",
 		sep='\t',
