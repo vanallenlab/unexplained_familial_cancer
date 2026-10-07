@@ -24,10 +24,10 @@ RUN wget https://github.com/samtools/bcftools/releases/download/1.19/bcftools-1.
     make install
 
 # Install PLINK 1.9
-RUN wget https://s3.amazonaws.com/plink1-assets/plink_linux_x86_64_20210614.zip && \
-    unzip plink_linux_x86_64_20210614.zip -d /usr/local/bin/ && \
+RUN wget https://s3.amazonaws.com/plink1-assets/plink_linux_x86_64_20210606.zip && \
+    unzip plink_linux_x86_64_20210606.zip -d /usr/local/bin/ && \
     chmod +x /usr/local/bin/plink && \
-    rm plink_linux_x86_64_20210614.zip
+    rm plink_linux_x86_64_20210606.zip
 
 RUN rm -r bcftools-1.19
 RUN rm bcftools-1.19.tar.bz2
