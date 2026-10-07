@@ -96,7 +96,8 @@ task T1_prepare_scores_file {
   usecols = ['hm_source','hm_chr', 'hm_pos', 'effect_allele', 'other_allele', 'effect_weight']
 
   df = pd.read_csv("~{prs_file}", comment = "#", index_col=False, sep='\t',dtype={'hm_chr': str, 'hm_pos': str},usecols=usecols)
-  df = df[df['hm_source'] == "liftover"]
+  #df = df[df['hm_source'] == "liftover"]
+  df = df.dropna(subset=['hm_chr', 'hm_pos','effect_allele', 'other_allele', 'effect_weight'])
 
   # Create primary and flipped IDs
   df1 = df[['hm_chr', 'hm_pos', 'effect_allele', 'other_allele', 'effect_weight']].copy()

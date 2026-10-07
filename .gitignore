@@ -10,6 +10,13 @@ results/*
 *.jpeg
 *.pdf
 **.pdf
+*gz
+
+.DS_Store
+
+# Replication Files (right now)
+replication/genes_to_curate/
+replication/create_gene_regions/
 
 # Cancer Ontology Drafts
 yamls/anti_cancer_ontology.v6.yaml
