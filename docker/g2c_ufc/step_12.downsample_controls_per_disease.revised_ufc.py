@@ -321,7 +321,7 @@ def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 
     matched_controls = []
 
     # Iterate over ancestry + sex combinations in cases
-    for (pop, sex), case_group in cases.groupby(['ancestry_pred', 'sex_karyotype']):
+    for (pop, sex), case_group in cases.groupby(['intake_qc_pop', 'sex_karyotype']):
         case_count = len(case_group)
 
         # To account for ancestry groups with disproportionately few cases, 
@@ -335,7 +335,7 @@ def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 
 
         # Find matching controls for ancestry and sex
         potential_controls = controls[
-            (controls['ancestry_pred'] == pop) &
+            (controls['intake_qc_pop'] == pop) &
             (controls['sex_karyotype'] == sex) &
             (~controls['person_id'].isin(already_matched_control_ids))
         ].copy()
@@ -373,7 +373,7 @@ def get_min_case_control_ratio(df: pd.DataFrame):
     df['is_case'] = df['pancancer_cancer'].eq(1)
 
     # Group by ancestry
-    grouped = df.groupby('ancestry_pred')['is_case']
+    grouped = df.groupby('intake_qc_pop')['is_case']
 
     # Count cases and controls
     counts = grouped.agg(['sum', 'count'])  # sum = cases, count - sum = controls
@@ -539,8 +539,8 @@ def main():
         f.write("Counts of ancestry_pred by cancer status:\n")
         case_cohort = metadata[metadata['pancancer_cancer'].fillna(0) > 0]
         control_cohort = metadata[metadata['pancancer_cancer'].fillna(0) == 0]
-        case_ancestry = case_cohort['ancestry_pred'].value_counts(dropna=False).to_string()
-        control_ancestry = control_cohort['ancestry_pred'].value_counts(dropna=False).to_string()
+        case_ancestry = case_cohort['intake_qc_pop'].value_counts(dropna=False).to_string()
+        control_ancestry = control_cohort['intake_qc_pop'].value_counts(dropna=False).to_string()
         f.write("Cases:\n")
         f.write(case_ancestry + "\n\n")
         f.write("Controls:\n")
