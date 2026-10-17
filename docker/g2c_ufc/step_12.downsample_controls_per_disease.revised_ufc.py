@@ -427,7 +427,7 @@ def main():
         
 
     # Load phenotype data
-    phenotype_data = pd.read_csv(args.phenotype_data,sep='\t',index_col=False)[['original_id','inferred_sex','intake_qc_pop','sex_karyotype']]
+    phenotype_data = pd.read_csv(args.phenotype_data,sep='\t',index_col=False)[['original_id','inferred_sex','intake_qc_pop','sex_karyotype','age']]
     phenotype_data['person_id'] = phenotype_data['original_id'].astype(str)
 
     metadata = pd.read_csv(args.metadata, sep='\t',index_col=False)
