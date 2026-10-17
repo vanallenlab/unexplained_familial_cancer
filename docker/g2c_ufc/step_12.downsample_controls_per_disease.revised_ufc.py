@@ -313,8 +313,8 @@ def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 
     already_matched_control_ids = set()
 
     # Define control and case status
-    is_control = meta['cancer'].str.lower().str.contains('control')
-    is_case = ~meta['cancer'].isin(['control', 'unknown'])
+    is_control = meta['pancancer_cancer'].isna()
+    is_case = meta['pancancer_cancer'].eq(1)
 
     cases = meta[is_case].copy()
     controls = meta[is_control].copy()
