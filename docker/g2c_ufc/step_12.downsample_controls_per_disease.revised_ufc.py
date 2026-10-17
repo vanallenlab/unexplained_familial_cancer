@@ -523,8 +523,8 @@ def main():
 
         # Counts of each sex
         f.write("Sex Stratification:\n")
-        f.write(f"Case Count:\n{case_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
-        f.write(f"Control Count:\n{control_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
+        # f.write(f"Case Count:\n{case_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
+        # f.write(f"Control Count:\n{control_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
         f.write("\n\n")
 
         # Mean age for cases and controls
