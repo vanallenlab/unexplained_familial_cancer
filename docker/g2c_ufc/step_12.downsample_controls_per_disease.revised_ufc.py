@@ -506,7 +506,7 @@ def main():
     metadata['cancer_status'] = metadata['pancancer_cancer'].eq(1).astype(int)
 
     # Declutter the final output
-    subtype = args.cancer_subtype.lower().replace("-", "_").replace(" ", "_")
+    subtype = args.cancer_type.lower().replace("-", "_").replace(" ", "_")
     related = {
         "melanoma": ["melanoma", "skin"],
         "leukemia": ["leukemia", "blood_or_soft_tissue"],
