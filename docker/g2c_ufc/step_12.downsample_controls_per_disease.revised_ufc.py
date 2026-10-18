@@ -460,14 +460,16 @@ def main():
         (metadata["pancancer_cancer"].fillna(0) == 0)
         ]
     
+    fdr_col = "fdrs_w_skin_cancer" if args.cancer_type == "melanoma" else f"fdrs_w_{args.cancer_type}_cancer"
+
     if args.familial == 1:
         metadata = metadata[
-            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[f"fdrs_w_{args.cancer_type}_cancer"] >= 1) | 
+            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 1) | 
             (metadata["pancancer_cancer"].fillna(0) == 0)
         ]
     elif args.familial == 2:
         metadata = metadata[
-            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[f"fdrs_w_{args.cancer_type}_cancer"] >= 2) | 
+            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 2) | 
             (metadata["pancancer_cancer"].fillna(0) == 0)
         ]
 
