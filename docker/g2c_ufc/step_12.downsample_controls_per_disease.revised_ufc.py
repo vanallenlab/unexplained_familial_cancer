@@ -512,7 +512,7 @@ def main():
     related = {
         "melanoma": ["melanoma", "skin"],
         "leukemia": ["leukemia", "blood_or_soft_tissue"],
-        "non_hodgkin_lymphoma": ["non-hodgkin lymphoma", "non_hodgkin_lymphoma", "blood_or_soft_tissue"],
+        "nhl": ["nhl", "blood_or_soft_tissue"],
     }.get(subtype, [subtype])
 
     metadata["sex_binary"] = metadata["inferred_sex"].str.lower().map({"female": 0, "male": 1})
