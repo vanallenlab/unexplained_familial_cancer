@@ -438,7 +438,7 @@ def main():
     metadata = metadata[~((metadata['pancancer_cancer'].fillna(0) == 0) & (metadata['num_relatives_w_cancer'] >= 1))]
 
     # Remove any straggler case with <3 reported relatives with cancer
-    metadata = metadata[~((metadata['pancancer_cancer'] == 1) & (metadata['num_relatives_w_cancer'] <= 3))]
+    metadata = metadata[~((metadata['pancancer_cancer'] == 1) & (metadata['num_relatives_w_cancer'] < 3))]
 
     # Read in PCAs
     pca = pd.read_csv(args.pca,sep='\t',index_col=False)
@@ -503,7 +503,30 @@ def main():
     min_ancestry_case_control_ratio = math.ceil(get_min_case_control_ratio(metadata))
     metadata = match_controls_by_ancestry(metadata, max_controls_per_case = min_ancestry_case_control_ratio)
 
-    metadata['cancer_status'] = metadata['pancancer_cancer'].eq(1)
+    metadata['cancer_status'] = metadata['pancancer_cancer'].eq(1).astype(int)
+
+    # Declutter the final output
+    subtype = args.cancer_subtype.lower().replace("-", "_").replace(" ", "_")
+    related = {
+        "melanoma": ["melanoma", "skin"],
+        "leukemia": ["leukemia", "blood_or_soft_tissue"],
+        "non_hodgkin_lymphoma": ["non-hodgkin lymphoma", "non_hodgkin_lymphoma", "blood_or_soft_tissue"],
+    }.get(subtype, [subtype])
+
+    metadata["sex_binary"] = metadata["inferred_sex"].str.lower().map({"female": 0, "male": 1})
+
+    metadata = metadata.loc[:, [
+        c for c in metadata.columns
+        if c in ["person_id", "age", "pancancer_cancer", "sex_binary", "intake_qc_pop", "PC1", "PC2", "PC3", "PC4"]
+        or any(term in c.lower() for term in related)
+    ]]
+
+    # Fill missing values with 0 in cancer-related columns and pancancer_cancer
+    cancer_cols = [
+        c for c in metadata.columns
+        if c == "pancancer_cancer" or any(term in c.lower() for term in related)
+    ]
+    metadata[cancer_cols] = metadata[cancer_cols].fillna(0)
 
     ## Print Summary Statistics
     with open(args.log_file, 'a') as f:
