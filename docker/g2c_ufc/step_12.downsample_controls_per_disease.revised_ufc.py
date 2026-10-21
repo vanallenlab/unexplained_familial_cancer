@@ -326,10 +326,10 @@ def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 
 
         # To account for ancestry groups with disproportionately few cases, 
         # we cap the control-to-case ratio at 5:1 when such imbalances are present. 
-        if (max_controls_per_case < 5):
-            max_controls = case_count * 5
-        else:
-            max_controls = case_count * max_controls_per_case
+        # if (max_controls_per_case < 5):
+        #     max_controls = case_count * 5
+        # else:
+        max_controls = case_count * max_controls_per_case
 
         median_age = case_group['age'].median()
 
@@ -393,7 +393,6 @@ def get_min_case_control_ratio(df: pd.DataFrame):
     print(f"Ratio Series: {ratio_series}")
     return min_val
 
-
 def main():
     """
     Main block
@@ -423,8 +422,37 @@ def main():
             args.log_file = "cancer.cohort.log"
 
     with open(args.log_file, "w") as f:
-        f.write("Size\tNum_Filtered\tPercent_Filtered\tExclusion_Criteria\n")
-        
+        f.write("Step\tTotal_Before\tTotal_After\tNum_Filtered\tPercent_Filtered\tSubtype_Cases_Before\tSubtype_Cases_After\tSubtype_Cases_Filtered\tControls_Before\tControls_After\tControls_Filtered\n")
+
+    # Logging helpers
+    def get_counts(df):
+        subtype_col = f"{args.cancer_type}_cancer"
+        return {
+            "total": len(df),
+            "subtype_cases": int((df[subtype_col] == 1).sum()) if subtype_col in df.columns else 0,
+            "controls": int((df["pancancer_cancer"].fillna(0) == 0).sum()) if "pancancer_cancer" in df.columns else 0
+        }
+
+    def log_step(step, before, after):
+        total_filtered = before["total"] - after["total"]
+        percent_filtered = (total_filtered / before["total"] * 100) if before["total"] else 0
+        cases_filtered = before["subtype_cases"] - after["subtype_cases"]
+        controls_filtered = before["controls"] - after["controls"]
+
+        with open(args.log_file, "a") as f:
+            f.write(
+                f"{step}\t"
+                f"{before['total']}\t"
+                f"{after['total']}\t"
+                f"{total_filtered}\t"
+                f"{percent_filtered:.2f}\t"
+                f"{before['subtype_cases']}\t"
+                f"{after['subtype_cases']}\t"
+                f"{cases_filtered}\t"
+                f"{before['controls']}\t"
+                f"{after['controls']}\t"
+                f"{controls_filtered}\n"
+            )
 
     # Load phenotype data
     phenotype_data = pd.read_csv(args.phenotype_data,sep='\t',index_col=False)[['original_id','inferred_sex','intake_qc_pop','sex_karyotype','age']]
@@ -433,18 +461,25 @@ def main():
     metadata = pd.read_csv(args.metadata, sep='\t',index_col=False)
     metadata['person_id'] = metadata['person_id'].astype(str)
     metadata = metadata.merge(phenotype_data, how = "left", on="person_id")
+    log_step("After phenotype metadata merge", {"total": len(metadata), "subtype_cases": int((metadata[f"{args.cancer_type}_cancer"] == 1).sum()), "controls": int((metadata["pancancer_cancer"].fillna(0) == 0).sum())}, get_counts(metadata))
 
     # Remove any straggler controls with >= 1 reported related with cancer
+    before = get_counts(metadata)
     metadata = metadata[~((metadata['pancancer_cancer'].fillna(0) == 0) & (metadata['num_relatives_w_cancer'] >= 1))]
+    log_step("Remove controls with affected relatives", before, get_counts(metadata))
 
     # Remove any straggler case with <3 reported relatives with cancer
+    before = get_counts(metadata)
     metadata = metadata[~((metadata['pancancer_cancer'] == 1) & (metadata['num_relatives_w_cancer'] < 3))]
+    log_step("Remove cases with fewer than 3 affected relatives", before, get_counts(metadata))
 
     # Read in PCAs
     pca = pd.read_csv(args.pca,sep='\t',index_col=False)
     pca['person_id'] = pca['#IID'].astype(str)
 
+    before = get_counts(metadata)
     metadata = metadata.merge(pca, how="left",on="person_id")
+    log_step("After PCA merge", before, get_counts(metadata))
 
     # Load list of samples to exclude
     if args.exclude_samples:
@@ -452,42 +487,39 @@ def main():
             exclude_samples = set(patient.strip() for patient in f3)
 
         # If these samples do exist, exclude them
+        before = get_counts(metadata)
         metadata = metadata[~metadata['person_id'].isin(exclude_samples)]
+        log_step("Exclude samples list", before, get_counts(metadata))
 
     # Filter to just cases in our study as well as cases in the specific subtype
+    before = get_counts(metadata)
     metadata = metadata[
-        (metadata[f"{args.cancer_type}_cancer"] == 1) | 
+        (metadata[f"{args.cancer_type}_cancer"] == 1) |
         (metadata["pancancer_cancer"].fillna(0) == 0)
         ]
-    
+    log_step("Cancer subtype filter", before, get_counts(metadata))
+
     fdr_col = "fdrs_w_skin_cancer" if args.cancer_type == "melanoma" else f"fdrs_w_{args.cancer_type}_cancer"
 
     if args.familial == 1:
+        before = get_counts(metadata)
         metadata = metadata[
-            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 1) | 
+            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 1) |
             (metadata["pancancer_cancer"].fillna(0) == 0)
         ]
+        log_step("Familial filter >= 1 FDR", before, get_counts(metadata))
+
     elif args.familial == 2:
+        before = get_counts(metadata)
         metadata = metadata[
-            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 2) | 
+            (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 2) |
             (metadata["pancancer_cancer"].fillna(0) == 0)
         ]
+        log_step("Familial filter >= 2 FDRs", before, get_counts(metadata))
 
+    before = get_counts(metadata)
     metadata = metadata[metadata['sex_karyotype'].isin(args.sex_karyotypes.split(","))]
-    # with open(args.log_file, "a") as f:
-    #     f.write(f"{len(phenotype_data)}\t0\t0\tInitial Samples\n")
-
-
-    # Filter to Cancer Subtypes of Interest
-    # print("Args Variables")
-
-    # --- Filtering logic ---
-
-    # Remove samples with irrelevant cancer diagnosis for this study
-    # sample_size4 = len(phenotype_data)
-
-    # with open(args.log_file, "a") as f:
-    #     f.write(f"{sample_size4}\t{(sample_size3 - sample_size4)}\t{round(((sample_size3 - sample_size4)/sample_size3),3) * 100}\tRemove samples that are not {args.sex_karyotypes} and not in {args.cohorts} cohort(s).\n")
+    log_step("Sex-karyotype filter", before, get_counts(metadata))
 
     ## Grab maximally unrelated set ##
 
@@ -497,13 +529,16 @@ def main():
     # Grab family units
     family_units = extract_family_units(kinship_file=args.kinship)
 
+    before = get_counts(metadata)
     keep_ids = select_unrelated_samples(args.kinship,metadata)
-
     metadata = metadata[metadata['person_id'].isin(keep_ids)]
+    log_step("Select unrelated samples", before, get_counts(metadata))
 
     # Downsample controls to match on cases ancestry
+    before = get_counts(metadata)
     min_ancestry_case_control_ratio = math.ceil(get_min_case_control_ratio(metadata))
     metadata = match_controls_by_ancestry(metadata, max_controls_per_case = min_ancestry_case_control_ratio)
+    log_step("Ancestry-based control sampling", before, get_counts(metadata))
 
     metadata['cancer_status'] = metadata['pancancer_cancer'].eq(1).astype(int)
 
@@ -517,11 +552,13 @@ def main():
 
     metadata["sex_binary"] = metadata["inferred_sex"].str.lower().map({"female": 0, "male": 1})
 
+    before = get_counts(metadata)
     metadata = metadata.loc[:, [
         c for c in metadata.columns
         if c in ["person_id", "age", "pancancer_cancer", "sex_binary", "intake_qc_pop", "PC1", "PC2", "PC3", "PC4"]
         or any(term in c.lower() for term in related)
     ]]
+    log_step("Select final output columns", before, get_counts(metadata))
 
     # Fill missing values with 0 in cancer-related columns and pancancer_cancer
     cancer_cols = [
@@ -532,8 +569,8 @@ def main():
 
     ## Print Summary Statistics
     with open(args.log_file, 'a') as f:
-        f.write("===== Summary Report =====\n\n")
-        
+        f.write("\n===== Summary Report =====\n\n")
+
         case_df = metadata[metadata['pancancer_cancer'].fillna(0) > 0]
         control_df = metadata[metadata['pancancer_cancer'].fillna(0) == 0]
 
@@ -548,16 +585,10 @@ def main():
 
         # Counts of each sex
         f.write("Sex Stratification:\n")
-        # f.write(f"Case Count:\n{case_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
-        # f.write(f"Control Count:\n{control_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
         f.write("\n\n")
 
         # Mean age for cases and controls
         f.write("Mean age by cancer type:\n")
-        # mean_case_age = round(metadata[metadata['pancancer_cancer'] == 1][f'{args.cancer_type}_age'].mean(), 2)
-        # mean_control_age = round(metadata[metadata['pancancer_cancer'].fillna(0) == 0]['age'].mean(), 2)
-        # f.write(f"Mean Case Age\t{mean_case_age}\n")
-        # f.write(f"Mean Control Age\t{mean_control_age}\n")
         f.write("\n\n")
 
         # ancestry_pred count per cancer
@@ -572,6 +603,185 @@ def main():
         f.write(control_ancestry + "\n\n")
 
         f.write("==========================\n\n")
+
+# def main():
+#     """
+#     Main block
+#     """
+#     parser = argparse.ArgumentParser(
+#              description=__doc__,
+#              formatter_class=argparse.RawDescriptionHelpFormatter)
+
+#     parser.add_argument('--phenotype-data', required=True, help='data describing phenotypes')
+#     parser.add_argument('--metadata',required=True)
+#     parser.add_argument('--sample-list', required=True, help='list of AoU CDRv7 UFC samples (n = 3218)')
+#     parser.add_argument('--cancer-type', required=True, help='cancer subtype being analyzed')
+#     parser.add_argument('--pca', required = True, help='.eigenvec file')
+#     parser.add_argument('--kinship', required = True, help='plink king file represtenting sparse matrix of kinship')
+#     parser.add_argument('--outfile', required=True, help='output.tsv')
+#     parser.add_argument('--sex_karyotypes',required=False)
+#     parser.add_argument('--exclude-samples',required=False, help='Samples to Exclude')
+#     parser.add_argument('--log-file', required=False, help='Path to log file')
+#     parser.add_argument('--familial', required=False, type=int, choices=[0, 1, 2], default=0)
+#     args = parser.parse_args()
+
+#     # Make the log file
+#     if not args.log_file:
+#         if args.cancer_type:
+#             args.log_file = f"{args.cancer_type}.cohort.log"
+#         else:
+#             args.log_file = "cancer.cohort.log"
+
+#     with open(args.log_file, "w") as f:
+#         f.write("Size\tNum_Filtered\tPercent_Filtered\tExclusion_Criteria\n")
+        
+
+#     # Load phenotype data
+#     phenotype_data = pd.read_csv(args.phenotype_data,sep='\t',index_col=False)[['original_id','inferred_sex','intake_qc_pop','sex_karyotype','age']]
+#     phenotype_data['person_id'] = phenotype_data['original_id'].astype(str)
+
+#     metadata = pd.read_csv(args.metadata, sep='\t',index_col=False)
+#     metadata['person_id'] = metadata['person_id'].astype(str)
+#     metadata = metadata.merge(phenotype_data, how = "left", on="person_id")
+
+#     # Remove any straggler controls with >= 1 reported related with cancer
+#     metadata = metadata[~((metadata['pancancer_cancer'].fillna(0) == 0) & (metadata['num_relatives_w_cancer'] >= 1))]
+
+#     # Remove any straggler case with <3 reported relatives with cancer
+#     metadata = metadata[~((metadata['pancancer_cancer'] == 1) & (metadata['num_relatives_w_cancer'] < 3))]
+
+#     # Read in PCAs
+#     pca = pd.read_csv(args.pca,sep='\t',index_col=False)
+#     pca['person_id'] = pca['#IID'].astype(str)
+
+#     metadata = metadata.merge(pca, how="left",on="person_id")
+
+#     # Load list of samples to exclude
+#     if args.exclude_samples:
+#         with open(args.exclude_samples) as f3:
+#             exclude_samples = set(patient.strip() for patient in f3)
+
+#         # If these samples do exist, exclude them
+#         metadata = metadata[~metadata['person_id'].isin(exclude_samples)]
+
+#     # Filter to just cases in our study as well as cases in the specific subtype
+#     metadata = metadata[
+#         (metadata[f"{args.cancer_type}_cancer"] == 1) | 
+#         (metadata["pancancer_cancer"].fillna(0) == 0)
+#         ]
+    
+#     fdr_col = "fdrs_w_skin_cancer" if args.cancer_type == "melanoma" else f"fdrs_w_{args.cancer_type}_cancer"
+
+#     if args.familial == 1:
+#         metadata = metadata[
+#             (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 1) | 
+#             (metadata["pancancer_cancer"].fillna(0) == 0)
+#         ]
+#     elif args.familial == 2:
+#         metadata = metadata[
+#             (metadata[f"{args.cancer_type}_cancer"] == 1) & (metadata[fdr_col] >= 2) | 
+#             (metadata["pancancer_cancer"].fillna(0) == 0)
+#         ]
+
+#     metadata = metadata[metadata['sex_karyotype'].isin(args.sex_karyotypes.split(","))]
+#     # with open(args.log_file, "a") as f:
+#     #     f.write(f"{len(phenotype_data)}\t0\t0\tInitial Samples\n")
+
+
+#     # Filter to Cancer Subtypes of Interest
+#     # print("Args Variables")
+
+#     # --- Filtering logic ---
+
+#     # Remove samples with irrelevant cancer diagnosis for this study
+#     # sample_size4 = len(phenotype_data)
+
+#     # with open(args.log_file, "a") as f:
+#     #     f.write(f"{sample_size4}\t{(sample_size3 - sample_size4)}\t{round(((sample_size3 - sample_size4)/sample_size3),3) * 100}\tRemove samples that are not {args.sex_karyotypes} and not in {args.cohorts} cohort(s).\n")
+
+#     ## Grab maximally unrelated set ##
+
+#     # Grab all cases not involved in a family
+#     non_familial_set = extract_non_familial_set(samples=set(metadata['person_id']),kinship_file=args.kinship)
+
+#     # Grab family units
+#     family_units = extract_family_units(kinship_file=args.kinship)
+
+#     keep_ids = select_unrelated_samples(args.kinship,metadata)
+
+#     metadata = metadata[metadata['person_id'].isin(keep_ids)]
+
+#     # Downsample controls to match on cases ancestry
+#     min_ancestry_case_control_ratio = math.ceil(get_min_case_control_ratio(metadata))
+#     metadata = match_controls_by_ancestry(metadata, max_controls_per_case = min_ancestry_case_control_ratio)
+
+#     metadata['cancer_status'] = metadata['pancancer_cancer'].eq(1).astype(int)
+
+#     # Declutter the final output
+#     subtype = args.cancer_type.lower().replace("-", "_").replace(" ", "_")
+#     related = {
+#         "melanoma": ["melanoma", "skin"],
+#         "leukemia": ["leukemia", "blood_or_soft_tissue"],
+#         "nhl": ["nhl", "blood_or_soft_tissue"],
+#     }.get(subtype, [subtype])
+
+#     metadata["sex_binary"] = metadata["inferred_sex"].str.lower().map({"female": 0, "male": 1})
+
+#     metadata = metadata.loc[:, [
+#         c for c in metadata.columns
+#         if c in ["person_id", "age", "pancancer_cancer", "sex_binary", "intake_qc_pop", "PC1", "PC2", "PC3", "PC4"]
+#         or any(term in c.lower() for term in related)
+#     ]]
+
+#     # Fill missing values with 0 in cancer-related columns and pancancer_cancer
+#     cancer_cols = [
+#         c for c in metadata.columns
+#         if c == "pancancer_cancer" or any(term in c.lower() for term in related)
+#     ]
+#     metadata[cancer_cols] = metadata[cancer_cols].fillna(0)
+
+#     ## Print Summary Statistics
+#     with open(args.log_file, 'a') as f:
+#         f.write("===== Summary Report =====\n\n")
+        
+#         case_df = metadata[metadata['pancancer_cancer'].fillna(0) > 0]
+#         control_df = metadata[metadata['pancancer_cancer'].fillna(0) == 0]
+
+#         # Total number of individuals
+#         total_count = len(metadata)
+#         f.write(f"Total individuals: {total_count}\n\n")
+
+#         # Case and Control Counts
+#         f.write(f"Case Count: {len(case_df)}\n")
+#         f.write(f"Control Count: {len(control_df)}\n")
+#         f.write("\n\n")
+
+#         # Counts of each sex
+#         f.write("Sex Stratification:\n")
+#         # f.write(f"Case Count:\n{case_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
+#         # f.write(f"Control Count:\n{control_df['sex_at_birth'].value_counts(dropna=False).to_string()}\n")
+#         f.write("\n\n")
+
+#         # Mean age for cases and controls
+#         f.write("Mean age by cancer type:\n")
+#         # mean_case_age = round(metadata[metadata['pancancer_cancer'] == 1][f'{args.cancer_type}_age'].mean(), 2)
+#         # mean_control_age = round(metadata[metadata['pancancer_cancer'].fillna(0) == 0]['age'].mean(), 2)
+#         # f.write(f"Mean Case Age\t{mean_case_age}\n")
+#         # f.write(f"Mean Control Age\t{mean_control_age}\n")
+#         f.write("\n\n")
+
+#         # ancestry_pred count per cancer
+#         f.write("Counts of ancestry_pred by cancer status:\n")
+#         case_cohort = metadata[metadata['pancancer_cancer'].fillna(0) > 0]
+#         control_cohort = metadata[metadata['pancancer_cancer'].fillna(0) == 0]
+#         case_ancestry = case_cohort['intake_qc_pop'].value_counts(dropna=False).to_string()
+#         control_ancestry = control_cohort['intake_qc_pop'].value_counts(dropna=False).to_string()
+#         f.write("Cases:\n")
+#         f.write(case_ancestry + "\n\n")
+#         f.write("Controls:\n")
+#         f.write(control_ancestry + "\n\n")
+
+#         f.write("==========================\n\n")
 
 
 
