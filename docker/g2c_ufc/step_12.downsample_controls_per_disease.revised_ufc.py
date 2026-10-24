@@ -412,7 +412,7 @@ def main():
     parser.add_argument('--exclude-samples',required=False, help='Samples to Exclude')
     parser.add_argument('--log-file', required=False, help='Path to log file')
     parser.add_argument('--familial', required=False, type=int, choices=[0, 1, 2], default=0)
-    parser.add_argument("--max_control_ratio", default = 5)
+    parser.add_argument("--max_control_ratio", type=int, default = 5)
     args = parser.parse_args()
 
     # Make the log file
