@@ -326,8 +326,8 @@ def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 
 
         # To account for ancestry groups with disproportionately few cases, 
         # we cap the control-to-case ratio at 5:1 when such imbalances are present. 
-        if (max_controls_per_case < 2):
-            max_controls = case_count * 2
+        if (max_controls_per_case < 5):
+            max_controls = case_count * 5
         else:
             max_controls = case_count * max_controls_per_case
 
