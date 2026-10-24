@@ -295,7 +295,7 @@ def maximal_non_related_subset_dfs_family_style(family, kinship_file, meta, pref
 
     return best[0]
 
-def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 2, seed: int = 42) -> pd.DataFrame:
+def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 2, seed: int = 42, set_control_ratio: int = 7) -> pd.DataFrame:
     """
     Match controls to cases based on ancestry (ancestry_pred), sex, and cohort if available.
     Try to balance age within each matched group.
@@ -325,9 +325,9 @@ def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 
         case_count = len(case_group)
 
         # To account for ancestry groups with disproportionately few cases, 
-        # we cap the control-to-case ratio at 5:1 when such imbalances are present. 
-        if (max_controls_per_case < 5):
-            max_controls = case_count * 5
+        # we cap the control-to-case ratio at a set ratio when such imbalances are present. 
+        if (max_controls_per_case < set_control_ratio):
+            max_controls = case_count * set_control_ratio
         else:
             max_controls = case_count * max_controls_per_case
 
@@ -412,6 +412,7 @@ def main():
     parser.add_argument('--exclude-samples',required=False, help='Samples to Exclude')
     parser.add_argument('--log-file', required=False, help='Path to log file')
     parser.add_argument('--familial', required=False, type=int, choices=[0, 1, 2], default=0)
+    parser.add_argument("--max_control_ratio", default = 5)
     args = parser.parse_args()
 
     # Make the log file
@@ -537,7 +538,7 @@ def main():
     # Downsample controls to match on cases ancestry
     before = get_counts(metadata)
     min_ancestry_case_control_ratio = math.ceil(get_min_case_control_ratio(metadata))
-    metadata = match_controls_by_ancestry(metadata, max_controls_per_case = min_ancestry_case_control_ratio)
+    metadata = match_controls_by_ancestry(metadata, max_controls_per_case = min_ancestry_case_control_ratio, set_control_ratio = args.max_control_ratio)
     log_step("Ancestry-based control sampling", before, get_counts(metadata))
 
     metadata['cancer_status'] = metadata['pancancer_cancer'].eq(1).astype(int)
