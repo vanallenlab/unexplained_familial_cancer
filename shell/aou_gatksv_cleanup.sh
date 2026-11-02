@@ -9,59 +9,36 @@
 
 # Note that the below code makes *heavy* use of code from the DFCI G2C Database
 # This code is available/documented here:
-# https://github.com/vanallenlab/pancan_germline_wgs
+# https://github.com/collins-genomics/pancan_germline_wgs
+
+# Note also that this code was ported from the All of Us Workbench v1.0 to v2.0 (Verily Pre)
 
 
-#########
-# SETUP #
-#########
+##############################
+# SETUP INTERACTIVE TERMINAL #
+##############################
 
-# Note that this setup makes heavy assumptions about standards and helper 
-# functions defined for the G2C project, which we repurpose here for convenience
+# This setup makes heavy assumptions about standards and helper functions defined 
+# for the G2C project, which we repurpose here for convenience
 
 # Set up local environment
 export GPROJECT="vanallen-pancan-germline-wgs"
-export MAIN_WORKSPACE_BUCKET=gs://fc-secure-d21aa6b0-1d19-42dc-93e3-42de3578da45
+export MAIN_WORKSPACE_BUCKET=gs://rw-migration-aou-rw-84a0039b
+export WORKSPACE_BUCKET="gs://rw-migration-aou-rw-db439520"
+gcloud storage cp $MAIN_WORKSPACE_BUCKET/code/scripts/configure_verily_vm.sh ./ && \
+. configure_verily_vm.sh && \
+rm configure_verily_vm.sh
+unset WN
 
-# Prep working directory structure
+# Set up local directory structure
 for dir in scratch staging cromshell cromshell/inputs cromshell/job_ids cromshell/progress; do
   if ! [ -e $dir ]; then
     mkdir $dir
   fi
 done
 
-# Copy necessary code to local disk
-gsutil -m cp -r $MAIN_WORKSPACE_BUCKET/code ./
+# Copy legacy mingq code
 gsutil -m cp -r $MAIN_WORKSPACE_BUCKET/misc/legacy_mingq_wdl code/wdl/gatk-sv/
-find code/ -name "*.py" | xargs -I {} chmod a+x {}
-find code/ -name "*.R" | xargs -I {} chmod a+x {}
-find code/ -name "*.sh" | xargs -I {} chmod a+x {}
-
-# Source .bashrc and bash utility functions
-. code/refs/dotfiles/aou.rw.bashrc
-. code/refs/general_bash_utils.sh
-
-# Ensure Cromwell/Cromshell are configured
-code/scripts/setup_cromshell.py
-
-# Format local copy of Cromwell options .json to reference this workspace's storage bucket
-~/code/scripts/envsubst.py \
-  -i code/refs/json/aou.cromwell_options.default.json \
-  -o code/refs/json/aou.cromwell_options.default.json2 && \
-mv code/refs/json/aou.cromwell_options.default.json2 \
-   code/refs/json/aou.cromwell_options.default.json
-
-# Create dependencies .zip for generic G2C workflow submissions
-cd code/wdl/pancan_germline_wgs && \
-zip -r g2c.dependencies.zip . && \
-mv g2c.dependencies.zip ~/ && \
-cd ~
-
-# Create dependencies .zip for QC workflow submissions
-cd code/wdl/pancan_germline_wgs/vcf-qc && \
-zip qc.dependencies.zip *.wdl && \
-mv qc.dependencies.zip ~/ && \
-cd ~
 
 # Create dependencies .zip for GATK-SV module submissions
 cd code/wdl/gatk-sv && \
@@ -81,13 +58,189 @@ zip svannotation.dependencies.zip *.wdl && \
 mv svannotation.dependencies.zip ~/ && \
 cd ~
 
-# Install necessary packages
-. code/refs/install_packages.sh python R
+# Format local copy of Cromwell options .json to reference this workspace's storage bucket
+~/code/scripts/envsubst.py \
+  -i code/refs/json/aou.cromwell_options.default.json \
+  -o code/refs/json/aou.cromwell_options.default.json2 && \
+mv code/refs/json/aou.cromwell_options.default.json2 \
+   code/refs/json/aou.cromwell_options.default.json
 
-# Download workspace-specific contig lists
-gsutil cp -r \
-  gs://dfci-g2c-refs/hg38/contig_lists \
-  ./
+
+##########################
+# LAUNCH CROMWELL SERVER #
+##########################
+
+# Launch Cromwell in server mode on the same Verily VM
+# Note that this must be executed from a separate terminal after 
+# configuring the environment per the above
+
+# Set up local environment
+export GPROJECT="vanallen-pancan-germline-wgs"
+export MAIN_WORKSPACE_BUCKET=gs://rw-migration-aou-rw-84a0039b
+export WORKSPACE_BUCKET="gs://rw-migration-aou-rw-db439520"
+
+cd ~
+
+# Source .bashrc and bash utility functions
+. code/refs/dotfiles/aou.rw.bashrc
+. code/refs/general_bash_utils.sh
+
+# Ensure we are using Cromwell v92 to expose default machine types
+if ! [ -e ~/bin/cromwell-92.jar ]; then
+  mkdir ~/bin
+  wget -P ~/bin/ https://github.com/broadinstitute/cromwell/releases/download/92/cromwell-92.jar
+fi
+export CROMWELL_JAR=~/bin/cromwell-92.jar
+
+# Set terminal timezone to Eastern US time
+export TZDIR=$(python -c "import tzdata, os; print(os.path.join(os.path.dirname(tzdata.__file__), 'zoneinfo'))")
+export TZ=America/New_York
+date +"%Y-%m-%d %H:%M:%S %Z %z"
+
+# Reassign $WORKSPACE_BUCKET to match AoU v1-migrated URIs
+export WORKSPACE_BUCKET="gs://rw-migration-aou-rw-db439520"
+
+# Create cromwell config file
+if ! [ -e /home/jupyter/.cromwell ]; then
+  mkdir /home/jupyter/.cromwell
+fi
+if [ -e /home/jupyter/.cromwell/cromwell.conf ]; then
+  rm /home/jupyter/.cromwell/cromwell.conf
+  rm /home/jupyter/.cromwell/cromwell.override.conf
+fi
+wb cromwell generate-config \
+  --google-bucket-name=$WORKSPACE_BUCKET \
+  --dir=/home/jupyter/.cromwell
+cat << EOF > /home/jupyter/.cromwell/cromwell.override.conf
+include "cromwell.conf"
+
+google {
+  cloud-sdk-image-url = "gcr.io/google.com/cloudsdktool/google-cloud-cli:slim"
+}
+
+backend {
+  default = "GCPBATCH"
+  providers {
+
+    # Disables the Local backend
+    Local.config.root = "/dev/null"
+
+    GCPBATCH {
+     
+        actor-factory = "cromwell.backend.google.batch.GcpBatchBackendLifecycleActorFactory"
+
+      config {
+        project = "${GOOGLE_PROJECT}"
+        concurrent-job-limit = 3000
+        root = "${WORKSPACE_BUCKET}/workflows/cromwell-executions"
+
+                        
+          virtual-private-cloud {
+          network-name = "projects/${GOOGLE_PROJECT}/global/networks/network"
+          subnetwork-name = "projects/${GOOGLE_PROJECT}/regions/*/subnetworks/subnetwork"
+                   
+        }
+
+        batch {
+          auth = "application_default"
+          compute-service-account = "${PET_SA_EMAIL}"
+          location = "us-central1"
+        }
+
+        default-runtime-attributes {
+          noAddress: true
+        }
+        
+        filesystems {
+          gcs {
+              auth = "application_default"
+          }
+        }
+      }
+    }
+  }
+}
+
+call-caching {
+  enabled = true
+}
+
+system {
+  job-rate-control {
+    jobs = 10
+    per = 10 seconds
+  }
+  workflow-heartbeats {
+    ttl = 20 minutes
+    write-failure-shutdown-duration = 15 minutes
+    write-batch-size = 250
+  }
+}
+
+engine {
+  filesystems {
+    gcs {
+      auth = "application_default"
+    }
+  }
+}
+
+database {
+  profile = "slick.jdbc.HsqldbProfile$"
+
+  db {
+    driver = "org.hsqldb.jdbcDriver"
+
+    url = """
+      jdbc:hsqldb:file:/home/jupyter/.cromwell/db/cromwell;
+      shutdown=false;
+      hsqldb.default_table_type=cached;
+      hsqldb.tx=mvcc;
+      hsqldb.result_max_memory_rows=10000;
+      hsqldb.large_data=true;
+      hsqldb.script_format=3
+    """
+
+    connectionTimeout = 1200000
+    numThreads = 8
+  }
+
+  insert-batch-size = 2000
+}
+EOF
+
+# Ensure cromwell local database exists
+DBDIR=/home/jupyter/.cromwell/db
+mkdir -p $DBDIR
+if [[ -d "$DBDIR" ]]; then
+  size_gb=$( du -sBG "$DBDIR" | cut -f1 | tr -d 'G' )
+  echo "Cromwell DB size: $size_gb GB"
+fi
+
+# Create cromshell config file
+if [ ! -e /home/jupyter/.cromshell ]; then
+  mkdir /home/jupyter/.cromshell
+fi
+cat << EOF > /home/jupyter/.cromshell/cromshell_config.json
+{
+  "cromwell_server": "http://localhost:8000",
+  "requests_timeout": 5
+}
+EOF
+
+# Launch cromwell in server mode
+echo -e "\nNow launching cromwell server using $CROMWELL_JAR"
+echo -e "Cromwell version detected as: $( java -jar $CROMWELL_JAR --version )"
+java \
+  -Xms12G \
+  -Xmx48G \
+  -XX:+UseG1GC \
+  -Dconfig.file=/home/jupyter/.cromwell/cromwell.override.conf \
+  -Xlog:gc*:file=/home/jupyter/.cromwell/gc.log:time \
+  -XX:+HeapDumpOnOutOfMemoryError \
+  -XX:HeapDumpPath=/home/jupyter/.cromwell/ \
+  -jar $CROMWELL_JAR \
+  server
 
 
 #################
@@ -205,13 +358,12 @@ cat << EOF | python -m json.tool > $staging_dir/Plot$wid_suffix.inputs.json
   "PlotVcfQcMetrics.common_sv_beds": $( collapse_txt $staging_dir/common_svs_bed.uris.list ),
   "PlotVcfQcMetrics.custom_qc_target_metrics": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.sv.qc_targets.tsv",
   "PlotVcfQcMetrics.deduplicate": true,
-  "PlotVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:cd2ca89",
-  "PlotVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.$wid_suffix",
+  "PlotVcfQcMetrics.g2c_analysis_docker": "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/g2c_analysis:ec08fc1",
+  "PlotVcfQcMetrics.linux_docker": "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/ubuntu:plucky-20251001",
+  "PlotVcfQcMetrics.output_prefix": "dfci-ufc.sv.v2.$wid_suffix",
   "PlotVcfQcMetrics.peak_ld_stat_tsvs": $( collapse_txt $staging_dir/ld_stats.uris.list ),
-  "PlotVcfQcMetrics.PlotSiteBenchmarking.mem_gb": 32,
-  "PlotVcfQcMetrics.PlotSiteBenchmarking.n_cpu": 8,
-  "PlotVcfQcMetrics.PlotSiteMetrics.mem_gb": 32,
-  "PlotVcfQcMetrics.PlotSiteMetrics.n_cpu": 8,
+  "PlotVcfQcMetrics.PlotSiteBenchmarking.gcp_machine_type": "n2d-standard-8",
+  "PlotVcfQcMetrics.PlotSiteMetrics.gcp_machine_type": "n2d-standard-8",
   "PlotVcfQcMetrics.ref_af_distribution_tsvs": $( collapse_txt $staging_dir/gnomAD_af_distribution.uris.list ),
   "PlotVcfQcMetrics.ref_size_distribution_tsvs": $( collapse_txt $staging_dir/gnomAD_size_distribution.uris.list ),
   "PlotVcfQcMetrics.ref_cohort_prefix": "gnomAD_v4.1_gatksv",
@@ -272,7 +424,7 @@ EOF
 staging_dir=staging/SubsetSamples
 if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 
-# Get list of all sample IDs present in G2C SV callset after variant recalibration
+# Get list of all sample IDs present in G2C SV callset after SV imputation
 gsutil -m cat \
   $MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/sv_gt_cleanup/chr22/ConcatVcfs/dfci-g2c.v1.chr22.imputed.vcf.gz \
 | gunzip -c | head -n5000 | bcftools query -l \
@@ -281,7 +433,7 @@ gsutil -m cat \
 # Map Noah UFC IDs onto G2C sample IDs
 gsutil -m cp \
   $MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/qc-filtering/dfci-g2c.sample_meta.posthoc_outliers.ceph_update.tsv.gz \
-  gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/STEP_4_RANDOM_FOREST/inputs/ufc_subjects.list \
+  gs://rw-migration-aou-rw-cf3e7774/UFC_REFERENCE_FILES/cohorts/ufc_subjects.list \
   $staging_dir/
 zcat $staging_dir/dfci-g2c.sample_meta.posthoc_outliers.ceph_update.tsv.gz \
 | awk -v FS="\t" '{ if ($NF=="True" && $3 ~ /aou|ceph|mesa|ufc/) print }' \
@@ -314,7 +466,7 @@ cat << EOF > $staging_dir/ExcludeSamplesFromVcf.inputs.template.json
 {
   "ExcludeSamplesFromVcf.docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
   "ExcludeSamplesFromVcf.exclude_samples_list": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.exclude_for_ufc_callset.samples.list",
-  "ExcludeSamplesFromVcf.outfile_prefix": "dfci-ufc.gatksv.v1",
+  "ExcludeSamplesFromVcf.outfile_prefix": "dfci-ufc.gatksv.v2",
   "ExcludeSamplesFromVcf.vcf": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/sv_gt_cleanup/\$CONTIG/ConcatVcfs/dfci-g2c.v1.\$CONTIG.imputed.vcf.gz"
 }
 EOF
@@ -324,8 +476,8 @@ code/scripts/manage_chromshards.py \
   --wdl code/wdl/pancan_germline_wgs/ExcludeSamplesFromVcf.wdl \
   --input-json-template $staging_dir/ExcludeSamplesFromVcf.inputs.template.json \
   --staging-bucket $WORKSPACE_BUCKET/data/raw_gatksv_vcfs \
-  --status-tsv cromshell/progress/dfci-ufc.v1.ExcludeSamplesFromVcf.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.v2.ExcludeSamplesFromVcf.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.v2" \
   --outer-gate 30 \
   --max-attempts 2
 
@@ -348,11 +500,12 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.inputs.template.json
                                                   "gs://dfci-g2c-refs/giab/\$CONTIG/giab.hg38.broad_callable.hard.\$CONTIG.bed.gz"],
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:e4eaf92",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
-  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.initial_qc.\$CONTIG",
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v2.initial_qc.\$CONTIG",
+  "CollectVcfQcMetrics.PreprocessVcf.gcp_machine_type": "n2d-standard-4",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
   "CollectVcfQcMetrics.ref_build": "hg38",
@@ -378,8 +531,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.inputs.template.json
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v2.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v2.vcf.gz.tbi"]
 }
 EOF
 
@@ -390,8 +543,8 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip qc.dependencies.zip \
   --staging-bucket $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs \
   --name CollectInitialVcfQcMetrics \
-  --status-tsv cromshell/progress/dfci-ufc.sv.v1.CollectVcfQcMetrics.initial_qc.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.sv.v2.CollectVcfQcMetrics.initial_qc.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0.1 \
   --max-attempts 3
@@ -419,108 +572,66 @@ reset_qc_plot_dir \
   $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs
 
 # Submit QC visualization workflow
-cromshell --no_turtle -t 120 -mc submit --no-validation \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip qc.dependencies.zip \
   code/wdl/pancan_germline_wgs/vcf-qc/PlotVcfQcMetrics.wdl \
   cromshell/inputs/PlotInitialVcfQcMetrics.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.sv.v1.PlotInitialVcfQcMetrics.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v2.PlotInitialVcfQcMetrics.job_ids.list
 
 # Monitor QC visualization workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotInitialVcfQcMetrics.job_ids.list ) 5
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotInitialVcfQcMetrics.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 gsutil -m rm -rf $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotInitialVcfQcMetrics.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotInitialVcfQcMetrics.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I \
   $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc/
 
 # Clear Cromwell execution & output buckets
-gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotInitialVcfQcMetrics.job_ids.list \
-                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v2.PlotInitialVcfQcMetrics.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/workflows/cromwell-*/PlotVcfQcMetrics/" \
                   '{ print bucket_prefix$1"/**" }' ) \
 > uris_to_delete.list
 cleanup_garbage
-
-
-##############################################
-# Fix typo in SV VCF header after imputation #
-##############################################
-
-# This is only necessary because there was a typo in FORMAT/IMP
-
-# Reaffirm staging directory
-staging_dir=staging/sv_gt_cleanup
-if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
-
-# Write template input .json for SV GT refinement
-cat << EOF > $staging_dir/FixHeaderTypo.inputs.template.json
-{
-  "FixHeaderTypo.bcftools_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
-  "FixHeaderTypo.vcf": "$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz",
-  "FixHeaderTypo.vcf_idx": "$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v1.vcf.gz.tbi"
-}
-EOF
-
-# Submit, monitor, and stage/cleanup SV GT refinement
-code/scripts/manage_chromshards.py \
-  --wdl code/wdl/pancan_germline_wgs/FixHeaderTypo.wdl \
-  --input-json-template $staging_dir/FixHeaderTypo.inputs.template.json \
-  --staging-bucket $WORKSPACE_BUCKET/qc/header_typo_fix \
-  --name FixHeaderTypo \
-  --status-tsv cromshell/progress/dfci-g2c.v1.FixHeaderTypo.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
-  --outer-gate 10 \
-  --submission-gate 0 \
-  --max-attempts 2
 
 
 #########################################
 # APPLY HIGH SENSITIVITY AOU GT FILTERS #
 #########################################
 
+# Clear cromwell cache
+~/code/scripts/rotate_cromwell_cache.sh delete
+
 # Make staging directory
-staging_dir=staging/FilterGenotypes
+staging_dir=staging/OnlyFilterGenotypes
 if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 
 # Write template .json for module 19
-cat << EOF > $staging_dir/FilterGenotypes.inputs.template.json
+cat << EOF > $staging_dir/OnlyFilterGenotypes.inputs.template.json
 {
-  "FilterGenotypes.FilterVcf.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/apply_sl_filter.g2c_imputed.py",
-  "FilterGenotypes.gatk_docker": "us.gcr.io/broad-dsde-methods/markw/gatk:mw-tb-form-sv-filter-training-data-899360a",
-  "FilterGenotypes.genome_tracks": ["gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38-RepeatMasker.bed.gz",
-                                    "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38-Segmental-Dups.bed.gz",
-                                    "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38-Simple-Repeats.bed.gz",
-                                    "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38_umap_s100.bed.gz",
-                                    "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/ucsc-genome-tracks/hg38_umap_s24.bed.gz"],
-  "FilterGenotypes.gq_recalibrator_model_file": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/gatk-sv-recalibrator.aou_phase_1.v1.model",
-  "FilterGenotypes.linux_docker": "ubuntu:plucky-20251001",
-  "FilterGenotypes.no_call_rate_cutoff": 0.1,
-  "FilterGenotypes.output_prefix": "dfci-ufc.v1.\$CONTIG",
-  "FilterGenotypes.ped_file": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/refs/dfci-g2c.all_samples.ped",
+  "FilterGenotypes.FilterVcf.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/apply_sl_filter.g2c_imputed_integrated.py",
+  "FilterGenotypes.no_call_rate_cutoff": 1,
+  "FilterGenotypes.output_prefix": "dfci-ufc.v2.\$CONTIG",
   "FilterGenotypes.ploidy_table": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/module-outputs/17/dfci-g2c.v1.ploidy.tsv",
-  "FilterGenotypes.primary_contigs_fai": "gs://dfci-g2c-refs/hg38/contig_fais/\$CONTIG.fai",
-  "FilterGenotypes.recalibrate_gq_args": ["--keep-homvar false","--keep-homref true","--keep-multiallelic true","--skip-genotype-filtering true","--min-samples-to-estimate-allele-frequency -1"],
-  "FilterGenotypes.run_qc": false,
-  "FilterGenotypes.runtime_override_plot_qc_per_family": {"mem_gb" : 15, "disk_gb" : 100},
   "FilterGenotypes.sl_filter_args": "--small-del-threshold -53 --medium-del-threshold -12 --small-dup-threshold -105 --medium-dup-threshold -81 --ins-threshold -97",
   "FilterGenotypes.sv_base_mini_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
   "FilterGenotypes.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-06-27-v1.0.4-63e6c81e",
-  "FilterGenotypes.vcf": "$WORKSPACE_BUCKET/qc/header_typo_fix/\$CONTIG/FixTypo/dfci-ufc.gatksv.v1.typo_fixed.vcf.gz"
+  "FilterGenotypes.vcf": "$WORKSPACE_BUCKET/data/raw_gatksv_vcfs/\$CONTIG/ExcludeSamples/dfci-ufc.gatksv.v2.vcf.gz"
 }
 EOF
 
-# Run module 19 on all UFC SV VCFs
+# Run filtering component of GATK-SV module 19 on all UFC SV VCFs
 code/scripts/manage_chromshards.py \
-  --wdl code/wdl/gatk-sv/FilterGenotypes.wdl \
-  --input-json-template $staging_dir/FilterGenotypes.inputs.template.json \
-  --staging-bucket $WORKSPACE_BUCKET/data/module19 \
+  --wdl code/wdl/gatk-sv/OnlyFilterGenotypes.wdl \
+  --input-json-template $staging_dir/OnlyFilterGenotypes.inputs.template.json \
+  --staging-bucket $WORKSPACE_BUCKET/data/OnlyFilterGenotypes \
   --dependencies-zip gatksv.dependencies.zip \
-  --status-tsv cromshell/progress/FilterGenotypes.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.v1" \
+  --status-tsv cromshell/progress/OnlyFilterGenotypes.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.v2" \
   --outer-gate 30 \
   --submission-gate 0.1 \
   --max-attempts 2
@@ -529,6 +640,9 @@ code/scripts/manage_chromshards.py \
 ############################################
 # COLLECT QC METRICS AFTER FILTERGENOTYPES #
 ############################################
+
+# Clear cromwell cache
+~/code/scripts/rotate_cromwell_cache.sh delete
 
 # Reaffirm staging directory
 staging_dir=staging/post_filtergenotypes
@@ -545,11 +659,12 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postFilterGenotypes.inputs.templat
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:e4eaf92",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
-  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_filtergenotypes.\$CONTIG",
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v2.post_filtergenotypes.\$CONTIG",
+  "CollectVcfQcMetrics.PreprocessVcf.gcp_machine_type": "n2d-standard-4",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
   "CollectVcfQcMetrics.ref_build": "hg38",
@@ -575,8 +690,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postFilterGenotypes.inputs.templat
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/OnlyFilterGenotypes/\$CONTIG/SanitizeHeader/dfci-ufc.v2.\$CONTIG.filter_genotypes.sanitized.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/OnlyFilterGenotypes/\$CONTIG/SanitizeHeader/dfci-ufc.v2.\$CONTIG.filter_genotypes.sanitized.vcf.gz.tbi"]
 }
 EOF
 
@@ -587,8 +702,8 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip qc.dependencies.zip \
   --staging-bucket $WORKSPACE_BUCKET/qc/post_filtergenotypes \
   --name CollectQcPostFilterGenotypes \
-  --status-tsv cromshell/progress/dfci-ufc.sv.v1.CollectVcfQcMetrics.post_filtergenotypes.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.sv.v2.CollectVcfQcMetrics.post_filtergenotypes.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0.1 \
   --max-attempts 2
@@ -607,31 +722,31 @@ reset_qc_plot_dir \
   $staging_dir \
   QcPostFilterGenotypes \
   $WORKSPACE_BUCKET/qc/post_filtergenotypes \
-  $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc/dfci-ufc.sv.v1.InitialVcfQcMetrics.all_qc_summary_metrics.tsv
+  $WORKSPACE_BUCKET/qc/raw_gatksv_vcfs/PlotQc/dfci-ufc.sv.v2.InitialVcfQcMetrics.all_qc_summary_metrics.tsv
 
 # Submit QC visualization workflow
-cromshell --no_turtle -t 120 -mc submit --no-validation \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip qc.dependencies.zip \
   code/wdl/pancan_germline_wgs/vcf-qc/PlotVcfQcMetrics.wdl \
   cromshell/inputs/PlotQcPostFilterGenotypes.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostFilterGenotypes.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostFilterGenotypes.job_ids.list
 
 # Monitor QC visualization workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostFilterGenotypes.job_ids.list ) 5
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostFilterGenotypes.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 gsutil -m rm -rf $WORKSPACE_BUCKET/qc/post_filtergenotypes/PlotQc
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostFilterGenotypes.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostFilterGenotypes.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I \
   $WORKSPACE_BUCKET/qc/post_filtergenotypes/PlotQc/
 
 # Clear Cromwell execution & output buckets
-gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostFilterGenotypes.job_ids.list \
-                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostFilterGenotypes.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/workflows/cromwell-*/PlotVcfQcMetrics/" \
                   '{ print bucket_prefix$1"/**" }' ) \
 > uris_to_delete.list
 cleanup_garbage
@@ -640,6 +755,9 @@ cleanup_garbage
 ###############################
 # COLLECT MINGQ TRAINING DATA #
 ###############################
+
+# Clear cromwell cache
+~/code/scripts/rotate_cromwell_cache.sh delete
 
 # Make staging directory
 staging_dir=staging/MinGQ
@@ -653,11 +771,11 @@ cat << EOF > $staging_dir/MinGQPart1.inputs.template.json
   "Module07FilterGTsPart1.contiglist": "gs://dfci-g2c-refs/hg38/contig_fais/\$CONTIG.fai",
   "Module07FilterGTsPart1.filter_metric": "GQ",
   "Module07FilterGTsPart1.gather_trio_geno_options": ["--fill-incomplete", "--default-value-homref 1", "--default-value-other 0"],
-  "Module07FilterGTsPart1.gcloud_sdk_docker": "gcr.io/google.com/cloudsdktool/google-cloud-cli@sha256:c31cf1fa2832affd0c875c89909245b9e794035472e2ec088c7c136a89df107e",
+  "Module07FilterGTsPart1.gcloud_sdk_docker": "google/cloud-sdk:581.0.0",
   "Module07FilterGTsPart1.getAFs.famfile": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/refs/dfci-g2c.all_samples.ped",
   "Module07FilterGTsPart1.max_shards_per_chrom_step1": 100,
   "Module07FilterGTsPart1.min_records_per_shard_step1": 50000,
-  "Module07FilterGTsPart1.prefix": "dfci-ufc.sv.v1.\$CONTIG",
+  "Module07FilterGTsPart1.prefix": "dfci-ufc.sv.v2.\$CONTIG",
   "Module07FilterGTsPart1.revise_mei_svtypes": true,
   "Module07FilterGTsPart1.runtime_attr_GatherTrioData": {"disk_gb" : 250, "boot_disk_gb" : 20, "cpu_cores" : 4, "mem_gb" : 15},
   "Module07FilterGTsPart1.sv_base_mini_docker": "vanallenlab/sv-pipeline-base:gnomad_rf_99fb8c",
@@ -666,8 +784,8 @@ cat << EOF > $staging_dir/MinGQPart1.inputs.template.json
   "Module07FilterGTsPart1.sv_pipeline_docker_for_mei_revise": "vanallenlab/sv-pipeline:filter_gt_029fa3b",
   "Module07FilterGTsPart1.sv_pipeline_updates_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2022-09-27-v0.26.2-beta-1f1a3b3a",
   "Module07FilterGTsPart1.trios_famfile": "$MAIN_WORKSPACE_BUCKET/data/sample_info/relatedness/dfci-g2c.reported_families.fam",
-  "Module07FilterGTsPart1.vcf": "$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz",
-  "Module07FilterGTsPart1.vcf_idx": "$WORKSPACE_BUCKET/data/module19/\$CONTIG/SanitizeHeader/dfci-ufc.v1.\$CONTIG.filter_genotypes.sanitized.vcf.gz.tbi"
+  "Module07FilterGTsPart1.vcf": "$WORKSPACE_BUCKET/data/OnlyFilterGenotypes/\$CONTIG/SanitizeHeader/dfci-ufc.v2.\$CONTIG.filter_genotypes.sanitized.vcf.gz",
+  "Module07FilterGTsPart1.vcf_idx": "$WORKSPACE_BUCKET/data/OnlyFilterGenotypes/\$CONTIG/SanitizeHeader/dfci-ufc.v2.\$CONTIG.filter_genotypes.sanitized.vcf.gz.tbi"
 }
 EOF
 
@@ -679,9 +797,9 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip mingq.dependencies.zip \
   --name MinGQPart1 \
   --status-tsv cromshell/progress/MinGQPart1.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
-  --max-attempts 2
+  --max-attempts 3
 
 
 #####################
@@ -694,14 +812,14 @@ if ! [ -e $staging_dir ]; then mkdir $staging_dir; fi
 
 # Write list of training data tarballs from all contigs
 gsutil -m ls \
-  $WORKSPACE_BUCKET/data/MinGQPart1/chr*/GatherTrioData_PCRMINUS/dfci-ufc.sv.v1.chr*.PCRMINUS.tar.gz \
+  $WORKSPACE_BUCKET/data/MinGQPart1/chr*/GatherTrioData_PCRMINUS/dfci-ufc.sv.v2.chr*.PCRMINUS.tar.gz \
 | sort -V \
 > $staging_dir/MinGQ.training_tarball.uris.list
 
 # Write .json of inputs (run this once across all chromosomes)
 cat << EOF > cromshell/inputs/MinGQPart2.inputs.json
 {
-  "Module07FilterGTsPart2.PCRMINUS_cleaned_trios_famfile": "$WORKSPACE_BUCKET/data/MinGQPart1/chr1/SplitFamfile_PCRMINUS/dfci-ufc.sv.v1.chr1.PCRMINUS.cleaned_trios.fam",
+  "Module07FilterGTsPart2.PCRMINUS_cleaned_trios_famfile": "$WORKSPACE_BUCKET/data/MinGQPart1/chr1/SplitFamfile_PCRMINUS/dfci-ufc.sv.v2.chr1.PCRMINUS.cleaned_trios.fam",
   "Module07FilterGTsPart2.PCRMINUS_trio_tarballs": $( collapse_txt $staging_dir/MinGQ.training_tarball.uris.list ),
   "Module07FilterGTsPart2.gcloud_sdk_docker": "google/cloud-sdk",
   "Module07FilterGTsPart2.optimize_excludeEV": ";;RD,SR;;",
@@ -714,7 +832,7 @@ cat << EOF > cromshell/inputs/MinGQPart2.inputs.json
   "Module07FilterGTsPart2.optimize_metric": "GQ",
   "Module07FilterGTsPart2.optimize_minFreqs": "0;0.001;0.01;0.1;0",
   "Module07FilterGTsPart2.optimize_minSizes": "0;250;1000;5000;25000;0",
-  "Module07FilterGTsPart2.prefix": "dfci-ufc.sv.v1",
+  "Module07FilterGTsPart2.prefix": "dfci-ufc.sv.v2",
   "Module07FilterGTsPart2.roc_max_fdr_PCRMINUS": 0.05,
   "Module07FilterGTsPart2.roc_max_fdr_PCRPLUS": 0.05,
   "Module07FilterGTsPart2.roc_max_metric": 100,
@@ -730,26 +848,26 @@ cat << EOF > cromshell/inputs/MinGQPart2.inputs.json
 EOF
 
 # Launch minGQ training workflow
-cromshell --no_turtle -t 120 -mc submit --no-validation \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip mingq.dependencies.zip \
   code/wdl/gatk-sv/legacy_mingq_wdl/Module07FilterGTsPart2TrainModel.wdl \
   cromshell/inputs/MinGQPart2.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v2.MinGQPart2.job_ids.list
 
 # Monitor minGQ training workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list ) 5
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.MinGQPart2.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.MinGQPart2.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I $WORKSPACE_BUCKET/data/MinGQPart2/
 
 # Clear Cromwell execution & output buckets
-gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.MinGQPart2.job_ids.list \
-                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/Module07FilterGTsPart2/" \
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v2.MinGQPart2.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/workflows/cromwell-*/Module07FilterGTsPart2/" \
                   '{ print bucket_prefix$1"/**" }' ) \
 > uris_to_delete.list
 cleanup_garbage
@@ -769,14 +887,14 @@ cat << EOF > $staging_dir/MinGQPart3.inputs.template.json
   "Module07FilterGTsPart3.apply_filter_PCRMINUS.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/gatksv_filter_GTs_by_metric.g2c_imputed.py",
   "Module07FilterGTsPart3.apply_filter_PCRPLUS.script": "$MAIN_WORKSPACE_BUCKET/code/scripts/gatksv_filter_GTs_by_metric.g2c_imputed.py",
   "Module07FilterGTsPart3.CombineVcfs.generate_index": true,
-  "Module07FilterGTsPart3.PCRMINUS_lookup_table": "$WORKSPACE_BUCKET/data/MinGQPart2/dfci-ufc.sv.v1.PCRMINUS.minGQ.filter_lookup_table.txt",
+  "Module07FilterGTsPart3.PCRMINUS_lookup_table": "$WORKSPACE_BUCKET/data/MinGQPart2/dfci-ufc.sv.v2.PCRMINUS.minGQ.filter_lookup_table.txt",
   "Module07FilterGTsPart3.PCRMINUS_vcf_idx_lists": \$CONTIG_VCF_IDXS,
   "Module07FilterGTsPart3.PCRMINUS_vcf_lists": \$CONTIG_VCFS,
   "Module07FilterGTsPart3.allow_overlaps_merge": true,
   "Module07FilterGTsPart3.filter_GT_options": ["--fail-missing-scores", "--filter-homalt", "--annotate-ncr", "--dropEmpties"],
   "Module07FilterGTsPart3.max_noCallRate": \$CONTIG_NCR,
   "Module07FilterGTsPart3.naive_merge": false,
-  "Module07FilterGTsPart3.prefix": "dfci-ufc.sv.v1",
+  "Module07FilterGTsPart3.prefix": "dfci-ufc.sv.v2",
   "Module07FilterGTsPart3.runtime_attr_CombineVcfs": {"mem_gb" : 7.5, "boot_disk_gb" : 20},
   "Module07FilterGTsPart3.sort_after_merge": false,
   "Module07FilterGTsPart3.sv_base_mini_docker": "vanallenlab/sv-base-mini:gnomad_rf_4760ac",
@@ -819,7 +937,7 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip mingq.dependencies.zip \
   --name MinGQPart3 \
   --status-tsv cromshell/progress/MinGQPart3.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --max-attempts 3 \
   --contig-gate 25
@@ -848,7 +966,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postMinGQ.inputs.template.json
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
-  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_mingq.\$CONTIG",
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v2.post_mingq.\$CONTIG",
+  "CollectVcfQcMetrics.PreprocessVcf.gcp_machine_type": "n2d-standard-4",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
   "CollectVcfQcMetrics.ref_build": "hg38",
@@ -874,8 +993,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postMinGQ.inputs.template.json
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v2.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v2.vcf.gz.tbi"]
 }
 EOF
 
@@ -886,8 +1005,8 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip qc.dependencies.zip \
   --staging-bucket $WORKSPACE_BUCKET/qc/post_mingq \
   --name CollectQcPostMinGQ \
-  --status-tsv cromshell/progress/dfci-ufc.sv.v1.CollectVcfQcMetrics.post_mingq.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.sv.v2.CollectVcfQcMetrics.post_mingq.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0.1 \
   --max-attempts 3
@@ -906,31 +1025,31 @@ reset_qc_plot_dir \
   $staging_dir \
   QcPostMinGQ \
   $WORKSPACE_BUCKET/qc/post_mingq \
-  $WORKSPACE_BUCKET/qc/post_filtergenotypes/PlotQc/dfci-ufc.sv.v1.QcPostFilterGenotypes.all_qc_summary_metrics.tsv
+  $WORKSPACE_BUCKET/qc/post_filtergenotypes/PlotQc/dfci-ufc.sv.v2.QcPostFilterGenotypes.all_qc_summary_metrics.tsv
 
 # Submit QC visualization workflow
-cromshell --no_turtle -t 120 -mc submit --no-validation \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip qc.dependencies.zip \
   code/wdl/pancan_germline_wgs/vcf-qc/PlotVcfQcMetrics.wdl \
   cromshell/inputs/PlotQcPostMinGQ.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostMinGQ.job_ids.list
 
 # Monitor QC visualization workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list ) 5
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostMinGQ.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 gsutil -m rm -rf $WORKSPACE_BUCKET/qc/post_mingq/PlotQc
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostMinGQ.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I \
   $WORKSPACE_BUCKET/qc/post_mingq/PlotQc/
 
 # Clear Cromwell execution & output buckets
-gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostMinGQ.job_ids.list \
-                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostMinGQ.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/workflows/cromwell-*/PlotVcfQcMetrics/" \
                   '{ print bucket_prefix$1"/**" }' ) \
 > uris_to_delete.list
 cleanup_garbage
@@ -953,13 +1072,13 @@ EOF
 cat << EOF > $staging_dir/PosthocCleanupPart1.inputs.template.json
 {
   "ApplyScriptSingleVcf.ApplyScript.contig": "\$CONTIG",
-  "ApplyScriptSingleVcf.bcftools_docker": "vanallenlab/g2c_pipeline:05aa88e",
+  "ApplyScriptSingleVcf.bcftools_docker": "vanallenlab/g2c_analysis:e4eaf92",
   "ApplyScriptSingleVcf.exec_prefix": "python ",
   "ApplyScriptSingleVcf.script": "$WORKSPACE_BUCKET/code/scripts/vcf_cleanup.part_1.before_outlier_exclusion.py",
   "ApplyScriptSingleVcf.script_files": $( collapse_txt $staging_dir/script_files.txt ),
   "ApplyScriptSingleVcf.script_options": "--gtf MANE.GRCh38.v1.2.ensembl_genomic.gtf.gz",
-  "ApplyScriptSingleVcf.vcf": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz",
-  "ApplyScriptSingleVcf.vcf_idx": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v1.vcf.gz.tbi"
+  "ApplyScriptSingleVcf.vcf": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v2.vcf.gz",
+  "ApplyScriptSingleVcf.vcf_idx": "$WORKSPACE_BUCKET/data/MinGQPart3/\$CONTIG/CombineVcfs/dfci-ufc.sv.v2.vcf.gz.tbi"
 }
 EOF
 
@@ -971,10 +1090,10 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip g2c.dependencies.zip \
   --name PosthocCleanupPart1 \
   --status-tsv cromshell/progress/PosthocCleanupPart1.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0 \
-  --max-attempts 2
+  --max-attempts 3
 
 
 ###########################################
@@ -996,11 +1115,12 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart1.inputs.template.j
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:e4eaf92",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
   "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
-  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.posthoc_part1.\$CONTIG",
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v2.posthoc_part1.\$CONTIG",
+  "CollectVcfQcMetrics.PreprocessVcf.gcp_machine_type": "n2d-standard-4",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
   "CollectVcfQcMetrics.ref_build": "hg38",
@@ -1026,8 +1146,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart1.inputs.template.j
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v2.\$CONTIG.out.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v2.\$CONTIG.out.vcf.gz.tbi"]
 }
 EOF
 
@@ -1038,8 +1158,8 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip qc.dependencies.zip \
   --staging-bucket $WORKSPACE_BUCKET/qc/post_cleanupPart1 \
   --name CollectQcPostCleanupPart1 \
-  --status-tsv cromshell/progress/dfci-ufc.sv.v1.CollectVcfQcMetrics.post_cleanupPart1.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.sv.v2.CollectVcfQcMetrics.post_cleanupPart1.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0.1 \
   --max-attempts 3
@@ -1058,31 +1178,31 @@ reset_qc_plot_dir \
   $staging_dir \
   QcPostCleanupPart1 \
   $WORKSPACE_BUCKET/qc/post_cleanupPart1 \
-  $WORKSPACE_BUCKET/qc/post_mingq/PlotQc/dfci-ufc.sv.v1.QcPostMinGQ.all_qc_summary_metrics.tsv
+  $WORKSPACE_BUCKET/qc/post_mingq/PlotQc/dfci-ufc.sv.v2.QcPostMinGQ.all_qc_summary_metrics.tsv
 
 # Submit QC visualization workflow
-cromshell --no_turtle -t 120 -mc submit --no-validation \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip qc.dependencies.zip \
   code/wdl/pancan_germline_wgs/vcf-qc/PlotVcfQcMetrics.wdl \
   cromshell/inputs/PlotQcPostCleanupPart1.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart1.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart1.job_ids.list
 
 # Monitor QC visualization workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart1.job_ids.list ) 5
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart1.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 gsutil -m rm -rf $WORKSPACE_BUCKET/qc/post_cleanupPart1/PlotQc
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart1.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart1.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I \
   $WORKSPACE_BUCKET/qc/post_cleanupPart1/PlotQc/
 
 # Clear Cromwell execution & output buckets
-gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart1.job_ids.list \
-                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart1.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/workflows/cromwell-*/PlotVcfQcMetrics/" \
                   '{ print bucket_prefix$1"/**" }' ) \
 > uris_to_delete.list
 cleanup_garbage
@@ -1102,7 +1222,7 @@ gsutil -m cat \
 | gunzip -c | awk '{ if ($6=="EUR") print $1 }' \
 > $staging_dir/g2c.EUR.samples.list
 gsutil -m cat \
-  $WORKSPACE_BUCKET/data/PosthocCleanupPart1/chr22/ApplyScript/dfci-ufc.sv.v1.chr22.out.vcf.gz \
+  $WORKSPACE_BUCKET/data/PosthocCleanupPart1/chr22/ApplyScript/dfci-ufc.sv.v2.chr22.out.vcf.gz \
 | bcftools query -l \
 > $staging_dir/ufc.samples.list
 while read bid; do
@@ -1113,9 +1233,9 @@ while read bid; do
   | awk -v OFS="\t" -v bid="$bid" '{ print bid, $1 }'
 done < <( gsutil cat $MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-sv/batch_info/dfci-g2c.gatk-sv.batches.list ) \
 | sort -Vk1,1 -k2,2V \
-> $staging_dir/dfci-ufc.v1.sv.EUR.batch_assignments.tsv
+> $staging_dir/dfci-ufc.v2.sv.EUR.batch_assignments.tsv
 gsutil -m cp \
-  $staging_dir/dfci-ufc.v1.sv.EUR.batch_assignments.tsv \
+  $staging_dir/dfci-ufc.v2.sv.EUR.batch_assignments.tsv \
   $WORKSPACE_BUCKET/data/misc/
 
 # Write template .json for batch effect detection
@@ -1123,15 +1243,15 @@ cat << EOF > $staging_dir/MarkBatchEffects.inputs.template.json
 {
   "MarkBatchEffects.custom_info_flag_id": "BATCH_EFFECTS_MASKED",
   "MarkBatchEffects.flag_failing_records": false,
-  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_analysis:9e19555",
-  "MarkBatchEffects.group_membership_tsv": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.v1.sv.EUR.batch_assignments.tsv",
+  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_analysis:e4eaf92",
+  "MarkBatchEffects.group_membership_tsv": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.v2.sv.EUR.batch_assignments.tsv",
   "MarkBatchEffects.lower_nonref_gt_freq": 0.02,
   "MarkBatchEffects.min_samples_per_group": 20,
-  "MarkBatchEffects.out_vcf_prefix": "dfci-g2c.sv.v1.\$CONTIG",
+  "MarkBatchEffects.out_vcf_prefix": "dfci-g2c.sv.v2.\$CONTIG",
   "MarkBatchEffects.ref_fai": "gs://dfci-g2c-refs/hg38/contig_fais/\$CONTIG.fai",
   "MarkBatchEffects.upper_nonref_gt_freq": 0.20,
-  "MarkBatchEffects.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz",
-  "MarkBatchEffects.vcf_idx": "$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v1.\$CONTIG.out.vcf.gz.tbi"
+  "MarkBatchEffects.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v2.\$CONTIG.out.vcf.gz",
+  "MarkBatchEffects.vcf_idx": "$WORKSPACE_BUCKET/data/PosthocCleanupPart1/\$CONTIG/ApplyScript/dfci-ufc.sv.v2.\$CONTIG.out.vcf.gz.tbi"
 }
 EOF
 
@@ -1142,7 +1262,7 @@ code/scripts/manage_chromshards.py \
   --staging-bucket $WORKSPACE_BUCKET/data/MarkBatchEffects \
   --dependencies-zip g2c.dependencies.zip \
   --status-tsv cromshell/progress/MarkBatchEffects.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0 \
   --max-attempts 2
@@ -1161,9 +1281,9 @@ gsutil -m cat \
   $MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/gatk-hc/qc-filtering/dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz \
 | gunzip -c | awk -v FS="\t" -v OFS="\t" '{ if ($6=="EUR") print $3, $1 }' \
 | fgrep -wf staging/batch_effects/ufc.samples.list \
-> $staging_dir/dfci-ufc.v1.sv.EUR.cohort_assignments.tsv
+> $staging_dir/dfci-ufc.v2.sv.EUR.cohort_assignments.tsv
 gsutil -m cp \
-  $staging_dir/dfci-ufc.v1.sv.EUR.cohort_assignments.tsv \
+  $staging_dir/dfci-ufc.v2.sv.EUR.cohort_assignments.tsv \
   $WORKSPACE_BUCKET/data/misc/
 
 # Write template .json for cohort effect detection
@@ -1171,15 +1291,15 @@ cat << EOF > $staging_dir/MarkCohortEffects.inputs.template.json
 {
   "MarkBatchEffects.custom_info_flag_id": "COHORT_EFFECTS_MASKED",
   "MarkBatchEffects.flag_failing_records": false,
-  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_analysis:9e19555",
-  "MarkBatchEffects.group_membership_tsv": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.v1.sv.EUR.cohort_assignments.tsv",
+  "MarkBatchEffects.g2c_pipeline_docker": "vanallenlab/g2c_analysis:e4eaf92",
+  "MarkBatchEffects.group_membership_tsv": "$WORKSPACE_BUCKET/data/misc/dfci-ufc.v2.sv.EUR.cohort_assignments.tsv",
   "MarkBatchEffects.lower_nonref_gt_freq": 0.02,
   "MarkBatchEffects.min_samples_per_group": 20,
-  "MarkBatchEffects.out_vcf_prefix": "dfci-g2c.sv.v1.\$CONTIG",
+  "MarkBatchEffects.out_vcf_prefix": "dfci-ufc.sv.v2.\$CONTIG",
   "MarkBatchEffects.ref_fai": "gs://dfci-g2c-refs/hg38/contig_fais/\$CONTIG.fai",
   "MarkBatchEffects.upper_nonref_gt_freq": 0.20,
-  "MarkBatchEffects.vcf": "$WORKSPACE_BUCKET/data/MarkBatchEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v1.\$CONTIG.vcf.gz",
-  "MarkBatchEffects.vcf_idx": "$WORKSPACE_BUCKET/data/MarkBatchEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v1.\$CONTIG.vcf.gz.tbi"
+  "MarkBatchEffects.vcf": "$WORKSPACE_BUCKET/data/MarkBatchEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v2.\$CONTIG.vcf.gz",
+  "MarkBatchEffects.vcf_idx": "$WORKSPACE_BUCKET/data/MarkBatchEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v2.\$CONTIG.vcf.gz.tbi"
 }
 EOF
 
@@ -1191,7 +1311,7 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip g2c.dependencies.zip \
   --status-tsv cromshell/progress/MarkCohortEffects.progress.tsv \
   --name MarkCohortEffects \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0 \
   --max-attempts 2
@@ -1210,16 +1330,16 @@ for file in $staging_dir/vcfs.list $staging_dir/vcf_idxs.list; do
   if [ -e $file ]; then rm $file; fi
 done
 for k in $( seq 1 22 ) X Y; do
-  echo "$WORKSPACE_BUCKET/data/MarkCohortEffects/chr$k/ConcatVcfs/dfci-g2c.sv.v1.chr$k.vcf.gz" \
+  echo "$WORKSPACE_BUCKET/data/MarkCohortEffects/chr$k/ConcatVcfs/dfci-ufc.sv.v2.chr$k.vcf.gz" \
   >> $staging_dir/vcfs.list
-  echo "$WORKSPACE_BUCKET/data/MarkCohortEffects/chr$k/ConcatVcfs/dfci-g2c.sv.v1.chr$k.vcf.gz.tbi" \
+  echo "$WORKSPACE_BUCKET/data/MarkCohortEffects/chr$k/ConcatVcfs/dfci-ufc.sv.v2.chr$k.vcf.gz.tbi" \
   >> $staging_dir/vcf_idxs.list
 done
 cat << EOF > cromshell/inputs/count_svs_posthoc.inputs.json
 {
   "CountSvsPerSample.bcftools_view_options": "-f PASS,MULTIALLELIC",
-  "CountSvsPerSample.g2c_pipeline_docker": "vanallenlab/g2c_analysis:9e19555",
-  "CountSvsPerSample.output_prefix": "dfci-ufc.v1.postCleanupPart1",
+  "CountSvsPerSample.g2c_pipeline_docker": "vanallenlab/g2c_analysis:e4eaf92",
+  "CountSvsPerSample.output_prefix": "dfci-ufc.v2.postCleanupPart1",
   "CountSvsPerSample.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-01-14-v1.0.1-88dbd052",
   "CountSvsPerSample.vcfs": $( collapse_txt $staging_dir/vcfs.list ),
   "CountSvsPerSample.vcf_idxs": $( collapse_txt $staging_dir/vcf_idxs.list )
@@ -1227,7 +1347,7 @@ cat << EOF > cromshell/inputs/count_svs_posthoc.inputs.json
 EOF
 
 # Submit SV counting task
-cromshell --no_turtle -t 120 -mc submit \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip g2c.dependencies.zip \
   code/wdl/gatk-sv/CountSvsPerSample.wdl \
@@ -1238,20 +1358,17 @@ cromshell --no_turtle -t 120 -mc submit \
 # Monitor SV counting task
 monitor_workflow $( tail -n1 cromshell/job_ids/count_svs_posthoc.job_ids.list )
 
-# Ensure R packages are installed
-. code/refs/install_packages.sh R
-
 # Once complete, download SV counts per sample, collapse CPX+INV, and exclude CTX and mCNVs
 cromshell -t 120 --no_turtle -mc list-outputs \
   $( tail -n1 cromshell/job_ids/count_svs_posthoc.job_ids.list ) \
 | awk '{ print $NF }' | gsutil cp -I $staging_dir/
 sed 's/\tINV\t\|\tCPX\t/\tINV_CPX\t/g' \
-  $staging_dir/dfci-ufc.v1.postCleanupPart1.counts.tsv \
+  $staging_dir/dfci-ufc.v2.postCleanupPart1.counts.tsv \
 | awk -v FS="\t" -v OFS="\t" '{ if ($2 !~ /CTX|BND|CNV/) print }' \
-> $staging_dir/dfci-ufc.v1.postCleanupPart1.counts.subsetted.tsv
+> $staging_dir/dfci-ufc.v2.postCleanupPart1.counts.subsetted.tsv
 code/scripts/sum_svcounts.py \
-  --outfile $staging_dir/dfci-ufc.v1.postCleanupPart1.counts.subsetted.collapsed.tsv \
-  $staging_dir/dfci-ufc.v1.postCleanupPart1.counts.subsetted.tsv
+  --outfile $staging_dir/dfci-ufc.v2.postCleanupPart1.counts.subsetted.collapsed.tsv \
+  $staging_dir/dfci-ufc.v2.postCleanupPart1.counts.subsetted.tsv
 
 # Regenerate ancestry labels split by cohort
 gsutil -m cp \
@@ -1268,19 +1385,19 @@ zcat $staging_dir/dfci-g2c.sample_meta.gatkhc_posthoc_outliers.tsv.gz \
 
 # Define outliers
 code/scripts/define_variant_count_outlier_samples.R \
-  --counts-tsv $staging_dir/dfci-ufc.v1.postCleanupPart1.counts.subsetted.collapsed.tsv \
+  --counts-tsv $staging_dir/dfci-ufc.v2.postCleanupPart1.counts.subsetted.collapsed.tsv \
   --sample-labels-tsv $staging_dir/dfci-g2c.intake_pop_labels.aou_split.tsv \
   --n-iqr 3 \
   --plot \
   --plot-title-prefix "GATKSV" \
-  --out-prefix $staging_dir/dfci-ufc.sv.v1.posthoc_outliers
+  --out-prefix $staging_dir/dfci-ufc.sv.v2.posthoc_outliers
 
 # Compress and archive outlier data for future reference
 cd $staging_dir && \
-tar -czvf dfci-ufc.sv.v1.posthoc_outliers.tar.gz dfci-ufc.sv.v1.posthoc_outliers* && \
+tar -czvf dfci-ufc.sv.v2.posthoc_outliers.tar.gz dfci-ufc.sv.v2.posthoc_outliers* && \
 gsutil -m cp \
-  dfci-ufc.sv.v1.posthoc_outliers.tar.gz \
-  dfci-ufc.sv.v1.posthoc_outliers.outliers.samples.list \
+  dfci-ufc.sv.v2.posthoc_outliers.tar.gz \
+  dfci-ufc.sv.v2.posthoc_outliers.outliers.samples.list \
   $WORKSPACE_BUCKET/data/posthoc_outliers/ && \
 cd ~
 
@@ -1288,9 +1405,9 @@ cd ~
 cat << EOF > $staging_dir/OutlierExclusion.inputs.template.json
 {
   "PosthocHardFilterPart2.bcftools_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
-  "PosthocHardFilterPart2.exclude_samples_list": "$WORKSPACE_BUCKET/data/posthoc_outliers/dfci-ufc.sv.v1.posthoc_outliers.outliers.samples.list",
-  "PosthocHardFilterPart2.vcf": "$WORKSPACE_BUCKET/data/MarkCohortEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v1.\$CONTIG.vcf.gz",
-  "PosthocHardFilterPart2.vcf_idx": "$WORKSPACE_BUCKET/data/MarkCohortEffects/\$CONTIG/ConcatVcfs/dfci-g2c.sv.v1.\$CONTIG.vcf.gz.tbi"
+  "PosthocHardFilterPart2.exclude_samples_list": "$WORKSPACE_BUCKET/data/posthoc_outliers/dfci-ufc.sv.v2.posthoc_outliers.outliers.samples.list",
+  "PosthocHardFilterPart2.vcf": "$WORKSPACE_BUCKET/data/MarkCohortEffects/\$CONTIG/ConcatVcfs/dfci-ufc.sv.v2.\$CONTIG.vcf.gz",
+  "PosthocHardFilterPart2.vcf_idx": "$WORKSPACE_BUCKET/data/MarkCohortEffects/\$CONTIG/ConcatVcfs/dfci-ufc.sv.v2.\$CONTIG.vcf.gz.tbi"
 }
 EOF
 
@@ -1300,8 +1417,8 @@ code/scripts/manage_chromshards.py \
   --input-json-template $staging_dir/OutlierExclusion.inputs.template.json \
   --staging-bucket $WORKSPACE_BUCKET/data/OutlierExclusionWorkflow \
   --name OutlierExclusion \
-  --status-tsv cromshell/progress/dfci-ufc.v1.OutlierExclusion.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.v2.OutlierExclusion.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0 \
   --max-attempts 3
@@ -1326,11 +1443,11 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postBatchFxOutliers.inputs.templat
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/g2c_analysis:ec08fc1",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
-  "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
+  "CollectVcfQcMetrics.linux_docker": "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
-  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_bfx_outliers.\$CONTIG",
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v2.post_bfx_outliers.\$CONTIG",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
   "CollectVcfQcMetrics.ref_build": "hg38",
@@ -1356,8 +1473,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postBatchFxOutliers.inputs.templat
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-ufc.sv.v2.\$CONTIG.posthoc_filtered.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-ufc.sv.v2.\$CONTIG.posthoc_filtered.vcf.gz.tbi"]
 }
 EOF
 
@@ -1368,11 +1485,11 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip qc.dependencies.zip \
   --staging-bucket $WORKSPACE_BUCKET/qc/postBatchFxOutliers \
   --name CollectQcPostBatchFxOutliers \
-  --status-tsv cromshell/progress/dfci-ufc.sv.v1.CollectVcfQcMetrics.post_bfx_outliers.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.sv.v2.CollectVcfQcMetrics.post_bfx_outliers.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0.1 \
-  --max-attempts 3
+  --max-attempts 4
 
 
 ###################################################
@@ -1388,41 +1505,41 @@ reset_qc_plot_dir \
   $staging_dir \
   QcPostBatchFxOutliers \
   $WORKSPACE_BUCKET/qc/postBatchFxOutliers \
-  $WORKSPACE_BUCKET/qc/post_cleanupPart1/PlotQc/dfci-ufc.sv.v1.QcPostCleanupPart1.all_qc_summary_metrics.tsv
+  $WORKSPACE_BUCKET/qc/post_cleanupPart1/PlotQc/dfci-ufc.sv.v2.QcPostCleanupPart1.all_qc_summary_metrics.tsv
 
 # Submit QC visualization workflow
-cromshell --no_turtle -t 120 -mc submit --no-validation \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip qc.dependencies.zip \
   code/wdl/pancan_germline_wgs/vcf-qc/PlotVcfQcMetrics.wdl \
   cromshell/inputs/PlotQcPostBatchFxOutliers.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostBatchFxOutliers.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostBatchFxOutliers.job_ids.list
 
 # Monitor QC visualization workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostBatchFxOutliers.job_ids.list ) 5
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostBatchFxOutliers.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 gsutil -m rm -rf $WORKSPACE_BUCKET/qc/post_batchFxOutliers/PlotQc
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostBatchFxOutliers.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostBatchFxOutliers.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I \
   $WORKSPACE_BUCKET/qc/post_batchFxOutliers/PlotQc/
 
 # Clear Cromwell execution & output buckets
-gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostBatchFxOutliers.job_ids.list \
-                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostBatchFxOutliers.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/workflows/cromwell-*/PlotVcfQcMetrics/" \
                   '{ print bucket_prefix$1"/**" }' ) \
 > uris_to_delete.list
 cleanup_garbage
 
 
-##################
-# VISUALIZE CNVS #
-##################
+# ##################
+# # VISUALIZE CNVS #
+# ##################
 
-# TODO: implement this
+# # TODO: implement this (maybe not necessary?)
 
 
 ##########################
@@ -1442,13 +1559,13 @@ EOF
 cat << EOF > $staging_dir/PosthocCleanupPart2.inputs.template.json
 {
   "ApplyScriptSingleVcf.ApplyScript.contig": "\$CONTIG",
-  "ApplyScriptSingleVcf.bcftools_docker": "vanallenlab/g2c_analysis:1aac84d",
+  "ApplyScriptSingleVcf.bcftools_docker": "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/g2c_analysis:1aac84d",
   "ApplyScriptSingleVcf.exec_prefix": "python ",
   "ApplyScriptSingleVcf.script": "$WORKSPACE_BUCKET/code/scripts/vcf_cleanup.part_2.after_outlier_exclusion.py",
   "ApplyScriptSingleVcf.script_files": $( collapse_txt $staging_dir/script_files.txt ),
-  "ApplyScriptSingleVcf.script_options": "--ped-file dfci-g2c.all_samples.ped --version-number 1.1",
-  "ApplyScriptSingleVcf.vcf": "$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz",
-  "ApplyScriptSingleVcf.vcf_idx": "$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.vcf.gz.tbi"
+  "ApplyScriptSingleVcf.script_options": "--ped-file dfci-g2c.all_samples.ped --version-number 2.0",
+  "ApplyScriptSingleVcf.vcf": "$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-ufc.sv.v2.\$CONTIG.posthoc_filtered.vcf.gz",
+  "ApplyScriptSingleVcf.vcf_idx": "$WORKSPACE_BUCKET/data/OutlierExclusionWorkflow/\$CONTIG/HardFilterPart2/dfci-ufc.sv.v2.\$CONTIG.posthoc_filtered.vcf.gz.tbi"
 }
 EOF
 
@@ -1460,7 +1577,7 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip g2c.dependencies.zip \
   --name PosthocCleanupPart2 \
   --status-tsv cromshell/progress/PosthocCleanupPart2.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0 \
   --max-attempts 2
@@ -1485,11 +1602,12 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart2.inputs.template.j
   "CollectVcfQcMetrics.benchmark_interval_bed_names": ["giab_easy", "giab_hard"],
   "CollectVcfQcMetrics.common_af_cutoff": 0.01,
   "CollectVcfQcMetrics.extra_vcf_preprocessing_commands": " | bcftools view -f .,PASS,MULTIALLELIC --no-update --no-version ",
-  "CollectVcfQcMetrics.g2c_analysis_docker": "vanallenlab/g2c_analysis:1aac84d",
+  "CollectVcfQcMetrics.g2c_analysis_docker": "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/g2c_analysis:ec08fc1",
   "CollectVcfQcMetrics.genome_file": "gs://dfci-g2c-refs/hg38/hg38.genome",
-  "CollectVcfQcMetrics.linux_docker": "ubuntu:plucky-20251001",
+  "CollectVcfQcMetrics.linux_docker": "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/ubuntu:plucky-20251001",
   "CollectVcfQcMetrics.n_for_sample_level_analyses": 10000,
-  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v1.post_mingq.\$CONTIG",
+  "CollectVcfQcMetrics.output_prefix": "dfci-ufc.sv.v2.post_mingq.\$CONTIG",
+  "CollectVcfQcMetrics.PreprocessVcf.gcp_machine_type": "n2d-standard-4",
   "CollectVcfQcMetrics.PreprocessVcf.mem_gb": 15.5,
   "CollectVcfQcMetrics.PreprocessVcf.n_cpu": 4,
   "CollectVcfQcMetrics.ref_build": "hg38",
@@ -1515,8 +1633,8 @@ cat << EOF > $staging_dir/CollectVcfQcMetrics.postCleanupPart2.inputs.template.j
   "CollectVcfQcMetrics.sv_site_benchmark_beds": ["gs://dfci-g2c-refs/gnomad/gnomad_v4_site_metrics/\$CONTIG/gnomad.v4.1.gatksv.\$CONTIG.sv.sites.bed.gz"],
   "CollectVcfQcMetrics.trios_fam_file": "$WORKSPACE_BUCKET/data/sample_info/dfci-g2c.reported_families.fam",
   "CollectVcfQcMetrics.twins_tsv": "$MAIN_WORKSPACE_BUCKET/dfci-g2c-callsets/qc-filtering/initial-qc/InferTwins/dfci-g2c.v1.cleaned.tsv",
-  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz"],
-  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz.tbi"]
+  "CollectVcfQcMetrics.vcfs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-ufc.sv.v2.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz"],
+  "CollectVcfQcMetrics.vcf_idxs_array": ["$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-ufc.sv.v2.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz.tbi"]
 }
 EOF
 
@@ -1527,8 +1645,8 @@ code/scripts/manage_chromshards.py \
   --dependencies-zip qc.dependencies.zip \
   --staging-bucket $WORKSPACE_BUCKET/qc/post_cleanupPart2 \
   --name CollectQcPostCleanupPart2 \
-  --status-tsv cromshell/progress/dfci-ufc.sv.v1.CollectVcfQcMetrics.post_cleanupPart2.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --status-tsv cromshell/progress/dfci-ufc.sv.v2.CollectVcfQcMetrics.post_cleanupPart2.progress.tsv \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0.1 \
   --max-attempts 3
@@ -1547,31 +1665,31 @@ reset_qc_plot_dir \
   $staging_dir \
   QcPostCleanupPart2 \
   $WORKSPACE_BUCKET/qc/post_cleanupPart2 \
-  $WORKSPACE_BUCKET/qc/post_batchFxOutliers/PlotQc/dfci-ufc.sv.v1.QcPostBatchFxOutliers.all_qc_summary_metrics.tsv
+  $WORKSPACE_BUCKET/qc/post_batchFxOutliers/PlotQc/dfci-ufc.sv.v2.QcPostBatchFxOutliers.all_qc_summary_metrics.tsv
 
 # Submit QC visualization workflow
-cromshell --no_turtle -t 120 -mc submit --no-validation \
+cromshell --no_turtle -t 120 -mc submit --no-validation --do-not-flatten-wdls \
   --options-json code/refs/json/aou.cromwell_options.default.json \
   --dependencies-zip qc.dependencies.zip \
   code/wdl/pancan_germline_wgs/vcf-qc/PlotVcfQcMetrics.wdl \
   cromshell/inputs/PlotQcPostCleanupPart2.inputs.json \
 | jq .id | tr -d '"' \
->> cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart2.job_ids.list
+>> cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart2.job_ids.list
 
 # Monitor QC visualization workflow
-monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart2.job_ids.list ) 5
+monitor_workflow $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart2.job_ids.list ) 5
 
 # Once workflow is complete, stage output
 gsutil -m rm -rf $WORKSPACE_BUCKET/qc/post_cleanupPart2/PlotQc
 cromshell -t 120 list-outputs \
-  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart2.job_ids.list ) \
+  $( tail -n1 cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart2.job_ids.list ) \
 | awk '{ print $2 }' \
 | gsutil -m cp -I \
   $WORKSPACE_BUCKET/qc/post_cleanupPart2/PlotQc/
 
 # Clear Cromwell execution & output buckets
-gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v1.PlotQcPostCleanupPart2.job_ids.list \
-                | awk -v bucket_prefix="$WORKSPACE_BUCKET/cromwell-*/PlotVcfQcMetrics/" \
+gsutil -m ls $( cat cromshell/job_ids/dfci-ufc.sv.v2.PlotQcPostCleanupPart2.job_ids.list \
+                | awk -v bucket_prefix="$WORKSPACE_BUCKET/workflows/cromwell-*/PlotVcfQcMetrics/" \
                   '{ print bucket_prefix$1"/**" }' ) \
 > uris_to_delete.list
 cleanup_garbage
@@ -1594,13 +1712,13 @@ cat << EOF > $staging_dir/AnnotateVcf.inputs.template.json
   "AnnotateVcf.external_af_ref_prefix": "gnomad_v4.1_sv",
   "AnnotateVcf.gatk_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/gatk:2025-05-20-4.6.2.0-4-g1facd911e-NIGHTLY-SNAPSHOT",
   "AnnotateVcf.par_bed": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/hg38.par.bed",
-  "AnnotateVcf.prefix": "dfci-ufc.sv.v1.1.\$CONTIG",
+  "AnnotateVcf.prefix": "dfci-ufc.sv.v2.1.\$CONTIG",
   "AnnotateVcf.protein_coding_gtf": "gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/gencode.v47.basic.protein_coding.canonical.gtf",
   "AnnotateVcf.runtime_attr_svannotate": {"cpu_cores" : 4, "mem_gb": 7.5},
   "AnnotateVcf.sv_base_mini_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-base-mini:2024-10-25-v0.29-beta-5ea22a52",
   "AnnotateVcf.sv_per_shard": 5000,
   "AnnotateVcf.sv_pipeline_docker": "us.gcr.io/broad-dsde-methods/gatk-sv/sv-pipeline:2025-09-02-v1.0.5-631368eb",
-  "AnnotateVcf.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-g2c.sv.v1.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz"
+  "AnnotateVcf.vcf": "$WORKSPACE_BUCKET/data/PosthocCleanupPart2/\$CONTIG/ApplyScript/dfci-ufc.sv.v2.\$CONTIG.posthoc_filtered.\$CONTIG.out.vcf.gz"
 }
 EOF
 
@@ -1608,10 +1726,10 @@ EOF
 code/scripts/manage_chromshards.py \
   --wdl code/wdl/gatk-sv/svannotation_v1.1/AnnotateVcf.wdl \
   --input-json-template $staging_dir/AnnotateVcf.inputs.template.json \
-  --staging-bucket $WORKSPACE_BUCKET/data/AnnotateVcf \
+  --staging-bucket $WORKSPACE_BUCKET/data/AnnotateVcf_v2 \
   --dependencies-zip svannotation.dependencies.zip \
   --status-tsv cromshell/progress/AnnotateVcf.progress.tsv \
-  --workflow-id-log-prefix "dfci-ufc.sv.v1" \
+  --workflow-id-log-prefix "dfci-ufc.sv.v2" \
   --outer-gate 30 \
   --submission-gate 0 \
   --max-attempts 2
