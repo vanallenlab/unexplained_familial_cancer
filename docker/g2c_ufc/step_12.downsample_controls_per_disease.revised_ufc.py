@@ -295,7 +295,7 @@ def maximal_non_related_subset_dfs_family_style(family, kinship_file, meta, pref
 
     return best[0]
 
-def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 2, seed: int = 42, set_control_ratio: int = 7) -> pd.DataFrame:
+def match_controls_by_ancestry(meta: pd.DataFrame, max_controls_per_case: int = 2, seed: int = 42, set_control_ratio: int = 5) -> pd.DataFrame:
     """
     Match controls to cases based on ancestry (ancestry_pred), sex, and cohort if available.
     Try to balance age within each matched group.

@@ -1,5 +1,6 @@
 # Ignore all contents of results/
 results/*
+revised_results/*
 
 # But keep the directory itself so it shows up empty
 !results/.gitkeep

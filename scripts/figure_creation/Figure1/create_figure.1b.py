@@ -86,4 +86,4 @@ ax.text(0.5, -0.1, "Cohort Selection Process",
         transform=ax.transAxes, ha='center', va='center', fontsize=6)
 
 plt.tight_layout()
-plt.savefig("Figure1b.pdf", bbox_inches="tight", pad_inches=0)
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/Figure1/Figure1b.pdf", bbox_inches="tight", pad_inches=0)

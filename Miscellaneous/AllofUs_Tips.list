@@ -1,0 +1,25 @@
+Helpful Tips for AoU Workbench
+
+1. Install "less": conda install -c conda-forge less
+2. Install cromshell: "python -m pip install --user cromshell"
+3. Install zip: conda install -c conda-forge zip
+
+
+  # Researcher Account Activity Confirmation Link
+  1. https://redcap.pmi-ops.org/surveys/?s=K4PA9H8E979AHJEP
+
+1. Local Ancestry for CHR7
+
+Hiding Cromshell Random Python Warning:
+1. echo 'export PYTHONWARNINGS="ignore::FutureWarning"' >> ~/.bashrc
+2. source ~/.bashrc
+
+Curl to find out if something failed
+1. curl -s http://localhost:8000/api/workflows/v1/{workflow}/status
+
+2. curl -s http://localhost:8000/api/workflows/v1/7db76563-cab0-451d-beae-30981c72b015/metadata | \
+jq '.calls["SAIGE_GENE.get_covariates2"][] | {executionStatus, backendStatus, failures}'
+
+# Delete CROMSHELL BUCKET
+1. find /home/jupyter/.cromwell -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+2. du -sh /home/jupyter/.cromwell

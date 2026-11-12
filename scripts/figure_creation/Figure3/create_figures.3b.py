@@ -33,9 +33,18 @@ or_df = pd.read_csv(
 # Filter PGS
 # -----------------------
 pgs_keep = [
-    "PGS000785","PGS000789","PGS000791","PGS000784",
-    "PGS000787","PGS003382","PGS004694","PGS000797","PGS004687",
-    "PGS003384","PGS000788","PGS000793","PGS004244","PGS004688"
+    "PGS004687",  # bladder
+    "PGS004688",  # breast
+    "PGS000785",  # colon
+    "PGS004244",  # endometrial
+    "PGS000787",  # kidney
+    "PGS000788",  # leukemia
+    "PGS003391",  # lung
+    "PGS003382",  # melanoma
+    "PGS000791",  # non-Hodgkin lymphoma
+    "PGS000793",  # ovarian
+    "PGS004694",  # prostate
+    "PGS000797",  # thyroid
 ]
 
 def filter_pgs(df):
@@ -111,7 +120,7 @@ df["y_pos"] = df["Cancer"].cat.codes
 # -----------------------
 # Significance
 # -----------------------
-sig = (df["p_value"] < 0.05) & (df["OR"] > 1.4)
+sig = (df["p_value"] < 0.05) & (df["OR"] > 1.6)
 
 # -----------------------
 # Plot
@@ -170,7 +179,7 @@ sig_handle2 = plt.scatter(
     c="white",
     edgecolor="none",    
     linewidth=0,
-    label="P < 2 x 10$^{-4}$"
+    label="P < 3 x 10$^{-4}$"
 )
 
 all_handles = size_handles + [sig_handle2,sig_handle]
@@ -195,11 +204,11 @@ plt.legend(
 # -----------------------
 ax.set_xticks(range(len(x_order)))
 ax.set_xticklabels(x_order, rotation=45, ha="right")
-ax.set_xticklabels(["Hematologic PRS" if x == "Leukemia PRS" else x for x in x_order], rotation=45, ha="right")
+ax.set_xticklabels([{"Non-Hodgkin":"non-Hodgkin"}.get(x,x) for x in x_order], rotation=45, ha="right")
 
 ax.set_yticks(range(len(y_order)))
 #ax.set_yticklabels(y_order)
-ax.set_yticklabels([{"Neuroendocrine":"NETs","Basal Cell":"BCC","Squamous Cell":"SCC","Non-Hodgkin":"NHL"}.get(l,l) for l in y_order])
+ax.set_yticklabels([{"Colon":"Colorectal","Nhl":"non-Hodgkin"}.get(l,l) for l in y_order])
 
 #ax.set_xlabel("PRS Model", labelpad=6)
 ax.set_ylabel("Patient Cancer", labelpad=4)
@@ -210,6 +219,7 @@ ax.set_ylabel("Patient Cancer", labelpad=4)
 cbar = plt.colorbar(sc, ax=ax, fraction=0.04, pad=0.02)
 cbar.set_label(r"$-\log_{10}P$", fontsize=6)
 cbar.ax.tick_params(labelsize=5, width=0.5, length=2)
+cbar.set_ticklabels(["", "1", "2", "3", "4", "5", "6", "7", r"$\geq 8$"])
 cbar.outline.set_linewidth(0.5)
 
 # -----------------------

@@ -50,20 +50,18 @@ pgs_dir = Path("/Users/noah/Desktop/ufc_repository/results/analysis_4a_prs/")
 # Cancer PGS IDs
 # -----------------------
 cancer_configs = {
-    "breast": ["PGS004688"],
-    "cervix": ["PGS000784"],
     "prostate": ["PGS004694"],
-    "hematologic":["PGS000788"],
-    "melanoma": ["PGS003382"],
-    "lung":["PGS000789"],
-    "thyroid": ["PGS000797"],
-    "brain": ["PGS003384"],
-    "colorectal": ["PGS000785"],
-    "uterus": ["PGS004244"],
-    "non-hodgkin": ["PGS000791"],
-    "bladder":["PGS004687"],
+    "nhl": ["PGS000791"],
+    "breast": ["PGS004688"],
     "kidney": ["PGS000787"],
-    "ovary":["PGS000793"]   
+    "melanoma": ["PGS003382"],
+    "endometrial": ["PGS004244"],
+    "thyroid": ["PGS000797"],
+    "bladder":["PGS004687"],   
+    "leukemia":["PGS000788"],    
+    "lung":["PGS003391"],
+    "colon": ["PGS000785"],
+    "ovarian":["PGS000793"]   
 }
 
 # -----------------------
@@ -167,7 +165,7 @@ for cancer, pgs_ids in cancer_configs.items():
         #     bbox=dict(facecolor="white", alpha=0.6, pad=0.05, linewidth=0)
         # )
 
-        ax.set_title(f"{cancer.upper()} PRS",pad=0.5)
+        ax.set_title(f"{cancer.upper().replace("COLON","COLORECTAL")} PRS",pad=0.5)
         ax.tick_params(width=0.8, length=2)
         ax.set_xlabel("")  # remove local x-label
         ax.set_ylabel("")  # remove local y-label

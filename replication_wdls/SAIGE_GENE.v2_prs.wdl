@@ -1,0 +1,1058 @@
+# The Germline Genomics of Cancer (G2C)
+# Copyright (c) 2024-Present, Noah Fields and the Dana-Farber Cancer Institute
+# Contact: Noah Fields <noah_fields@dfci.harvard.edu>
+# # Distributed under the terms of the GNU GPL v2.0
+
+version 1.0
+import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
+
+workflow SAIGE_GENE_PRS {
+  input {
+    File rare_variants_001 = "gs://rw-migration-aou-rw-cf3e7774/STEP_9_RUN_VEP/saige_gene_001_variants.tsv"
+    File rare_variants_0001 = "gs://rw-migration-aou-rw-cf3e7774/STEP_9_RUN_VEP/saige_gene_0001_variants.tsv"
+    File group_file_001 = "gs://rw-migration-aou-rw-cf3e7774/STEP_9_RUN_VEP/ufc_001.groupfile"
+    File group_file_0001 = "gs://rw-migration-aou-rw-cf3e7774/STEP_9_RUN_VEP/ufc_0001.groupfile"
+    String step_8_output_dir = "gs://rw-migration-aou-rw-cf3e7774/STEP_8_FILTER_TO_TP_VARIANTS/sharded_vcfs"
+    File subjects_list
+    String cancer_type
+    File pcs = "gs://rw-migration-aou-rw-cf3e7774/STEP_11_GENETIC_RELATEDNESS/ufc.eigenvec" 
+    File ld_pruned_vcf = "gs://rw-migration-aou-rw-cf3e7774/STEP_11_GENETIC_RELATEDNESS/ufc_1000G_snps.ld_pruned.vcf.gz"
+    File sample_data
+    String analysis_3_saige_dir = "gs://dataproc-staging-wb-cordial-diamond-9893/ANALYSIS_3_SAIGE_GENE/prs/"
+    String single_sex_analysis
+    File aou_list = "gs://rw-migration-aou-rw-cf3e7774/UFC_REFERENCE_FILES/cohorts/ufc_subjects.aou.list"
+    String pgs_id    
+  }
+
+  File prs_file = "gs://rw-migration-aou-rw-cf3e7774/ANALYSIS_4_PRS/" + pgs_id + ".raw.pgs"
+
+  call get_covariates2 {
+    input:
+      sample_data = sample_data,
+      prs_file = prs_file
+  }
+
+  call saige_gene_step0 {
+    input:
+      bed = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_ld.bed",
+      bim = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_ld.bim",
+      fam = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_ld.fam"
+  }
+
+  call saige_gene_step1 {
+    input:
+      bed = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_ld.bed",
+      bim = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_ld.bim",
+      fam = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_ld.fam",
+      single_sex_analysis = single_sex_analysis,
+      sample_data = get_covariates2.data,
+      sparseGRMFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx",
+      sparseGRMSampleIDFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+  }
+
+  call saige_gene_step2 as saige_gene_step2_001 {
+    input:
+      cancer_type = cancer_type,
+      vcf = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz",
+      vcf_idx = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz.csi",
+      sampleFile = subjects_list,
+      rda = saige_gene_step1.rda, 
+      group_file = group_file_001,
+      varianceRatio = saige_gene_step1.varianceRatio,
+      sparseGRMFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx",
+      sparseGRMSampleIDFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+  }
+
+  call saige_gene_step2_beta as saige_gene_step2_beta_001 {
+    input:
+      cancer_type = cancer_type,
+      vcf = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz",
+      vcf_idx = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz.csi",
+      sampleFile = subjects_list,
+      rda = saige_gene_step1.rda,
+      group_file = group_file_001,
+      varianceRatio = saige_gene_step1.varianceRatio,
+      sparseGRMFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx",
+      sparseGRMSampleIDFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+  }
+
+  call saige_gene_step2 as saige_gene_step2_0001 {
+    input:
+      cancer_type = cancer_type,
+      vcf = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz",
+      vcf_idx = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz.csi",
+      sampleFile = subjects_list,
+      rda = saige_gene_step1.rda,
+      group_file = group_file_0001,
+      varianceRatio = saige_gene_step1.varianceRatio,
+      sparseGRMFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx",
+      sparseGRMSampleIDFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+  }
+
+  call saige_gene_step2_beta as saige_gene_step2_beta_0001 {
+    input:
+      cancer_type = cancer_type,
+      vcf = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz",
+      vcf_idx = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz.csi",
+      sampleFile = subjects_list,
+      rda = saige_gene_step1.rda,
+      group_file = group_file_0001,
+      varianceRatio = saige_gene_step1.varianceRatio,
+      sparseGRMFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx",
+      sparseGRMSampleIDFile = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+  }
+
+  call sortSAIGE_Output {
+    input:
+      saige_output_001 = saige_gene_step2_001.out1,
+      saige_output_beta_001 = saige_gene_step2_beta_001.out1,
+      saige_output_0001 = saige_gene_step2_0001.out1,
+      saige_output_beta_0001 = saige_gene_step2_beta_0001.out1,
+      output_name = cancer_type
+  }
+
+  call RecalibrateSaigeStats {
+    input:
+      raw_stats_tsv = sortSAIGE_Output.out1,
+      output_prefix = "~{cancer_type}"
+  }
+
+  call Tasks.copy_file_to_storage as copy3{
+    input:
+      text_file = RecalibrateSaigeStats.out1,
+      output_dir = analysis_3_saige_dir
+  }
+}
+
+task copy_to_storage {
+  input {
+    String cancer_type
+    File gene_burden_output_file
+    File log_file
+    File single_var_output_file
+    File group_file
+  }
+  command <<<
+  gsutil -m cp ~{gene_burden_output_file}\
+          gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/ \
+          analysis/~{cancer_type}/~{cancer_type}.saige_results.tsv
+  gsutil -m cp ~{single_var_output_file}\
+          gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/ \
+          analysis/~{cancer_type}/~{cancer_type}.saige_results.single_var.tsv
+  gsutil -m cp ~{log_file} \
+          gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/ \
+          analysis/~{cancer_type}/~{cancer_type}.saige.log
+  gsutil -m cp ~{group_file} \
+          gs://fc-secure-d531c052-7b41-4dea-9e1d-22e648f6e228/UFC_REFERENCE_FILES/ \
+          analysis/~{cancer_type}/~{cancer_type}.group_file
+  >>>
+  runtime {
+    docker: "vanallenlab/g2c_pipeline"
+    preepmtible: 3
+  }
+}
+
+task ConcatVcfs {
+  input {
+    Array[File] vcfs
+    Array[File] vcf_idxs
+    String callset_name
+
+    String bcftools_concat_options = ""
+
+    Float mem_gb = 3.5
+    Int cpu_cores = 2
+    Int? disk_gb
+
+    String bcftools_docker = "vanallenlab/bcftools"
+  }
+
+  String out_filename = callset_name + ".vcf.gz"
+
+  Int default_disk_gb = ceil(2.5 * size(vcfs, "GB")) + 10
+
+  command <<<
+    set -eu -o pipefail
+
+    bcftools concat \
+      ~{bcftools_concat_options} \
+      --file-list ~{write_lines(vcfs)} \
+      -O z \
+      -o ~{out_filename} \
+      --threads ~{cpu_cores}
+
+    bcftools index --csi ~{out_filename}
+  >>>
+
+  output {
+    File merged_vcf = "~{out_filename}"
+    File merged_vcf_idx = "~{out_filename}.csi"
+  }
+
+  runtime {
+    docker: bcftools_docker
+    memory: mem_gb + " GB"
+    cpu: cpu_cores
+    disks: "local-disk " + select_first([disk_gb, default_disk_gb]) + " HDD"
+    preemptible: 3
+  }
+}
+
+task sort_vcf_list {
+  input {
+    File unsorted_vcf_list
+  }
+  command <<<
+  set -eu -o pipefail
+  python3 <<CODE
+  import re
+
+  # Input file containing the list of file paths
+  file_path = '~{unsorted_vcf_list}'
+
+  # Read and parse file paths
+  with open(file_path, 'r') as f:
+      paths = f.readlines()
+
+  # Function to extract chromosome and shard number for sorting
+  def extract_key(path):
+      # Extract chromosome and shard numbers using regex
+      match = re.search(r'chr([0-9XY]+)-finalrun\.([0-9]+)', path)
+      if match:
+          chrom_str, shard_str = match.groups()
+
+          # Convert chromosome to integer, treating 'X' as 23 and 'Y' as 24
+          chrom_num = 23 if chrom_str == 'X' else 24 if chrom_str == 'Y' else int(chrom_str)
+          shard_num = int(shard_str)
+          
+          # Return a tuple with chromosome and shard for sorting
+          return (chrom_num, shard_num)
+      else:
+          return (float('inf'), float('inf'))  # Unmatched lines go to the end
+  # Sort paths using the extracted keys
+  sorted_paths = sorted(paths, key=extract_key)
+
+  # Write to vcf.sorted.list and vcf_idx.sorted.list
+  with open('vcf.sorted.list', 'w') as vcf_file, open('vcf_idx.sorted.list', 'w') as vcf_idx_file:
+      for path in sorted_paths:
+          clean_path = path.strip()
+          vcf_file.write(clean_path + '\n')
+          vcf_idx_file.write(clean_path + '.tbi\n')
+  CODE
+  >>>
+  output {
+    Array[String] vcf_arr = read_lines("vcf.sorted.list")
+    Array[String] vcf_idx_arr = read_lines("vcf_idx.sorted.list")
+  }
+  runtime {
+    docker: "vanallenlab/pydata_stack"
+    preemptible: 3
+  }
+}
+
+task gather_vcfs {
+  input {
+    String dir
+  }
+  command <<<
+  set -euxo pipefail
+  gsutil ls ~{dir}/*.vcf.bgz > vcf.list #tmp.txt
+  #grep chr17 tmp.txt > vcf.list
+  >>>
+  output {
+    File vcf_list = "vcf.list"
+  }
+  runtime {
+    docker: "us.gcr.io/google.com/cloudsdktool/google-cloud-cli:latest"
+    preemptible: 3
+  }
+}
+
+
+task process_vcf {
+  input {
+    File vcf
+    File sample_list
+    File rare_variants
+  }
+  Int default_disk_gb = ceil(size(vcf,"GB") * 2) + 10
+  command <<<
+  set -euxo pipefail
+  bcftools annotate -x INFO -O z -o tmp1.vcf.gz ~{vcf}
+  echo '##FILTER=<ID=ExcessHet,Description="Excess heterozygosity filter">' > extra_header.txt
+  bcftools annotate -h extra_header.txt -O z -o tmp2.vcf.gz tmp1.vcf.gz
+  bcftools view -S ~{sample_list} tmp2.vcf.gz -Oz -o tmp3.vcf.gz
+  bcftools annotate -h extra_header.txt -O z -o tmp3.vcf.gz tmp2.vcf.gz
+  bcftools index -t tmp3.vcf.gz
+  bcftools view --include ID==@~{rare_variants} tmp2.vcf.gz -O z -o output.vcf.gz
+  bcftools index --csi output.vcf.gz
+  >>>
+  output {
+    File output_vcf = "output.vcf.gz"
+    File output_vcf_idx = "output.vcf.gz.csi"
+  }
+  runtime {
+    docker: "vanallenlab/bcftools"
+    disks: "local-disk ~{default_disk_gb} HDD"
+    memory: "8GB"
+    preemptible: 3
+  }
+}
+
+task make_group_file_part1 {
+  input {
+    File vcf
+    File autosomal_gene_file
+  }
+  command <<<
+  set -euxo pipefail
+
+  # Get the VEP HIGH and MODERATE IMPACT Variants
+  echo "Checkpoint 1"
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%IMPACT\t%clinvar_CLNSIG\n' -d > tmp0.txt
+  grep -v '^\.' tmp0.txt > tmp1.txt || touch tmp1.txt
+  grep -E 'HIGH|MODERATE' tmp1.txt | grep -Ev 'Benign|Likely_bengin|Benign/Likely_benign' | cut -f1-3 > tmp2.txt || touch tmp2.txt
+  grep -v '^$' tmp2.txt > tmp3.txt || touch tmp3.txt
+  sort -u --compress-program=gzip < tmp3.txt > vep_impact.txt || touch vep_impact.txt
+
+  # Get the ClinVar Important Variants
+  #head vep_impact.txt
+  #echo "Checkpoint 2"
+  #bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%clinvar_clnsig\n' -d > tmp1.txt
+  #grep -E 'Pathogenic|Likely_pathogenic|Pathogenic/Likely_pathogenic' tmp1.txt > tmp2.txt || touch tmp2.txt
+  ## Remove instances that are MODERATE or LOW because these variants are pathogenic in other genes most likely
+  #grep -Ev 'MODIFIER|LOW' tmp2.txt | cut -f1-3 > tmp3.txt || touch tmp3.txt
+  #rm tmp2.txt
+  #sort -u tmp2.txt > vep_plp_clinvar.txt || touch vep_plp_clinvar.txt
+
+  # Get known Benign or Likely_Benign variants to exclude later on
+  #grep -E 'Benign|Likely_bengin|Benign/Likely_benign' tmp1.txt > tmp2.txt || touch tmp2.txt
+  #sort -u tmp2.txt > vep_blb_clinvar.txt || touch vep_blb_clinvar.txt
+  #rm tmp1.txt tmp2.txt
+
+
+  # Keep variants if they are Alpha Missense Likely_pathogenic
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%am_class\t%Consequence\t%clinvar_CLNSIG\n' -d | \
+    grep 'likely_pathogenic' | grep 'missense_variant' | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | \
+    cut -f1-3 | uniq > am_scores.tsv || touch am_scores.tsv
+
+  # Keep variants if they are PrimateAI Deleterious (D)
+  bcftools +split-vep ~{vcf} \
+    -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%PrimateAI_score\t%PrimateAI_pred\t%clinvar_CLNSIG\t%Consequence\n' -d | \
+    awk -F'\t' '$4 == "D"' | grep 'missense_variant' | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' | \
+    cut -f1,2,4 | uniq > primateAI_scores.tsv || touch primateAI_scores.tsv
+
+  # Keep variants if they are greater than 0.5 and are classified as missense variants
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%REVEL_score\t%Consequence\t%clinvar_CLNSIG\n' -d | \
+    grep "missense_variant" | grep -Ev 'NMD_transcript_variant' | \
+    grep -Ev 'Benign|Likely_benign|Benign/Likely_benign' > tmp.txt || touch tmp.txt
+  cut -f1-3 < tmp.txt | uniq > revel_scores.tsv
+
+  # CODE to parse VEP REVEL Scores
+  python3 <<CODE
+  def process_revel_score(score_field: str) -> float:
+      parts = score_field.split("&")
+      numeric_values = [float(p) for p in parts if p != "."]
+      return max(numeric_values) if numeric_values else None
+
+  # Example:
+  with open("revel_scores.tsv", "r") as infile, open("vep_revel_score.tmp.txt", "w") as outfile:
+      for line in infile:
+          parts = line.strip().split("\t")
+          max_score = process_revel_score(parts[2])
+          if max_score is None or max_score < 0.5:
+              continue
+          elif max_score >= 0.75:
+              outfile.write(f"{parts[0]}\t{parts[1]}\tREVEL075\n") 
+          elif max_score >= 0.5:
+              outfile.write(f"{parts[0]}\t{parts[1]}\tREVEL050\n")
+  CODE
+  sort -u vep_revel_score.tmp.txt > vep_revel_score.txt
+
+  # Get the synonymous variants
+  bcftools +split-vep ~{vcf} -f '%SYMBOL\t%CHROM:%POS:%REF:%ALT\t%Consequence\t%IMPACT\n' -d > tmp0.txt
+  grep -v '^\.' tmp0.txt > tmp1.txt || touch tmp1.txt
+  grep -E 'synonymous_variant' tmp1.txt > tmp2.txt || touch tmp2.txt
+  grep 'LOW' tmp2.txt | cut -f1-3 > tmp3.txt || touch tmp3.txt
+  grep -v '^$' tmp3.txt > tmp4.txt || touch tmp4.txt 
+  sort -u --compress-program=gzip < tmp4.txt > synonymous.txt || touch synonymous.txt  
+
+  echo "Checkpoint 3"
+  cat vep_impact.txt vep_revel_score.txt am_scores.tsv primateAI_scores.tsv synonymous.txt > vep_output.tmp.txt
+  awk 'NR==FNR {genes[$1]; next} $1 in genes' ~{autosomal_gene_file} vep_output.tmp.txt > vep_output.txt
+
+  echo "Make Important Variant ID List"
+  cut -f2 vep_output.txt > tmp0.txt || touch tmp0.txt
+  tr ':' '_' < tmp0.txt > tmp1.txt || touch tmp1.txt
+  sort -u tmp1.txt > important_variants.list || touch important_variants.list
+  >>>
+  runtime {
+    docker: "vanallenlab/g2c_pipeline"
+    preemptible: 3
+    disks: "local-disk 20 HDD"
+    memory: "4GB"
+  }
+  output {
+    File vep_output = "vep_output.txt"
+    File important_variants = "important_variants.list"
+  }
+}
+
+task make_group_file_part2 {
+  input {
+    File split_vep_output
+    String cancer_type
+    String freq
+  }
+  command <<<
+  set -eu -o pipefail
+  python3 <<CODE
+  import pandas as pd
+
+  # Load the VEP output (tab-delimited file from +split-vep)
+  vep_file = "~{split_vep_output}"
+  df = pd.read_csv(vep_file, sep="\t", names=['Gene', 'Variant', 'Consequence'], header=None)
+  df = df[df['Gene'] != '.']
+  #df = df[~df['Consequence'].str.contains('&',na=False)]
+  # Drop Instances of Nonsense Mediated Decay Variants
+  #df = df.loc[~df['Consequence'].str.contains('NMD_transcript_variant', case=False, na=False)]
+  #df.loc[df['Consequence'].str.contains('synonymous_variant', na=False), 'Consequence'] = 'synonymous_variant'
+ 
+  df = df[~df['Gene'].str.contains('-', na=False)]
+  #df['Consequence'] = df['Consequence'].replace('Pathogenic/Likely_pathogenic', 'PLP')
+  # Removing Pathogenic Clinvar Terms, but if that same variant is annotated otherwise it remains in analysis
+  #df = df[~df['Consequence'].isin(['Pathogenic', 'Likely_pathogenic', 'PLP'])]
+ 
+  # Print the number of unique values in 'Gene' and 'Variant'
+  #print(f"Unique values in 'Gene': {df['Gene'].nunique()}")
+  #print(f"Unique values in 'Variant': {df['Variant'].nunique()}")
+
+  # Define the hierarchy for 'Consequence'
+  # consequence_hierarchy = {
+  #     'Pathogenic': 1,
+  #     'PLP': 2,
+  #     'Likely_pathogenic': 3,
+  #     'HIGH': 4,
+  #     'REVEL075': 5,
+  #     'REVEL050': 6,
+  #     'MODERATE': 7,
+  #     "synonymous_variant": 8,
+  #     'LOW': 9
+  # }
+  consequence_hierarchy = {
+      'HIGH': 1,
+      'TIER1': 2,
+      'TIER2': 3,
+      'MODERATE': 4,
+      "synonymous_variant": 5,
+  }
+  # Example mapping function for one group of consequences
+  def assign_consequence_v1(group):
+      consequences = set(group['Consequence'])
+      
+      # Rule 1: HIGH present
+      if any('HIGH' in c for c in consequences):
+          return 1
+      
+      # Rule 2: at least two of [REVEL075, likely_pathogenic, D]
+      severe_hits = [c for c in consequences if any(x in c for x in ['REVEL075', 'likely_pathogenic', 'D'])]
+      if len(severe_hits) >= 2:
+          return 2
+      
+      # Rule 3: at least one of [REVEL050, REVEL075, likely_pathogenic, D]
+      if any(any(x in c for x in ['REVEL050', 'REVEL075', 'likely_pathogenic', 'D']) for c in consequences):
+          return 3
+      
+      # Rule 4: MODERATE present
+      if any('MODERATE' in c for c in consequences):
+          return 4
+      
+      # Rule 5: synonymous_variant present
+      if any('synonymous_variant' in c for c in consequences):
+          return 5
+      
+      # Default if none matched
+      return None
+  
+  # Apply groupby and map back to full df
+  df['Consequence_Rank'] = (
+      df.groupby(['Gene', 'Variant'], group_keys=False)
+        .apply(assign_consequence_v1)
+        .reindex(df.index)
+  )
+
+  # Add a rank column based on the hierarchy
+  #df['Consequence_Rank'] = df['Consequence'].map(consequence_hierarchy)
+
+  # Sort by Gene, Variant, and Consequence_Rank
+  #df_sorted = df.sort_values(by=['Gene', 'Variant', 'Consequence_Rank'])
+
+  # Drop duplicates, keeping the first (highest-ranked Consequence)
+  #df_filtered = df_sorted.drop_duplicates(subset=['Gene', 'Variant'], keep='first')
+
+  # Drop the rank column (optional)
+  #df_filtered = df_filtered.drop(columns=['Consequence_Rank'])
+  #df = df_filtered
+
+  # Extract and format data
+  grouped = df.groupby('Gene')
+
+  # Prepare the output
+  output = []
+  for gene, group in grouped:
+      variants = " ".join(group['Variant'].tolist())
+      annotations = " ".join(group['Consequence_Rank'].tolist())
+      output.append(f"{gene} var {variants}")
+      output.append(f"{gene} anno {annotations}")
+
+  # Write to the group file
+  with open("~{cancer_type}.~{freq}.groupfile", "w") as f:
+      f.write("\n".join(output) + "\n")
+
+  CODE
+  >>>
+  output {
+    File group_file = "~{cancer_type}.~{freq}.groupfile"
+  }
+  runtime {
+    docker: "vanallenlab/pydata_stack"
+    preemptible: 3
+    memory: "16GB"
+  }
+}
+
+task make_cohorts {
+  input{
+    File sample_data
+  }
+  command <<<
+  set -eu -o pipefail
+  python3 <<CODE
+  import pandas as pd
+  
+  df = pd.read_csv("~{sample_data}",sep='\t')
+  
+  CODE
+  >>>
+  output {
+  }
+  runtime {
+    docker: "vanallenlab/pydata_stack"
+    preemptible: 3
+  }
+}
+
+task get_covariates2 {
+  input {
+    File sample_data
+    File prs_file
+  }
+  command <<<
+  set -eu -o pipefail
+  python3 <<CODE
+  import pandas as pd
+  import numpy as np
+  from scipy.stats import zscore
+
+  sample_data = pd.read_csv("~{sample_data}", sep='\t')
+  prs_df = pd.read_csv("~{prs_file}",sep='\t',index_col=False,dtype={"sample":str})
+
+  prs_df['person_id'] = prs_df['sample'].astype(str).str.strip()
+  # Make sure person_id is interpreted as a string
+  sample_data['person_id'] = sample_data['person_id'].astype(str).str.strip()
+  sample_data = sample_data.merge(prs_df,how="left",on="person_id")
+
+  # Normalize PC1-PC4
+  covariates = [f"PC{i}" for i in range(1, 5)] + ["PGS"]
+  sample_data[covariates] = sample_data[covariates].apply(zscore)
+
+  # Write to file
+  sample_data.to_csv("ufc_covariates.tsv", sep='\t', index=False)
+  CODE
+  >>>
+  runtime {
+    docker: "vanallenlab/pydata_stack"
+    preemptible: 3
+  }
+  output {
+    File data = "ufc_covariates.tsv"
+  }
+}
+
+
+task get_covariates {
+  input {
+    File sample_data
+    File aou_phenotypes
+    File non_aou_phenotypes
+    File subjects_list
+
+  }
+  command <<<
+  set -eu -o pipefail
+  python3 <<CODE
+  import pandas as pd
+  import numpy as np
+  from scipy.stats import zscore
+
+  sample_data = pd.read_csv("~{sample_data}",sep='\t')
+  aou_phenotypes = pd.read_csv("~{aou_phenotypes}",sep='\t')
+  non_aou_phenotypes = pd.read_csv("~{non_aou_phenotypes}",sep='\t')
+  
+  # Normalize sample_data PCS
+  covariates = [f"PC{i}" for i in range(1, 5)] + ["age"] 
+  sample_data[covariates] = sample_data[covariates].apply(zscore)
+
+  # Concatenate the two DataFrames
+  phenotypes = pd.concat([aou_phenotypes, non_aou_phenotypes], ignore_index=True)
+
+  # Identify common columns (excluding the key column for merging)
+  common_columns = sample_data.columns.intersection(phenotypes.columns).difference(["Sample", "original_id"])
+
+  # Drop common columns from `phenotypes`
+  phenotypes = phenotypes.drop(columns=common_columns)
+
+  # Making Sure that we will merge correctly!
+  sample_data['original_id'] = sample_data['original_id'].astype(str).str.strip()
+  phenotypes['Sample'] = phenotypes['Sample'].astype(str).str.strip()
+
+  # Merge the DataFrames
+  merged_df = pd.merge(sample_data, phenotypes, left_on="original_id", right_on="Sample")
+   
+  # Add in cancer as a binary trait
+  merged_df['cancer_status'] = merged_df['cancer'].apply(lambda x: 1 if x not in ['unknown', 'control'] else 0)
+
+
+
+  # Read the ~{subjects_list} file into a Python set for efficient lookup
+  with open("~{subjects_list}", "r") as file:
+      subjects = set(line.strip() for line in file)
+
+  # Filter the DataFrame to include only rows where 'original_id' is in the subjects set
+  filtered_df = merged_df[merged_df['original_id'].isin(subjects)]
+  filtered_df['sex'] = (filtered_df['inferred_sex'] == 'male').astype(int)
+
+  # Write to file
+  filtered_df.to_csv("ufc_covariates.tsv",sep='\t', index=False)
+  print("File written to ufc_covariates.tsv")
+  CODE
+  >>>
+  runtime {
+    docker: "vanallenlab/pydata_stack"
+    preemptible: 3
+  }
+  output {
+    File data = "ufc_covariates.tsv"
+  }
+}
+
+task saige_gene_step0 {
+  input {
+    File bed
+    File bim
+    File fam
+  }
+  command <<<
+  set -eu -o pipefail
+
+  # Ensure all files are in the same directory
+  cp ~{bed} ufc.bed
+  cp ~{bim} ufc.bim
+  cp ~{fam} ufc.fam
+
+  if ! createSparseGRM.R       \
+       --plinkFile=./ufc \
+       --nThreads=4  \
+       --outputPrefix=sparseGRM       \
+       --numRandomMarkerforSparseKin=2000      \
+       --relatednessCutoff=0.125; then
+    echo "Error: Sparse GRM creation failed" >&2
+    exit 1
+  fi
+
+  echo "Files created by SparseGRM.R"
+  ls *mtx*
+  >>>
+  runtime {
+    docker: "wzhou88/saige:1.1.9"
+    preemptible: 3
+    memory: "8 GB"
+  }
+  output {
+    File sparseGRMFile = "sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx"
+    File sparseGRMSampleIDFile = "sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt"
+  }
+}
+
+task saige_gene_step1 {
+  input {
+    File bed
+    File bim
+    File fam
+    String single_sex_analysis
+    File sample_data
+    File sparseGRMFile
+    File sparseGRMSampleIDFile
+  }
+  command <<<
+  set -eu -o pipefail
+
+  # Ensure all files are in the same directory
+  cp ~{bed} ufc.bed
+  cp ~{bim} ufc.bim
+  cp ~{fam} ufc.fam
+ 
+  echo "Checkpoint 1"
+
+  #run step 1
+  #step1_fitNULLGLMM.R \
+  #    --plinkFile=./ufc \
+  #    --sparseGRMFile=~{sparseGRMFile} \
+  #    --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
+  #    --useSparseGRMtoFitNULL=TRUE \
+  #    --isCateVariance=TRUE \
+  #    --phenoFile=~{sample_data} \
+  #    --phenoCol=cancer_status \
+  #    --traitType=binary \
+  #    --covarColList=PC1,PC2,PC3,PC4,age,sex\
+  #    --sampleIDColinphenoFile=original_id \
+  #    --traitType=binary \
+  #    --useSparseGRMforVarRatio=TRUE \
+  #    --outputPrefix=./test_run \
+  #    --sexCol=sex_karyotype \
+  #    --FemaleCode=XO,XX,XXX \
+  #    --MaleCode=XY,XYY,XXY
+  #
+  # Shared parameters
+  CMD="step1_fitNULLGLMM.R \
+    --plinkFile=./ufc \
+    --phenoFile=~{sample_data} \
+    --phenoCol=pancancer_cancer \
+    --traitType=binary \
+    --sampleIDColinphenoFile=person_id \
+    --outputPrefix=./test_run \
+    --sparseGRMFile=~{sparseGRMFile} \
+    --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
+    --useSparseGRMtoFitNULL=TRUE \
+    --isCateVarianceRatio=FALSE"
+  # Add covariates and sex-related arguments if this is NOT a single-sex analysis
+  # Examples of when this should be True are Breast, Prostate, Ovarian, etc
+  #if [ "~{single_sex_analysis}" = "False" ]; then
+  #  CMD="$CMD \
+  #    --covarColList=PC1,PC2,PC3,PC4,sex,PGS,num_ppv_missense \
+  #    --sexCol=sex_karyotype \
+  #    --FemaleCode=XO,XX,XXX \
+  #    --MaleCode=XY,XYY,XXY"
+  #else
+  #  CMD="$CMD \
+  #    --covarColList=PC1,PC2,PC3,PC4,PGS,num_ppv_missense"
+  #fi
+
+  # Start with the base covariates
+  COVARS="PC1,PC2,PC3,PC4,PGS"
+
+
+  # Add sex-related covariates if this is not a single-sex analysis
+  if [ "~{single_sex_analysis}" = "False" ]; then
+      COVARS="sex_binary,$COVARS"
+      CMD="$CMD \
+        --covarColList=$COVARS" # \
+        #--sexCol=sex_karyotype \
+        #--FemaleCode=XO,XX,XXX \
+        #--MaleCode=XY,XYY,XXY"
+  else
+      CMD="$CMD --covarColList=$COVARS"
+  fi
+  # Run the final command
+  eval $CMD
+
+  >>>
+  output {
+    File rda = "test_run.rda"
+    File varianceRatio = "test_run.varianceRatio.txt"
+  }
+  runtime {
+    docker: "wzhou88/saige:1.3.0"
+    preemptible: 3
+    memory: "8 GB"
+  }
+}
+
+task saige_gene_step2 {
+  input {
+    File vcf
+    File vcf_idx
+    String cancer_type
+    File sampleFile
+    File rda
+    File group_file
+    File varianceRatio
+    File sparseGRMFile
+    File sparseGRMSampleIDFile
+  }
+
+  command <<<
+
+  if ! step2_SPAtests.R \
+    --vcfFile=~{vcf} \
+    --vcfFileIndex=~{vcf_idx} \
+    --vcfField=GT \
+    --SAIGEOutputFile=saige_gene_output.~{cancer_type}.txt \
+    --LOCO=FALSE \
+    --minMAF=0 \
+    --minMAC=0.5 \
+    --sampleFile=~{sampleFile} \
+    --GMMATmodelFile=~{rda} \
+    --sparseGRMFile=~{sparseGRMFile} \
+    --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
+    --max_MAC_for_ER=10 \
+    --varianceRatioFile=~{varianceRatio} \
+    --groupFile=~{group_file} \
+    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T1:T2:T3:T4:T5,T2,T3,T4,T5,T6 \
+    --is_output_moreDetails=TRUE \
+    --maxMAF_in_groupTest=0.1\
+    2>&1 | tee saige.~{cancer_type}.log ; then
+  
+    echo "Error: Step2 failed" >&2
+    exit 0
+  fi
+
+  >>>
+  output {
+    File out1 = "saige_gene_output.~{cancer_type}.txt"
+    File out2 = "saige_gene_output.~{cancer_type}.txt.singleAssoc.txt"
+    File out3 = "saige.~{cancer_type}.log" 
+  }
+  runtime{
+    docker:"wzhou88/saige:1.3.0"
+    disks: "local-disk 64 HDD"
+    preemptible: 1
+    memory: "8 GB" 
+  }
+}
+
+task saige_gene_step2_beta {
+  input {
+    File vcf
+    File vcf_idx
+    String cancer_type
+    File sampleFile
+    File rda
+    File group_file
+    File varianceRatio
+    File sparseGRMFile
+    File sparseGRMSampleIDFile
+  }
+
+  command <<<
+
+  if ! step2_SPAtests.R \
+    --vcfFile=~{vcf} \
+    --vcfFileIndex=~{vcf_idx} \
+    --vcfField=GT \
+    --SAIGEOutputFile=saige_gene_output.~{cancer_type}.txt \
+    --LOCO=FALSE \
+    --minMAF=0 \
+    --minMAC=0.5 \
+    --sampleFile=~{sampleFile} \
+    --GMMATmodelFile=~{rda} \
+    --sparseGRMFile=~{sparseGRMFile} \
+    --sparseGRMSampleIDFile=~{sparseGRMSampleIDFile} \
+    --max_MAC_for_ER=10 \
+    --varianceRatioFile=~{varianceRatio} \
+    --groupFile=~{group_file} \
+    --annotation_in_groupTest=T1,T1:T2,T1:T2:T3,T1:T2:T3:T4,T1:T2:T3:T4:T5,T2,T3,T4,T5,T6 \
+    --is_output_moreDetails=TRUE \
+    --maxMAF_in_groupTest=0.1\
+    --is_no_weight_in_groupTest=TRUE \
+    2>&1 | tee saige.~{cancer_type}.log ; then
+
+    echo "Error: Step2 failed" >&2
+    exit 0
+  fi
+
+  echo "Locations of file"
+  ls saige_gene_output*
+  >>>
+  output {
+    File out1 = "saige_gene_output.~{cancer_type}.txt"
+    File out2 = "saige_gene_output.~{cancer_type}.txt.singleAssoc.txt"
+    File out3 = "saige.~{cancer_type}.log"
+  }
+  runtime{
+    docker:"wzhou88/saige:1.3.0"
+    disks: "local-disk 64 HDD"
+    preemptible: 3
+    memory: "8 GB"
+  }
+}
+
+task plink {
+  input {
+    File vcf
+    String output_prefix
+  }
+
+  Int default_disk_gb = ceil(2 * size(vcf,"GB")) + 20
+  command <<<
+  set -x
+
+  #if [ "$(bcftools view -H ~{vcf} | wc -l)" -eq 0 ]; then
+  #  touch ~{output_prefix}.bed ~{output_prefix}.bim ~{output_prefix}.fam
+  #  exit 0
+  #fi
+  # Creating Plink Files from VCF; --double-id flag makes IID and FID the same value. Needs to be changed eventually
+  plink --vcf ~{vcf} --make-bed --out ~{output_prefix} --double-id
+
+  >>>
+  output {
+    File bed = "~{output_prefix}.bed"
+    File bim = "~{output_prefix}.bim"
+    File fam = "~{output_prefix}.fam"
+  }
+  runtime {
+    docker: "elixircloud/plink:1.9-20210614"
+    disks: "local-disk ~{default_disk_gb} HDD"
+    memory: "16 GB"
+    preemptible: 3
+  }
+}
+
+task sortSAIGE_Output {
+  input {
+    File saige_output_001
+    File saige_output_beta_001
+    File saige_output_0001
+    File saige_output_beta_0001
+    String output_name
+  }
+  String out_filename = output_name + ".saige.tsv"
+  command <<<
+  set -x
+    # 1% AF
+    head -n 1 ~{saige_output_001} > header.txt
+    tail -n +2 ~{saige_output_001} | grep -v Cauchy > tmp_001.tsv
+    tail -n +2 ~{saige_output_beta_001} | grep -v Cauchy > tmp.beta_001.tsv
+    
+    paste <(cut -f1-6 tmp_001.tsv) <(cut -f7,8 tmp.beta_001.tsv) <(cut -f9- tmp_001.tsv) > tmp.updated_001.tsv
+    awk 'BEGIN{OFS="\t"} NR==1 {print; next} { $3 = 0.01; print }' tmp.updated_001.tsv > tmp.updated_again_001.tsv
+    sort -k4,4g tmp.updated_again_001.tsv > tmp.final_001.tsv
+
+    # 0.1% AF
+    tail -n +2 ~{saige_output_0001} | grep -v Cauchy > tmp_0001.tsv
+    tail -n +2 ~{saige_output_beta_0001} | grep -v Cauchy > tmp.beta_0001.tsv
+
+    paste <(cut -f1-6 tmp_0001.tsv) <(cut -f7,8 tmp.beta_0001.tsv) <(cut -f9- tmp_0001.tsv) > tmp.updated_0001.tsv
+    awk 'BEGIN{OFS="\t"} NR==1 {print; next} { $3 = 0.001; print }' tmp.updated_0001.tsv > tmp.updated_again_0001.tsv
+    sort -k4,4g tmp.updated_again_0001.tsv > tmp.final_0001.tsv
+
+    # Put it all together
+    cat header.txt tmp.final_001.tsv tmp.final_0001.tsv > ~{out_filename}
+  >>>
+  runtime{
+    docker:"ubuntu:latest"
+    preemptible: 3
+  }
+  output{
+    File out1 = "~{out_filename}"
+  }
+}
+
+task mergePlinkFiles {
+  input {
+    Array[File] beds
+    Array[File] bims
+    Array[File] fams
+    Int num_shards
+  }
+  command <<<
+  set -euxo pipefail
+
+  echo "Moving bed files"
+  # Move BED files to home directory
+  for bed_file in ~{sep=' ' beds}; do
+    mv "$bed_file" .
+  done
+  
+  echo "Moving bim files"
+  # Move BIM files to home directory
+  for bim_file in ~{sep=' ' bims}; do
+    mv "$bim_file" .
+  done
+
+  echo "Moving fam files"
+  # Move FAM files to home directory
+  for fam_file in ~{sep=' ' fams}; do
+    mv "$fam_file" .
+  done
+
+  seq 1 $((~{num_shards} - 1)) > merge_list.txt
+  plink --bfile 0 --merge-list merge_list.txt --make-bed --out ufc
+  >>>
+  output {
+    File bed = "ufc.bed"
+    File bim = "ufc.bim"
+    File fam = "ufc.fam"
+  }
+  runtime {
+    docker: "elixircloud/plink:1.9-20210614"
+    preemptible: 3
+    memory: "16 GB"
+    disks: "local-disk 30 HDD"
+  }
+}
+
+task concatenateFiles {
+  input {
+    Array[File] files
+    String callset_name
+  }
+  command <<<
+    cat ~{sep=" " files} >> ~{callset_name}.tsv
+  >>>
+  runtime{
+    docker:"ubuntu:latest"
+    preemptible: 3
+  }
+  output{
+    File out = "~{callset_name}.tsv"
+  }
+}
+
+task RecalibrateSaigeStats {
+  input {
+    File raw_stats_tsv
+    String output_prefix
+
+    Int disk_gb = 20
+    Float mem_gb = 7.5
+    Int n_cpu = 4
+    String docker = "vanallenlab/g2c_analysis:4c4511c"
+  }
+
+  String out_tsv = output_prefix + ".saige.recalibrated.stats.tsv"
+
+  command <<<
+    set -eu -o pipefail
+
+    /opt/pancan_germline_wgs/scripts/association/recalibrate_saige_gene.R \
+      -i "~{raw_stats_tsv}" \
+      -o "~{out_tsv}"
+    gzip -f "~{out_tsv}"
+  >>>
+
+  output {
+    File out1 = "~{out_tsv}.gz"
+  }
+
+  runtime {
+    docker: docker
+    memory: "~{mem_gb} GB"
+    cpu: n_cpu
+    disks: "local-disk " + disk_gb + " HDD"
+    preemptible: 1
+    maxRetries: 1
+  }
+}

@@ -1,12 +1,12 @@
 # The Germline Genomics of Cancer (G2C)
-# Copyright (c) 2024-Present, Noah Fields and the Dana-Farber Cancer Institute
+# Copyright (c) 2026-Present, Noah Fields and the Dana-Farber Cancer Institute
 # Contact: Noah Fields <noah_fields@dfci.harvard.edu>
 # # Distributed under the terms of the GNU GPL v2.0
   
 version 1.0 
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
   
-workflow STEP_R1_TIER_VARIANTS {
+workflow STEP_R0_ANNOTATE_IDS {
   input {
     String CDRv9_cpg_vcfs = "gs://dataproc-staging-wb-cordial-diamond-9893/vep_annotated_cpgs_sept2026/CDRv9"
   } 

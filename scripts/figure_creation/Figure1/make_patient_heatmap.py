@@ -142,26 +142,23 @@ CYAN = "#007C7C"
 # Fixed cancer lists (alphabetical)
 # -----------------------
 PATIENT_CANCERS = [
-    "Basal_Cell_Carcinoma","Breast","Prostate","Squamous_Cell_Carcinoma","Melanoma",
-    "Lung","Colorectal","Thyroid","Hematologic","Non-Hodgkin","Uterus","Bladder","Sarcoma",
-    "Ovary","Kidney","Cervix","Neuroendocrine","Brain","Control"
+    "Breast","Prostate","Melanoma",
+    "Lung","Colorectal","Thyroid","Leukemia","NHL","Endometrial","Bladder",
+    "Ovarian","Kidney","Control"
 ]
 
 FAMILY_CANCERS = [
-    "Skin","Breast","Prostate","Lung","Colorectal","Blood_soft_tissue","Brain","Bladder",
-    "Ovary","Thyroid","Bone","Cervix","Kidney","Uterus"
+    "Skin","Breast","Prostate","Lung","Colorectal","Blood_soft_tissue","Bladder",
+    "Ovarian","Thyroid","Kidney","Endometrial"
 ]
 
 # -----------------------
 # Patient → family match map
 # -----------------------
 MATCH_MAP = {
-    "Basal_Cell_Carcinoma": ["Skin"],
-    "Squamous_Cell_Carcinoma": ["Skin"],
     "Melanoma": ["Skin"],
     "Non-Hodgkin": ["Blood_soft_tissue"],
-    "Hematologic": ["Blood_soft_tissue"],
-    "Sarcoma":["Bone"],
+    "Leukemia": ["Blood_soft_tissue"],
     "Breast":["Breast"],
     "Lung":["Lung"],
     "Prostate":["Prostate"],
@@ -169,11 +166,10 @@ MATCH_MAP = {
     "Ovary":["Ovary"],
     "Kidney":["Kidney"],
     "Brain":["Brain"],
-    "Uterus":["Uterus"],
-    "Colorectal":["Colorectal"],
-    "Cervix":["Cervix"]
-
+    "Uterus":["Endometrial"],
+    "Colorectal":["Colorectal"]
 }
+
 from matplotlib.patches import Rectangle
 for i, pc in enumerate(PATIENT_CANCERS):
     if pc not in MATCH_MAP:
@@ -204,5 +200,5 @@ ax.set_xlabel("Cancer History of First-Degree Relatives", fontsize=7, fontweight
 ax.set_ylabel("18 Cancer Cohorts in This Study", fontsize=7, fontweight="bold")
 
 plt.tight_layout()
-plt.savefig("/Users/noah/Desktop/ufc_repository/results/Figure1/patient_family_matrix.pdf",pad_inches=0, bbox_inches="tight")
+plt.savefig("/Users/noah/Desktop/ufc_repository/results/Figure1/Figure_1D.pdf",pad_inches=0, bbox_inches="tight")
 #plt.show()
