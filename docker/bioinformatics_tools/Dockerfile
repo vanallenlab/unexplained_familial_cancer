@@ -11,7 +11,7 @@ LABEL maintainer="Noah Fields <Noah_Fields@dfci.harvard.edu>"
 # Install bcftools dependencies
 RUN apt-get update && \
     apt-get install -y gcc make unzip wget bzip2 zlib1g-dev libbz2-dev liblzma-dev \
-                       libcurl4-openssl-dev libssl-dev libncurses5-dev && \
+                       libcurl4-openssl-dev libssl-dev libncurses5-dev python3-numpy python3-pandas&& \
     apt-get clean
 
 # Install bcftools
