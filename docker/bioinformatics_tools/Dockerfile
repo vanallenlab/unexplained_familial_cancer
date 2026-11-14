@@ -29,6 +29,12 @@ RUN wget https://s3.amazonaws.com/plink1-assets/plink_linux_x86_64_20210606.zip 
     chmod +x /usr/local/bin/plink && \
     rm plink_linux_x86_64_20210606.zip
 
+# Install PLINK 2
+RUN wget https://s3.amazonaws.com/plink2-assets/plink2_linux_x86_64_20261107.zip && \
+    unzip plink2_linux_x86_64_20261107.zip -d /usr/local/bin/ && \
+    chmod +x /usr/local/bin/plink2 && \
+    rm plink2_linux_x86_64_20261107.zip
+
 RUN rm -r bcftools-1.19
 RUN rm bcftools-1.19.tar.bz2
 
