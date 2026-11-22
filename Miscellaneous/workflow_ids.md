@@ -15,6 +15,7 @@ WORKFLOW IDS:
   10. Melanoma 0 FDRs: ed135722-0d9a-42a0-a56c-24ea87c8d8af
   11. Bladder 0 FDRs: b4044a07-db36-4de4-803f-ea35213bc77c
   12. Endometrial 0 FDRs: 1a1fffac-1f04-46d6-a422-2379691fee4f
+  13. Pancancer 0 FDRS; 8c3f1a24-40c1-4ba3-87b5-e13f0bd697a5
   
   ### SAIGE PRS WOrkflows (1FDR)
    1. CRC 1 FDR PRS: 268fec5a-d336-4bdd-844c-49c5b6c454b8
@@ -39,8 +40,5 @@ WORKFLOW IDS:
   1. gs://dataproc-temp-wb-cordial-diamond-9893/workflows/cromwell-executions/
   2. Docker prefix
   
-  1. Calculating PCs w/out chr7 (using SNP loadings): 8f97981c-bfb8-49b9-9c19-0de9554c9834
-  gsutil cat gs://dataproc-temp-wb-cordial-diamond-9893/workflows/cromwell-executions/STEP_R7_RECALCULATE_PCS/8f97981c-bfb8-49b9-9c19-0de9554c9834
-  2. BRAT1 WDL PART1: b325a4a9-c89b-486f-bdee-c6b248a3799f
-  2. SVs 44da5aa2-b509-4a54-bd54-3758fc9cd495
+  1. BRAT1 FORMAL analysis: 5cf16a73-6546-4ed9-ab03-421e6c9e1c73
   

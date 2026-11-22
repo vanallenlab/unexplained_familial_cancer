@@ -76,6 +76,15 @@ This repository contains the working code and scripts used to process genotype i
   7. List of Samples in v9 but not v7 (n=294,373) (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/v9_only.subjects)
   8. List of Individuals w/ PGVs in BRCA1 in CDRv9 (gs://dataproc-staging-wb-cordial-diamond-9893/step_r1_output/BRCA1.tier1_0001.list; all of them)
   
+  # List of Individuals Carrying Variants in Genes of Interest
+  1. BRAT1 ALT HET (gs://dataproc-staging-wb-cordial-diamond-9893/BRAT1_ANALYSIS/brat1_het.list)
+  2. BRAT1 REF HOM (gs://dataproc-staging-wb-cordial-diamond-9893/BRAT1_ANALYSIS/brat1_hom_ref.list)
+  3. BRAT1 ALT HOM (gs://dataproc-staging-wb-cordial-diamond-9893/BRAT1_ANALYSIS/brat1_hom_alt.list)
+  4. BRAT1 ALT (HET OR HOM) (gs://dataproc-staging-wb-cordial-diamond-9893/BRAT1_ANALYSIS/brat1_alt.list)
+  5. BRAT1 OTHER (gs://dataproc-staging-wb-cordial-diamond-9893/BRAT1_ANALYSIS/brat1_other_gt.list)
+  6. ZNF346 ALT (gs://dataproc-staging-wb-cordial-diamond-9893/ZNF346_ANALYSIS/znf346_het.list) - No Hom exist?
+  5. ZNF17 ALT (gs://dataproc-staging-wb-cordial-diamond-9893/ZNF17_ANALYSIS/znf17_het.list) - No Hom exist?
+  
   ### SAIGE FILES To SPEED THINGS UP
   1. Concatenated VCF for Rare Variants used by SAIGE-GENE+ (AF<1%) (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.001.vcf.gz)
   2. Concatenated VCF for Rare Variants used by SAIGE-GENE+ (AF<0.1%) (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_rare_variants.0001.vcf.gz)
@@ -84,6 +93,7 @@ This repository contains the working code and scripts used to process genotype i
   5. UFC LD Plink FAM (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ufc_ld.fam)
   6. Sparse Matrix GRM (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx)
   7. Sparse Matrix IDs (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/sparseGRM_relatednessCutoff_0.125_2000_randomMarkersUsed.sparseGRM.mtx.sampleIDs.txt)
+  8. Output Directory (gs://dataproc-staging-wb-cordial-diamond-9893/ANALYSIS_3_SAIGE_GENE/no_prs/)
   
   
   # Researcher Account Activity Confirmation Link

@@ -9,14 +9,15 @@ version 1.0
 workflow REPLICATION_1_EXTRACT_GENOMIC_RANGES {
 	input {
 		String AllofUs_HailMatrix = "gs://vwb-aou-datasets-controlled/v9/wgs/short_read/snpindel/exome/splitMT/hail.mt"
+		#String AllofUs_HailMatrix = "gs://vwb-aou-datasets-controlled/v7/wgs/short_read/snpindel/exome_v7.1/splitMT/hail.mt"
 		String Google_Project = "wb-cordial-diamond-9893"
-		String AllofUs_version = "CDRv9"
+		String AllofUs_version
 		File MANE_GENCODE
 
 		File Gene_List
 		Int Gene_Buffer
 
-		String project_name
+		String project_name = "replication1"
 	}
 
 	Array[String] Genes = read_lines(Gene_List)
@@ -47,6 +48,11 @@ workflow REPLICATION_1_EXTRACT_GENOMIC_RANGES {
 			input:
 				vcf = T2_Query_Hail_MT.out1
 		}
+                call T4_Write_Index {
+                        input:
+                                vcf = T2_Query_Hail_MT.out2,
+				AllofUs_version = AllofUs_version
+                }
 	}
 }
 
@@ -102,7 +108,7 @@ task T1_Find_Gene_Ranges {
 	CODE
 	>>>
 	runtime {
-		docker: "vanallenlab/hail_rf"
+		docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/hail_rf"
 		memory: "8 GB"
 	}
 	output {
@@ -138,26 +144,27 @@ task T2_Query_Hail_MT {
 	mt_filtered = hl.filter_intervals(mt,[hl.parse_locus_interval("~{Interval}")])
 
 	# Keep only variant rows
-	#mt_filtered = mt_filtered.select_entries()
 	variant_table = mt_filtered.rows()
 
-	#hl.export_vcf(mt_filtered,f"gs://dataproc-staging-wb-cordial-diamond-9893/genes/~{Gene}.vcf.bgz")
+	hl.export_vcf(mt_filtered,f"~{Gene}.gt.vcf.bgz")
 	hl.export_vcf(variant_table,"~{Gene}.vcf.bgz")
 	CODE
 	>>>
 	runtime {
-		docker: "vanallenlab/hail_rf"
+		docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/hail_rf"
 		memory: "8 GB"
 		preemptible: 3
 	}
 	output {
 		File out1 = "~{Gene}.vcf.bgz"
+		File out2 = "~{Gene}.gt.vcf.bgz"
 	}
 }
 
 task T3_Write_Index {
 	input {
 		File vcf
+		String AllofUs_version
 	}
 
 	String rootname = basename(vcf)
@@ -167,21 +174,60 @@ task T3_Write_Index {
 
 	echo "Indexing ~{rootname}"
 
-	bcftools index -t "~{vcf}"
+	# Annotate File
+	bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%ALT' -Oz -o annotated.vcf.bgz ~{vcf}
+	bcftools index -t annotated.vcf.bgz
 
 	echo "Uploading index"
 
 	export CLOUDSDK_PYTHON=/opt/conda/envs/gatk-sv/bin/python3
 
-	gcloud storage cp ~{vcf} gs://dataproc-staging-wb-cordial-diamond-9893/genes_raw_vcf/
-	gcloud storage cp ~{vcf}.tbi gs://dataproc-staging-wb-cordial-diamond-9893/genes_raw_vcf/
+	#gcloud storage cp ~{vcf} gs://dataproc-staging-wb-cordial-diamond-9893/genes_raw_vcf/
+	#gcloud storage cp ~{vcf}.tbi gs://dataproc-staging-wb-cordial-diamond-9893/genes_raw_vcf/
+
+	gcloud storage cp annotated.vcf.bgz gs://dataproc-staging-wb-cordial-diamond-9893/unannotated_cpgs_sept2026/~{AllofUs_version}/~{rootname}
+	gcloud storage cp annotated.vcf.bgz.tbi gs://dataproc-staging-wb-cordial-diamond-9893/unannotated_cpgs_sept2026/~{AllofUs_version}/~{rootname}.tbi
 
 	echo "Finished ~{rootname}"
 	>>>
 
 	runtime {
-		docker: "vanallenlab/g2c_pipeline"
+		docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/g2c_pipeline"
 		memory: "8 GB"
 		preemptible: 3
 	}
+}
+
+task T4_Write_Index {
+        input {
+                File vcf
+		String AllofUs_version
+        }
+
+        String rootname = basename(vcf)
+
+        command <<<
+        set -euxo pipefail
+
+        echo "Indexing ~{rootname}"
+
+        # Annotate File
+        bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%ALT' -Oz -o annotated.vcf.bgz ~{vcf}
+        bcftools index -t annotated.vcf.bgz
+
+        echo "Uploading index"
+
+        export CLOUDSDK_PYTHON=/opt/conda/envs/gatk-sv/bin/python3
+
+        gcloud storage cp annotated.vcf.bgz gs://dataproc-staging-wb-cordial-diamond-9893/unannotated_genotyped_cpgs_sept2026/~{AllofUs_version}/~{rootname}
+        gcloud storage cp annotated.vcf.bgz.tbi gs://dataproc-staging-wb-cordial-diamond-9893/unannotated_genotyped_cpgs_sept2026/~{AllofUs_version}/~{rootname}.tbi
+
+        echo "Finished ~{rootname}"
+        >>>
+
+        runtime {
+                docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/g2c_pipeline"
+                memory: "8 GB"
+                preemptible: 3
+        }
 }
