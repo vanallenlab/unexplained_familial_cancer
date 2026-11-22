@@ -6,7 +6,9 @@ def filter_cases_controls(df, case_filter, control_filter):
     controls = df.query(control_filter).copy()
     return cases, controls
 
-def match_cases_to_controls(df: pd.DataFrame, case_filter: str, control_filter:str , age_column="age", n_matched_controls=30, exclude_files=None, seed=42):
+def match_cases_to_controls(cancer_type: str, df: pd.DataFrame, case_filter: str, control_filter:str , n_matched_controls=30, exclude_files=None, seed=42):
+
+    case_age = cancer_type + "_age"
 
     # Exclude samples included in a file designated for removal (e.g., indiviuduals with a PGV, or in CDRv7)
     if exclude_files:
@@ -33,7 +35,7 @@ def match_cases_to_controls(df: pd.DataFrame, case_filter: str, control_filter:s
         candidate_controls = available_controls[
             (available_controls["sex_at_birth"] == case["sex_at_birth"]) &
             (available_controls["ancestry_pred"] == case["ancestry_pred"]) &
-            ((available_controls["age"] - case[age_column]).abs() < 2)
+            ((available_controls["age"] - case[case_age]).abs() < 2)
         ].copy()
 
         selected = candidate_controls.head(n_matched_controls).copy()

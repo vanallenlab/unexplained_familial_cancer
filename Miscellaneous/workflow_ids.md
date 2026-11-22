@@ -40,5 +40,7 @@ WORKFLOW IDS:
   1. gs://dataproc-temp-wb-cordial-diamond-9893/workflows/cromwell-executions/
   2. Docker prefix
   
-  1. BRAT1 FORMAL analysis: 5cf16a73-6546-4ed9-ab03-421e6c9e1c73
+  1. STEP R6 ZNF346: 99696189-ed04-46f8-b5b1-f2df9c8e114f
+  2. STEP R6 ZNF17: 
+  3. STEP R1 ZNF579: 825bf830-5aa4-48bb-9efe-0c3558e96970
   

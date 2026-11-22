@@ -182,7 +182,7 @@ task gather_vcf {
     File out1 = read_string("vcf.list")
   }
   runtime {
-    docker: "us.gcr.io/google.com/cloudsdktool/google-cloud-cli:latest"
+    docker: "us.gcr.io/google.com/cloudsdktool/google-cloud-cli:588.0.0"
     preemptible: 3
   }
 }
