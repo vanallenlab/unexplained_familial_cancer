@@ -99,4 +99,6 @@ This repository contains the working code and scripts used to process genotype i
   # Researcher Account Activity Confirmation Link
   1. https://redcap.pmi-ops.org/surveys/?s=K4PA9H8E979AHJEP
 
+  # Docker Tips
+  
   
