@@ -1,73 +1,104 @@
-# The Unexplained Familial Cancer (UFC)
-# Copyright (c) 2023-Present, Noah Fields and the Dana-Farber Cancer Institute
 # Contact: Noah Fields <Noah_Fields@dfci.harvard.edu>
-# Distributed under the terms of the GNU GPL v2.0g
+# Distributed under the terms of the GNU GPL v2.0
 
 version 1.0
-import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
 workflow STEP_R6_GRAB_SNP_REGION {
   input {
-    Int start_sequence = 7702
-    Int end_sequence = 7720
-    String gene = "ZNF346"
+    Int start_sequence = 20945
+    Int end_sequence = 20965
+    String gene = "ZNF17"
+    File relatedness = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/relatedness_flagged_samples.tsv"
   }
 
-  call T1_make_regional_vcf {
+  Array[Int] sequence_numbers = range(end_sequence - start_sequence + 1)
+
+  scatter (offset in sequence_numbers) {
+    Int sequence = start_sequence + offset
+
+    call T1_process_vcf_shard {
+      input:
+        sequence = sequence,
+        gene = gene,
+        relatedness = relatedness
+    }
+  }
+
+  call T2_concat_regional_vcfs {
     input:
-      start_sequence = start_sequence,
-      end_sequence = end_sequence,
-      gene = gene
+      gene = gene,
+      vcf_files = T1_process_vcf_shard.processed_vcf
+  }
+
+  output {
+    File regional_vcf = T2_concat_regional_vcfs.regional_vcf
+    File regional_vcf_index = T2_concat_regional_vcfs.regional_vcf_index
+    Array[File] processed_shards = T1_process_vcf_shard.processed_vcf
   }
 }
-task T1_make_regional_vcf {
+
+
+task T1_process_vcf_shard {
   input {
-    Int start_sequence = 9299
-    Int end_sequence = 9314
+    Int sequence
     String gene
+    File relatedness
   }
 
-  String outdir = gene + "_region"
-  String output_file_name = gene + "_region.vcf.bgz"
+  String output_file_name = gene + "_region." + sequence + ".vcf.bgz"
 
   command <<<
     set -euo pipefail
 
     BASE="gs://vwb-aou-datasets-controlled/v9/wgs/short_read/snpindel/acaf_threshold/vcf"
-    OUTDIR="~{outdir}"
+    RELATEDNESS="~{relatedness}"
+
+    FILE=$(printf "%010d" ~{sequence})
+    INPUT="${FILE}.vcf.bgz"
     OUTPUT_VCF="~{output_file_name}"
 
-    if (( ~{start_sequence} > ~{end_sequence} )); then
-      echo "ERROR: start_sequence must be less than or equal to end_sequence" >&2
-      exit 1
-    fi
+    echo "Downloading ${FILE}..."
+    gsutil -q -u wb-cordial-diamond-9893 cp "$BASE/${FILE}.vcf.bgz" "$INPUT"
 
-    mkdir -p "$OUTDIR"
+    echo "Processing ${FILE}..."
+    echo "[$(TZ='America/New_York' date '+%Y-%m-%d %H:%M:%S %Z')] Processing ${FILE}..."
 
-    # Download each VCF and its tabix index.
-    vcf_files=()
-    for i in $(seq ~{start_sequence} ~{end_sequence}); do
-      FILE=$(printf "%010d" "$i")
+    bcftools view -S "^${RELATEDNESS}" --force-samples -Ou "$INPUT" |
+    bcftools annotate -x FORMAT,^FORMAT/GT -Ou |
+    bcftools norm -m -any -Ou |
+    bcftools annotate --set-id '%CHROM\_%POS\_%REF\_%ALT' -Oz --threads 1 -o "$OUTPUT_VCF"
 
-      echo "Downloading ${FILE}..."
+    rm "$INPUT"
+  >>>
 
-      gsutil -q -u "$GOOGLE_CLOUD_PROJECT" cp \
-        "$BASE/${FILE}.vcf.bgz" \
-        "$OUTDIR/"
+  output {
+    File processed_vcf = "~{output_file_name}"
+  }
 
-      gsutil -q -u "$GOOGLE_CLOUD_PROJECT" cp \
-        "$BASE/${FILE}.vcf.bgz.tbi" \
-        "$OUTDIR/"
+  runtime {
+    docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/bioinformatics_tools"
+    cpu: 4
+    memory: "16 GB"
+    disks: "local-disk 32 HDD"
+    preemptible: 3
+  }
+}
 
-      vcf_files+=("$OUTDIR/${FILE}.vcf.bgz")
-    done
 
-    # Concatenate VCFs in numeric sequence order.
-    bcftools concat -Oz \
-      -o "$OUTPUT_VCF" \
-      "${vcf_files[@]}"
+task T2_concat_regional_vcfs {
+  input {
+    String gene
+    Array[File] vcf_files
+  }
 
-    # Index the concatenated VCF.
+  String output_file_name = gene + "_region.vcf.bgz"
+
+  command <<<
+    set -euo pipefail
+
+    OUTPUT_VCF="~{output_file_name}"
+
+    bcftools concat -Oz -o "$OUTPUT_VCF" ~{sep=' ' vcf_files}
     bcftools index -t "$OUTPUT_VCF"
   >>>
 
@@ -80,6 +111,7 @@ task T1_make_regional_vcf {
     docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/bioinformatics_tools"
     cpu: 4
     memory: "16 GB"
+    disks: "local-disk 50 HDD"
     preemptible: 3
   }
 }

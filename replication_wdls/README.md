@@ -30,8 +30,13 @@ This repository contains the working code and scripts used to process genotype i
  
  ### BRAT1 Analysis
  1. Location of BRAT1 region VCF and index - 1MB buffer (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/BRAT1_region.vcf.bgz)
- 2. File containing variants of interest for AoU PCs (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/loadings.ht.tar.gz)
- 3. BRAT1 LD Results (Chi-Squared) - (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/brat1_haplotype_ld.tsv.gz)
+ 2. BRAT1 LD Results (Log Reg) - (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/brat1_haplotype_ld.tsv.gz)
+ 
+ ### ZNF17 Analysis (chr19_57416333_G_T)
+ 1. Location of ZNF17 region VCF and index - 1MB buffer (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ZNF17_Haplotype/ZNF17_region.vcf.bgz)
+
+ ### ZNF346 Analysis (chr5_177064408_CCTGT_C)
+ 1. Location of ZNF346 region VCF and index - 1MB buffer (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/ZNF346_Haplotype/ZNF346_region.vcf.bgz)
  
  ### WDL Dependency Packages
  1. Ufc_utilities.zip (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/Ufc_utlities.zip)
@@ -56,6 +61,7 @@ This repository contains the working code and scripts used to process genotype i
  1. Discovery UFC Principal Components (gs://rw-migration-aou-rw-cf3e7774/STEP_11_GENETIC_RELATEDNESS/ufc.eigenvec)
  2. Discovery UFC LD pruned variants (gs://rw-migration-aou-rw-cf3e7774/STEP_11_GENETIC_RELATEDNESS/ufc_1000G_snps.ld_pruned.vcf.gz)
  3. All of Us Flagged Related Samples (gs://vwb-aou-datasets-controlled/v9/wgs/short_read/snpindel/aux/relatedness/relatedness_flagged_samples.tsv)
+ 4. All of Us Flagged Related Samples (gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/relatedness_flagged_samples.tsv)
  
  
  ### VCF Folders (sharded by CPGs)
@@ -100,5 +106,6 @@ This repository contains the working code and scripts used to process genotype i
   1. https://redcap.pmi-ops.org/surveys/?s=K4PA9H8E979AHJEP
 
   # Docker Tips
-  
+  docker build -t vanallenlab/{image} --platform linux/x86_64 --build-arg "REPO_HASH={repo}" .
+  docker push vanallenlab/{image}
   

@@ -6,7 +6,7 @@
 version 1.0
 import "Ufc_utilities/Ufc_utilities.wdl" as Tasks
 
-workflow GENE_REGION_FORMAL_ANALYSIS {
+workflow STEP_R7_GENE_REGION_FORMAL_ANALYSIS {
   input {
     File vcf
     File vcf_idx
@@ -17,6 +17,8 @@ workflow GENE_REGION_FORMAL_ANALYSIS {
     Int variant_position = 2555487
     String variant_id = "chr7_2555487_C_A"
   }
+
+  String output_dir = "gs://dataproc-staging-wb-cordial-diamond-9893/UFC_REFERENCE_FILES/" + gene_name + "_Haplotype/"
 
   call T0_extract_variant_gt {
     input:
@@ -46,7 +48,7 @@ workflow GENE_REGION_FORMAL_ANALYSIS {
     call T3_plink_log_reg {
       input:
         vcf = T2_shard_vcf.out1,
-        carrier_alt = T0_extract_variant_gt.alt,
+        carrier_alt = T0_extract_variant_gt.het,
         hom_ref = T0_extract_variant_gt.hom_ref,
         gene_name = gene_name
     }
@@ -69,11 +71,6 @@ workflow GENE_REGION_FORMAL_ANALYSIS {
       vcf = T5_filter_vcf.out1,
       gene_name = gene_name
   }
-  #call T7_find_haplotype{
-  #  input:
-  #    vcf = T6_beagle_phasing.phased_vcf,
-  #    brat1_het = T0_extract_variant_gt.het,
-  #}
   call T7_chunk_genotypes {
     input:
       vcf = T6_beagle_phasing.phased_vcf,
@@ -100,6 +97,89 @@ workflow GENE_REGION_FORMAL_ANALYSIS {
       haplotype_scores = T8_count_snps.out1,
       phased_samples = T9_find_haplotype.out1,
       gene_name = gene_name
+  }
+
+  call T11_Youdens_J {
+    input:
+      haplotype_scores = T10_paste_output.out1,
+      het_samples = T0_extract_variant_gt.het,
+      hom_ref_samples = T0_extract_variant_gt.hom_ref,
+      gene = gene_name
+  }
+
+  # Logistic Regression Results
+  call Tasks.copy_file_to_storage as copy1 {
+    input:
+      text_file = concat_logreg.out2,
+      output_dir = output_dir
+  }
+  # Beagle Phased VCF
+  call Tasks.copy_file_to_storage as copy2 {
+    input:
+      text_file = T6_beagle_phasing.phased_vcf,
+      output_dir = output_dir
+  }
+  # Heterozygotes
+  call Tasks.copy_file_to_storage as copy3 {
+    input:
+      text_file = T0_extract_variant_gt.het,
+      output_dir = output_dir
+  }
+
+  # Ref Homozygotes (0/0)
+  call Tasks.copy_file_to_storage as copy4 {
+    input:
+      text_file = T0_extract_variant_gt.hom_ref,
+      output_dir = output_dir
+  }
+
+  # Homozygous Alternate (1/1)
+  call Tasks.copy_file_to_storage as copy5 {
+    input:
+      text_file = T0_extract_variant_gt.hom_alt,
+      output_dir = output_dir
+  }
+
+  # Alternate (0/1, 0|1, 1|0)
+  call Tasks.copy_file_to_storage as copy6 {
+    input:
+      text_file = T0_extract_variant_gt.alt,
+      output_dir = output_dir
+  }
+
+  # Alternate (0/2, ./., etc)
+  call Tasks.copy_file_to_storage as copy7 {
+    input:
+      text_file = T0_extract_variant_gt.other_gt,
+      output_dir = output_dir
+  }
+
+  # Scores per sample (1 for each haplotype)
+  call Tasks.copy_file_to_storage as copy8 {
+    input:
+      text_file = T10_paste_output.out1,
+      output_dir = output_dir
+  }
+
+  # Scores per sample (1 for each haplotype)
+  call Tasks.copy_file_to_storage as copy9 {
+    input:
+      text_file = T10_paste_output.out1,
+      output_dir = output_dir
+  }
+
+  # Summary Stats file for Youden's J chosen cutoff
+  call Tasks.copy_file_to_storage as copy10 {
+    input:
+      text_file = T11_Youdens_J.out1,
+      output_dir = output_dir
+  }
+
+  # List of samples who carry that haplotype
+  call Tasks.copy_file_to_storage as copy11 {
+    input:
+      text_file = T11_Youdens_J.out2,
+      output_dir = output_dir
   }
 }
 
@@ -238,14 +318,14 @@ task T2_shard_vcf {
     set -euxo pipefail
 
     bcftools view \
-      --threads 4 \
+      --threads 2 \
       -R ~{bed_file} \
       -Oz \
       -o shard.vcf.gz \
       ~{vcf}
 
     bcftools index \
-      --threads 4 \
+      --threads 2 \
       -t shard.vcf.gz
   >>>
 
@@ -256,11 +336,13 @@ task T2_shard_vcf {
 
   runtime {
     docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/bcftools"
-    cpu: 4
+    cpu: 2
     preemptible:3
     memory: "16 GB"
   }
 }
+
+
 
 task T3_plink_log_reg {
   input {
@@ -603,6 +685,84 @@ task T9_find_haplotype{
   runtime {
     docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/bioinformatics_tools"
     memory: "8 GB"
+    preemptible: 3
+  }
+}
+
+task T11_Youdens_J {
+  input {
+    File haplotype_scores
+    File het_samples
+    File hom_ref_samples
+    String gene
+  }
+
+  String output_file_name = "T11_Youdens_J." + gene + ".txt"
+
+  command <<<
+  python3 <<CODE
+  import pandas as pd
+  import numpy as np
+  from sklearn.metrics import roc_curve, roc_auc_score
+
+  df = pd.read_csv("~{haplotype_scores}", sep="\t", dtype={"person_id": str})
+  het_samples = set(pd.read_csv("~{het_samples}", header=None, dtype=str)[0].str.strip())
+  hom_ref_samples = set(pd.read_csv("~{hom_ref_samples}", header=None, dtype=str)[0].str.strip())
+  df["person_id"] = df["person_id"].str.strip()
+
+  het = df[df["person_id"].isin(het_samples)].copy()
+  hom_ref = df[df["person_id"].isin(hom_ref_samples)].copy()
+
+  het_hap_scores = het.apply(lambda row: row["right_hap"] if row["phase"] == "right" else row["left_hap"], axis=1)
+  hom_ref_scores = hom_ref[["left_hap", "right_hap"]].values.flatten()
+
+  het_hap_scores = pd.to_numeric(het_hap_scores, errors="coerce")
+  hom_ref_scores = pd.to_numeric(pd.Series(hom_ref_scores), errors="coerce")
+
+  het_hap_scores = het_hap_scores[np.isfinite(het_hap_scores)]
+  hom_ref_scores = hom_ref_scores[np.isfinite(hom_ref_scores)]
+
+  scores = np.concatenate([het_hap_scores, hom_ref_scores])
+  labels = np.concatenate([np.ones(len(het_hap_scores)), np.zeros(len(hom_ref_scores))])
+
+  fpr, tpr, thresholds = roc_curve(labels, scores)
+  youden_j = tpr - fpr
+  best_idx = np.argmax(youden_j)
+  best_cutoff = thresholds[best_idx]
+
+  sensitivity = tpr[best_idx]
+  specificity = 1 - fpr[best_idx]
+  auc = roc_auc_score(labels, scores)
+
+  het_above = (het_hap_scores >= best_cutoff).sum()
+  hom_ref_above = (hom_ref_scores >= best_cutoff).sum()
+
+  with open("~{output_file_name}", "w") as f:
+      f.write(f"Optimal cutoff: {best_cutoff:.3f}\n")
+      f.write(f"Youden's J: {youden_j[best_idx]:.3f}\n")
+      f.write(f"Sensitivity: {sensitivity:.3%}\n")
+      f.write(f"Specificity: {specificity:.3%}\n")
+      f.write(f"AUC: {auc:.3f}\n\n")
+      f.write(f"~{gene} haplotypes above cutoff: {het_above:,} / {len(het_hap_scores):,}\n")
+      f.write(f"Baseline haplotypes above cutoff: {hom_ref_above:,} / {len(hom_ref_scores):,}\n")
+
+  left_hap = pd.to_numeric(df["left_hap"], errors="coerce")
+  right_hap = pd.to_numeric(df["right_hap"], errors="coerce")
+
+  final_samples = df.loc[(left_hap >= best_cutoff) | (right_hap >= best_cutoff), "person_id"].drop_duplicates().tolist()
+
+  with open(f"~{gene}_haplotype_samples_above_cutoff.list", "w") as f:
+      f.write("\n".join(final_samples))
+  CODE
+  >>>
+
+  output {
+    File out1 = "~{output_file_name}"
+    File out2 = "~{gene}_haplotype_samples_above_cutoff.list"
+  }
+
+  runtime {
+    docker: "us-central1-docker.pkg.dev/all-of-us-rw-prod/aou-rw-gar-remote-repo-docker-prod/vanallenlab/pydata_stack"
     preemptible: 3
   }
 }
