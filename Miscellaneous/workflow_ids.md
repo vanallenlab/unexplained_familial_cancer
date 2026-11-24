@@ -40,7 +40,7 @@ WORKFLOW IDS:
   1. gs://dataproc-temp-wb-cordial-diamond-9893/workflows/cromwell-executions/
   2. Docker prefix
   
-  1. STEP R7 ZNF346: 4206200d-48d2-45a5-9386-66dfb1e8b27d
-  2. STEP R6 ZNF17: 549b0259-c738-4a35-a1b2-e24bd588f3a8
+  1. STEP R7 ZNF346: 63e7e952-4fad-44c4-9ab8-3b561ddc580d
+  2. STEP R6 ZNF17: 2b262e6b-45d0-4f80-a523-c017eda86fb8
   4. Control Matching: 3a03d865-8a34-4887-ac29-e92b42c5bd60
   

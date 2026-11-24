@@ -5,7 +5,7 @@ import numpy as np
 
 def filter_cases_controls(df, case_filter, control_filter):
     cases = df.query(case_filter).copy()
-    controls = df.query(control_filter).copy()
+    controls = df.query(control_filter).copy() if control_filter else df[df["pancancer_cancer"].fillna(0) == 0].copy()
     return cases, controls
 
 
@@ -103,7 +103,7 @@ def main():
 
     parser.add_argument("-d", "--data", required=True, help="Input metadata TSV")
     parser.add_argument("-c", "--cancer-type", required=True, help="Cancer type (e.g., breast, colon, kidney)")
-    parser.add_argument("--control-filter", required=True, help="Pandas query expression defining eligible controls")
+    parser.add_argument("--control-filter", required=False, default=None, help="Pandas query expression defining eligible controls")
     parser.add_argument("--case-filter", default=None, help="Pandas query expression defining cases. Defaults to '<cancer_type>_cancer == 1'")
     parser.add_argument("-n", "--n-matched-controls", type=int, default=30, help="Maximum number of controls per case (default: 30)")
     parser.add_argument("--exclude-files", nargs="+", default=None, help="Files containing person IDs to exclude")
